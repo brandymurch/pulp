@@ -98,19 +98,26 @@ def _blocks_to_markdown(blocks: list[dict]) -> str:
 
 def list_templates(brand: Optional[str] = None) -> list[dict]:
     client = _get_client()
-    filter_obj: Optional[dict] = None
+    body: dict[str, Any] = {}
     if brand:
-        filter_obj = {"property": "Brand", "select": {"equals": brand}}
-
-    kwargs: dict[str, Any] = {"data_source_id": NOTION_DATABASE_ID}
-    if filter_obj:
-        kwargs["filter"] = filter_obj
-    kwargs["sorts"] = [
+        body["filter"] = {"property": "Brand", "select": {"equals": brand}}
+    body["sorts"] = [
         {"property": "Brand", "direction": "ascending"},
         {"property": "Page Type", "direction": "ascending"},
     ]
 
-    result = client.data_sources.query(**kwargs)
+    # notion-client v3 uses data_sources.query, but it requires the database
+    # to be a "data source". Fall back to the raw REST API if that fails.
+    try:
+        result = client.data_sources.query(data_source_id=NOTION_DATABASE_ID, **body)
+    except Exception:
+        # Fallback: use the raw POST /v1/databases/{id}/query endpoint
+        result = client.request(
+            path=f"databases/{NOTION_DATABASE_ID}/query",
+            method="POST",
+            body=body,
+        )
+
     return [_page_to_summary(page) for page in result.get("results", [])]
 
 
