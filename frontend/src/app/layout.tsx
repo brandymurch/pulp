@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   title: "Pulp. Fresh-squeezed copy for every location.",
   description:
     "Pulp writes local landing pages, menus, and ad copy for each of your storefronts, in your voice, tuned to the neighborhood, refreshed weekly.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

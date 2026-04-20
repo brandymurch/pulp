@@ -2,6 +2,7 @@
 from __future__ import annotations
 import logging
 import re
+import uuid
 from typing import Any, Optional
 from notion_client import Client
 from app.config import NOTION_API_KEY, NOTION_DATABASE_ID
@@ -9,6 +10,12 @@ from app.config import NOTION_API_KEY, NOTION_DATABASE_ID
 logger = logging.getLogger(__name__)
 
 _client: Optional[Client] = None
+
+
+def _normalize_database_id(raw_id: str) -> str:
+    """Ensure the database ID is in UUID format with hyphens."""
+    clean = raw_id.replace("-", "")
+    return str(uuid.UUID(clean))
 
 
 def _get_client() -> Client:
@@ -106,8 +113,9 @@ def list_templates(brand: Optional[str] = None) -> list[dict]:
         {"property": "Page Type", "direction": "ascending"},
     ]
 
+    db_id = _normalize_database_id(NOTION_DATABASE_ID)
     result = client.request(
-        path=f"databases/{NOTION_DATABASE_ID}/query",
+        path=f"databases/{db_id}/query",
         method="POST",
         body=body,
     )
