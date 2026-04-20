@@ -1,605 +1,1071 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+/* ------------------------------------------------------------------ */
+/*  SVG Components                                                     */
+/* ------------------------------------------------------------------ */
 
-type Tab = "brief" | "draft" | "score";
-
-interface TermTarget {
-  phrase: string;
-  weight: number;
-  target: number;
-}
-
-interface Brief {
-  target_word_count: number;
-  term_targets: TermTarget[];
-  lsa_phrases: string[];
-}
-
-interface ScoreResult {
-  overall_score: number;
-  term_score: number;
-  word_count_score: number;
-  recommendations: string[];
-  well_optimized: { phrase: string; current: number; target: number }[];
-  missing: { phrase: string; current: number; target: number }[];
-}
-
-export default function Home() {
-  // Input state
-  const [keyword, setKeyword] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [city, setCity] = useState("");
-  const [services, setServices] = useState("");
-  const [contentType, setContentType] = useState("blog_post");
-  const [contextOpen, setContextOpen] = useState(false);
-
-  // Output state
-  const [activeTab, setActiveTab] = useState<Tab>("brief");
-  const [brief, setBrief] = useState<Brief | null>(null);
-  const [draft, setDraft] = useState("");
-  const [title, setTitle] = useState("");
-  const [wordCount, setWordCount] = useState(0);
-  const [score, setScore] = useState<ScoreResult | null>(null);
-
-  // Loading state
-  const [loadingBrief, setLoadingBrief] = useState(false);
-  const [loadingGenerate, setLoadingGenerate] = useState(false);
-  const [loadingScore, setLoadingScore] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleGetBrief = useCallback(async () => {
-    if (!keyword.trim()) return;
-    setError("");
-    setLoadingBrief(true);
-    try {
-      const res = await fetch(`${API}/api/brief`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keyword: keyword.trim(),
-          location: city || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Failed to get brief");
-      }
-      const data: Brief = await res.json();
-      setBrief(data);
-      setActiveTab("brief");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to get brief");
-    } finally {
-      setLoadingBrief(false);
-    }
-  }, [keyword, city]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!keyword.trim() || !brief) return;
-    setError("");
-    setLoadingGenerate(true);
-    try {
-      const res = await fetch(`${API}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keyword: keyword.trim(),
-          brief: {
-            target_word_count: brief.target_word_count,
-            term_targets: brief.term_targets,
-          },
-          business_name: businessName || "Local Business",
-          city: city || "United States",
-          services: services
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          content_type: contentType,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Failed to generate content");
-      }
-      const data = await res.json();
-      setTitle(data.title);
-      setDraft(data.content);
-      setWordCount(data.word_count);
-      setActiveTab("draft");
-
-      // Auto-score after generation
-      await handleScore(data.content);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to generate content");
-    } finally {
-      setLoadingGenerate(false);
-    }
-  }, [keyword, brief, businessName, city, services, contentType]);
-
-  const handleScore = useCallback(
-    async (content?: string) => {
-      const textToScore = content || draft;
-      if (!textToScore.trim() || !keyword.trim()) return;
-      setLoadingScore(true);
-      try {
-        const res = await fetch(`${API}/api/score`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: textToScore,
-            keyword: keyword.trim(),
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || "Failed to score content");
-        }
-        const data: ScoreResult = await res.json();
-        setScore(data);
-        if (!content) setActiveTab("score");
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to score content");
-      } finally {
-        setLoadingScore(false);
-      }
-    },
-    [draft, keyword]
-  );
-
-  const handleDraftChange = (text: string) => {
-    setDraft(text);
-    setWordCount(text.split(/\s+/).filter(Boolean).length);
-  };
-
-  const scoreColor = (s: number) => {
-    if (s >= 80) return "text-green-400";
-    if (s >= 60) return "text-yellow-400";
-    return "text-red-400";
-  };
-
-  const scoreBgColor = (s: number) => {
-    if (s >= 80) return "bg-green-500/10 border-green-500/30";
-    if (s >= 60) return "bg-yellow-500/10 border-yellow-500/30";
-    return "bg-red-500/10 border-red-500/30";
-  };
-
+function SliceMark({ className }: { className?: string }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-black font-bold text-sm">P</span>
-          </div>
-          <h1 className="text-lg font-semibold tracking-tight">Pulp</h1>
-          <span className="text-xs text-zinc-500 font-mono">SEO Content Engine</span>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Left panel - Inputs */}
-        <div className="w-full lg:w-[40%] border-r border-border p-6 flex flex-col gap-6 overflow-y-auto">
-          {/* Keyword input */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Target Keyword
-            </label>
-            <input
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="e.g. best plumber in austin"
-              className="w-full bg-surface-raised border border-border rounded-lg px-4 py-3 text-lg text-white placeholder:text-zinc-600 font-medium"
-            />
-          </div>
-
-          {/* Context section (collapsible) */}
-          <div className="border border-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => setContextOpen(!contextOpen)}
-              className="w-full px-4 py-3 flex items-center justify-between text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
-            >
-              <span>Business Context</span>
-              <svg
-                className={`w-4 h-4 transition-transform ${contextOpen ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {contextOpen && (
-              <div className="px-4 pb-4 flex flex-col gap-4 border-t border-border pt-4">
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Business Name</label>
-                  <input
-                    type="text"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="Acme Plumbing"
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">City / Location</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Austin, TX"
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">
-                    Services (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={services}
-                    onChange={(e) => setServices(e.target.value)}
-                    placeholder="drain cleaning, water heater repair, pipe installation"
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Content type */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Content Type
-            </label>
-            <div className="flex gap-2">
-              {[
-                { value: "blog_post", label: "Blog Post" },
-                { value: "service_page", label: "Service Page" },
-                { value: "landing_page", label: "Landing Page" },
-              ].map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setContentType(type.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    contentType === type.value
-                      ? "bg-accent text-black"
-                      : "bg-surface-raised border border-border text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex flex-col gap-3 mt-auto pt-4">
-            <button
-              onClick={handleGetBrief}
-              disabled={!keyword.trim() || loadingBrief}
-              className="w-full py-3 rounded-lg font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-surface-raised border border-accent text-accent hover:bg-accent/10"
-            >
-              {loadingBrief ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Spinner /> Getting Brief...
-                </span>
-              ) : (
-                "1. Get Brief"
-              )}
-            </button>
-            <button
-              onClick={handleGenerate}
-              disabled={!brief || loadingGenerate}
-              className="w-full py-3 rounded-lg font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-accent text-black hover:bg-green-400"
-            >
-              {loadingGenerate ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Spinner /> Generating...
-                </span>
-              ) : (
-                "2. Generate Content"
-              )}
-            </button>
-            <button
-              onClick={() => handleScore()}
-              disabled={!draft.trim() || loadingScore}
-              className="w-full py-3 rounded-lg font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-surface-raised border border-border text-zinc-300 hover:text-white hover:border-zinc-600"
-            >
-              {loadingScore ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Spinner /> Scoring...
-                </span>
-              ) : (
-                "Re-score"
-              )}
-            </button>
-          </div>
-
-          {/* Error display */}
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-        </div>
-
-        {/* Right panel - Output */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Tab bar */}
-          <div className="border-b border-border px-6 flex gap-1 pt-2">
-            {(["brief", "draft", "score"] as Tab[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
-                  activeTab === tab
-                    ? "bg-surface-raised text-white border-t border-x border-border"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                {tab === "brief" && "Brief"}
-                {tab === "draft" && "Draft"}
-                {tab === "score" && (
-                  <span className="flex items-center gap-2">
-                    Score
-                    {score && (
-                      <span className={`font-mono text-xs ${scoreColor(score.overall_score)}`}>
-                        {score.overall_score}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {/* Brief tab */}
-            {activeTab === "brief" && (
-              <div>
-                {!brief ? (
-                  <EmptyState message="Enter a keyword and click &quot;Get Brief&quot; to start" />
-                ) : (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-6">
-                      <div className="bg-surface-raised border border-border rounded-lg px-5 py-4">
-                        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
-                          Target Words
-                        </div>
-                        <div className="text-2xl font-mono font-bold text-accent">
-                          {brief.target_word_count.toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="bg-surface-raised border border-border rounded-lg px-5 py-4">
-                        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
-                          Terms
-                        </div>
-                        <div className="text-2xl font-mono font-bold text-white">
-                          {brief.term_targets.length}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold text-zinc-300 mb-3">
-                        Term Targets
-                      </h3>
-                      <div className="bg-surface-raised border border-border rounded-lg overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="text-left px-4 py-2 text-xs text-zinc-500 font-medium">
-                                Phrase
-                              </th>
-                              <th className="text-right px-4 py-2 text-xs text-zinc-500 font-medium">
-                                Weight
-                              </th>
-                              <th className="text-right px-4 py-2 text-xs text-zinc-500 font-medium">
-                                Target
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {brief.term_targets
-                              .sort((a, b) => b.weight - a.weight)
-                              .slice(0, 30)
-                              .map((term, i) => (
-                                <tr key={i} className="border-b border-border/50 last:border-0">
-                                  <td className="px-4 py-2 font-mono text-zinc-200">
-                                    {term.phrase}
-                                  </td>
-                                  <td className="px-4 py-2 text-right font-mono text-zinc-500">
-                                    {term.weight.toFixed(1)}
-                                  </td>
-                                  <td className="px-4 py-2 text-right font-mono text-accent">
-                                    {term.target}x
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Draft tab */}
-            {activeTab === "draft" && (
-              <div className="h-full flex flex-col">
-                {!draft ? (
-                  <EmptyState message="Generate content to see your draft here" />
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        {title && (
-                          <h3 className="text-sm font-semibold text-zinc-300">{title}</h3>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-mono text-zinc-500">
-                          {wordCount.toLocaleString()} words
-                        </span>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(`# ${title}\n\n${draft}`);
-                          }}
-                          className="text-xs text-zinc-500 hover:text-white transition-colors px-2 py-1 rounded border border-border hover:border-zinc-600"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                    <textarea
-                      value={draft}
-                      onChange={(e) => handleDraftChange(e.target.value)}
-                      className="flex-1 w-full min-h-[500px] bg-surface-raised border border-border rounded-lg p-4 text-sm text-zinc-200 font-mono leading-relaxed"
-                    />
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Score tab */}
-            {activeTab === "score" && (
-              <div>
-                {!score ? (
-                  <EmptyState message="Generate or score content to see results" />
-                ) : (
-                  <div className="space-y-6">
-                    {/* Score overview */}
-                    <div className="flex items-center gap-6">
-                      <div className={`rounded-lg border px-6 py-5 ${scoreBgColor(score.overall_score)}`}>
-                        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
-                          Overall
-                        </div>
-                        <div className={`text-4xl font-mono font-bold ${scoreColor(score.overall_score)}`}>
-                          {score.overall_score}
-                        </div>
-                      </div>
-                      <div className="bg-surface-raised border border-border rounded-lg px-5 py-4">
-                        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
-                          Terms
-                        </div>
-                        <div className={`text-2xl font-mono font-bold ${scoreColor(score.term_score)}`}>
-                          {score.term_score}
-                        </div>
-                      </div>
-                      <div className="bg-surface-raised border border-border rounded-lg px-5 py-4">
-                        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
-                          Word Count
-                        </div>
-                        <div className={`text-2xl font-mono font-bold ${scoreColor(score.word_count_score)}`}>
-                          {score.word_count_score}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Recommendations */}
-                    {score.recommendations.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-zinc-300 mb-3">
-                          Recommendations
-                        </h3>
-                        <div className="space-y-2">
-                          {score.recommendations.map((rec, i) => (
-                            <div
-                              key={i}
-                              className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg px-4 py-3 text-sm text-yellow-300"
-                            >
-                              {rec}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Well optimized */}
-                    {score.well_optimized.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-green-400 mb-3">
-                          Well Optimized
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {score.well_optimized.map((term, i) => (
-                            <span
-                              key={i}
-                              className="px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-xs font-mono text-green-400"
-                            >
-                              {term.phrase}{" "}
-                              <span className="text-green-600">
-                                {term.current}/{term.target}
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Missing terms */}
-                    {score.missing.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-red-400 mb-3">
-                          Missing Terms
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {score.missing.map((term, i) => (
-                            <span
-                              key={i}
-                              className="px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full text-xs font-mono text-red-400"
-                            >
-                              {term.phrase}{" "}
-                              <span className="text-red-600">
-                                0/{term.target}
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    <svg
+      className={className}
+      viewBox="0 0 280 260"
+      overflow="visible"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <g transform="translate(10 0)">
+        <g transform="rotate(30 120 90) scale(1 -1) translate(0 -180)">
+          <path
+            strokeWidth="11"
+            d="M20 150 L220 150 M20 150 A 100 110 0 0 1 220 150"
+          />
+          <g strokeWidth="4.5">
+            <line x1="120" y1="150" x2="120" y2="48" />
+            <line x1="120" y1="150" x2="74" y2="62" />
+            <line x1="120" y1="150" x2="166" y2="62" />
+            <line x1="120" y1="150" x2="44" y2="98" />
+            <line x1="120" y1="150" x2="196" y2="98" />
+          </g>
+        </g>
+        <g strokeWidth="5">
+          <path d="M250 108 C 264 130, 264 148, 250 152 C 236 148, 236 130, 250 108 Z" />
+        </g>
+      </g>
+    </svg>
   );
 }
 
-function Spinner() {
+function ArrowIcon({ className }: { className?: string }) {
   return (
-    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
+    <svg className={className} width="13" height="13" viewBox="0 0 16 16">
       <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        d="M3 8 H13 M9 4 L13 8 L9 12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function Squiggle() {
   return (
-    <div className="h-full min-h-[300px] flex items-center justify-center">
-      <p className="text-zinc-600 text-sm">{message}</p>
-    </div>
+    <svg
+      viewBox="0 0 200 10"
+      preserveAspectRatio="none"
+      className="absolute left-[-2%] right-[-2%] bottom-[-0.18em] w-[104%] h-[0.32em]"
+      style={{ color: "var(--ink)" }}
+    >
+      <path
+        d="M0 5 Q 25 0, 50 5 T 100 5 T 150 5 T 200 5"
+        stroke="currentColor"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Demo data                                                          */
+/* ------------------------------------------------------------------ */
+
+interface DemoEntry {
+  loc: string;
+  locEm: string;
+  path: string;
+  h: string;
+  p1: string;
+  p2: string;
+  age: string;
+}
+
+const demos: DemoEntry[] = [
+  {
+    loc: "Ember",
+    locEm: "Mission",
+    path: "/sf-mission",
+    h: "Pies pulled from a 900\u00b0 oven, two blocks from 24th St BART.",
+    p1: "Fog-proof crust, blistered at the edge, with a middle that still holds the slice. Our Mission location leans into the neighborhood \u2014 sourdough from Josey Baker, tomatoes from Dirty Girl, and a Saturday-only \u2018burrito pie\u2019 nobody asked for but everyone keeps ordering.",
+    p2: "Open till midnight Thursday through Saturday. Walk-ins welcome; the bar seat is the best seat.",
+    age: "2 days ago",
+  },
+  {
+    loc: "Ember",
+    locEm: "Alberta",
+    path: "/pdx-alberta",
+    h: "Wet crust weather. Dry pizza oven. Meet us on Alberta.",
+    p1: "Portland rain is the crust\u2019s best friend \u2014 it keeps the dough slack and the kitchen honest. On Alberta we keep a rotating Oregon-mushroom pie, a sourdough starter we\u2019ve been feeding since 2016, and a natural-wine list that punches above its weight.",
+    p2: "Happy hour 4\u20136 weekdays. Dog-friendly patio when the gutters let us.",
+    age: "4 days ago",
+  },
+  {
+    loc: "Ember",
+    locEm: "LoHi",
+    path: "/den-lohi",
+    h: "Altitude bakes a different pie. Ours leans crisp.",
+    p1: "At a mile up, dough behaves \u2014 less humidity, faster rise, sharper char. Our LoHi kitchen pushes the oven past 950\u00b0 to get that mountain-dry snap, with a green-chile honey drizzle that only lives here.",
+    p2: "Rooftop open May\u2013October. Ski-boot friendly in February.",
+    age: "Today",
+  },
+  {
+    loc: "Ember",
+    locEm: "Logan Sq",
+    path: "/chi-logan",
+    h: "Not deep dish. We\u2019ll still take your tavern-cut question.",
+    p1: "Logan Square asked for thin, so we made ours thinner \u2014 14-inch rounds, cracker-crisp bottom, square-cut at the counter, whole-pie if you ask. Dough cold-fermented four days, topped with Midwest dairy we can walk to.",
+    p2: "Bears Sundays: $1 slices 1st and 3rd quarter. No exceptions for Packers fans.",
+    age: "Yesterday",
+  },
+  {
+    loc: "Ember",
+    locEm: "Old Fourth",
+    path: "/atl-o4w",
+    h: "Peach-sweet summer nights. Pizza to match.",
+    p1: "Our Old Fourth Ward kitchen sits on the BeltLine \u2014 we see runners, strollers, and the last bikes of the night. Atlanta humidity softens the dough, so we pull it earlier and blister it harder. Peaches on pie in July, collards on pie in January.",
+    p2: "Walk up from the trail. Bike racks out front, water bowls on the patio.",
+    age: "3 days ago",
+  },
+  {
+    loc: "Ember",
+    locEm: "East Side",
+    path: "/aus-east",
+    h: "Texas heat. Italian oven. No BBQ pizza, we promise.",
+    p1: "East Austin gets a crust with more hydration \u2014 the summer sun demands it. The oven runs hot, the A/C runs hotter, and the back patio has misters from May to October. Local Texas mozz, Blue Bonnet flour, jalape\u00f1os from the farm up the road.",
+    p2: "SXSW hours posted weekly. Queso pizza exists. We admit nothing.",
+    age: "Today",
+  },
+  {
+    loc: "Ember",
+    locEm: "Silver Lake",
+    path: "/la-silverlake",
+    h: "A Los Angeles pie that isn\u2019t trying to be New York.",
+    p1: "Sunset Boulevard gets our California angle \u2014 Weiser Farms onions, Bellwether burrata, a nettle pesto from early spring till we run out. Crust is lighter than our East-Coast cousins, and the dough ferments under the Silver Lake sun on the windowsill.",
+    p2: "Open for lunch. Parking is a myth; walk from the reservoir.",
+    age: "Yesterday",
+  },
+];
+
+/* Pin positions keyed to US map layout */
+const pins: { code: string; left: string; top: string }[] = [
+  { code: "SF", left: "18%", top: "46%" },
+  { code: "PDX", left: "22%", top: "26%" },
+  { code: "DEN", left: "42%", top: "44%" },
+  { code: "CHI", left: "62%", top: "30%" },
+  { code: "ATL", left: "80%", top: "56%" },
+  { code: "AUS", left: "50%", top: "72%" },
+  { code: "LA", left: "26%", top: "62%" },
+];
+
+/* Ticker names */
+const tickerNames = [
+  "Flour & Field",
+  "Saltbox Co.",
+  "Halfmoon Hotels",
+  "Ember Pizza",
+  "North Fork Dental",
+  "Rivet Gym",
+  "Brightline Optical",
+  "Otter & Oak",
+];
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
+
+export default function Home() {
+  const [activePin, setActivePin] = useState(0);
+  const demo = demos[activePin];
+
+  return (
+    <>
+      {/* ====== NAV ====== */}
+      <nav
+        className="sticky top-0 z-50 bg-white"
+        style={{ borderBottom: "1px solid var(--line)" }}
+      >
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6 flex items-center justify-between h-[68px]">
+          <a href="#" className="flex items-center gap-3">
+            <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
+            <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none">
+              Pulp.
+            </span>
+          </a>
+
+          <div className="hidden min-[821px]:flex gap-7 text-xs text-ink-70 font-mono">
+            <a href="#how" className="hover:text-ink transition-colors">
+              How
+            </a>
+            <a href="#features" className="hover:text-ink transition-colors">
+              Features
+            </a>
+            <a href="#demo" className="hover:text-ink transition-colors">
+              Demo
+            </a>
+            <a href="#compare" className="hover:text-ink transition-colors">
+              vs. Templates
+            </a>
+          </div>
+
+          <div className="flex gap-2">
+            <a
+              href="#"
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] border border-line text-ink hover:border-ink transition-all"
+            >
+              Sign in
+            </a>
+            <a
+              href="#"
+              className="group inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] bg-ink text-white border border-transparent hover:-translate-y-px transition-transform"
+            >
+              Start free{" "}
+              <ArrowIcon className="transition-transform group-hover:translate-x-[3px]" />
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      {/* ====== HERO ====== */}
+      <section className="py-24 max-[900px]:py-16 relative">
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6 grid grid-cols-[1.3fr_1fr] max-[900px]:grid-cols-1 gap-16 max-[900px]:gap-10 items-end">
+          {/* Left */}
+          <div>
+            <div className="flex items-center gap-2.5 text-[11px] tracking-[0.22em] uppercase text-ink-70 mb-10">
+              <span className="w-2 h-2 rounded-full bg-ink inline-block" />
+              The copy engine for multi-location brands
+            </div>
+            <h1
+              className="font-display font-[800] leading-[0.88] tracking-[-0.035em] mb-7"
+              style={{ fontSize: "clamp(72px, 11vw, 168px)" }}
+            >
+              <span className="block">Fresh-squeezed</span>
+              <span className="block">
+                <span className="font-display italic font-normal tracking-[-0.015em]">
+                  copy
+                </span>
+                , for every
+              </span>
+              <span className="block">
+                <span className="relative inline-block">
+                  location
+                  <Squiggle />
+                </span>
+                .
+              </span>
+            </h1>
+            <p className="text-base leading-[1.55] text-ink-70 max-w-[46ch] mb-10 font-mono">
+              Pulp writes local landing pages, menus, and ad copy for each of
+              your storefronts — in your voice, tuned to the neighborhood,
+              refreshed weekly.
+            </p>
+            <div className="flex gap-2.5 items-center flex-wrap">
+              <a
+                href="#"
+                className="group inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] bg-ink text-white border border-transparent hover:-translate-y-px transition-transform"
+              >
+                Start pressing{" "}
+                <ArrowIcon className="transition-transform group-hover:translate-x-[3px]" />
+              </a>
+              <a
+                href="#"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] border border-line text-ink hover:border-ink transition-all"
+              >
+                Watch 90 sec demo
+              </a>
+            </div>
+          </div>
+
+          {/* Right — tilt cards */}
+          <div className="flex flex-col gap-3.5 relative">
+            {[
+              {
+                rotate: "-2deg",
+                mr: "20px",
+                ml: "0",
+                meta: "Ember \u00b7 Mission",
+                path: "/sf-mission",
+                h: "Pies pulled from a 900\u00b0 oven, two blocks from 24th St BART.",
+                age: "Refreshed 2 days ago",
+              },
+              {
+                rotate: "1.5deg",
+                mr: "0",
+                ml: "24px",
+                meta: "Ember \u00b7 Alberta",
+                path: "/pdx-alberta",
+                h: "Wet crust weather. Dry pizza oven. Meet us on Alberta.",
+                age: "Refreshed today",
+              },
+              {
+                rotate: "-1deg",
+                mr: "8px",
+                ml: "0",
+                meta: "Ember \u00b7 LoHi",
+                path: "/den-lohi",
+                h: "Altitude bakes a different pie. Ours leans crisp.",
+                age: "Refreshed 4 days ago",
+              },
+            ].map((card, i) => (
+              <div
+                key={i}
+                className="border-[1.5px] border-ink rounded-[14px] bg-white p-[18px_20px] flex flex-col gap-1.5 relative"
+                style={{
+                  boxShadow: "6px 6px 0 0 var(--ink)",
+                  transform: `rotate(${card.rotate})`,
+                  marginRight: card.mr,
+                  marginLeft: card.ml,
+                }}
+              >
+                <div className="flex justify-between text-[10px] tracking-[0.2em] uppercase text-ink-70">
+                  <span>{card.meta}</span>
+                  <span>{card.path}</span>
+                </div>
+                <div className="font-display italic font-normal text-xl leading-[1.1] tracking-[-0.01em]">
+                  {card.h}
+                </div>
+                <div className="flex justify-between text-[10px] tracking-[0.2em] uppercase text-ink-70">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-[7px] h-[7px] rounded-full bg-ink inline-block" />
+                    {card.age}
+                  </span>
+                  <span>Live</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ====== TICKER ====== */}
+      <div
+        className="overflow-hidden py-3.5 bg-ink text-white"
+        style={{
+          borderTop: "1.5px solid var(--ink)",
+          borderBottom: "1.5px solid var(--ink)",
+        }}
+      >
+        <div
+          className="flex gap-10 whitespace-nowrap font-display font-[800] text-[22px] tracking-[-0.02em]"
+          style={{ animation: "ticker-scroll 35s linear infinite" }}
+        >
+          {[...tickerNames, ...tickerNames].map((name, i) => (
+            <span key={i} className="inline-flex items-center gap-10">
+              {name}
+              <span className="font-normal text-lg">&#10033;</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ====== HOW IT WORKS ====== */}
+      <section
+        id="how"
+        className="py-[140px] relative overflow-hidden"
+        style={{ borderBottom: "1.5px solid var(--ink)" }}
+      >
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6">
+          {/* Head */}
+          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
+            <div className="text-[11px] tracking-[0.24em] uppercase text-ink">
+              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
+                01
+              </span>
+              How it works
+            </div>
+            <h2
+              className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
+              style={{ fontSize: "clamp(44px, 6.8vw, 96px)" }}
+            >
+              Three steps.
+              <br />
+              <span className="font-display italic font-normal tracking-[-0.015em]">
+                Pulp
+              </span>{" "}
+              does the squeezing.
+            </h2>
+          </div>
+
+          {/* Cards */}
+          <div className="grid grid-cols-3 max-[820px]:grid-cols-1 gap-5">
+            {[
+              {
+                n: "01",
+                title: "Plug in your locations.",
+                body: "CSV, Google Business Profile, or your CMS. Pulp pulls the neighborhood, hours, menu, and local signals automatically.",
+                tag: "5-min setup",
+                dark: false,
+              },
+              {
+                n: "02",
+                title: "Tune your voice.",
+                body: "Drop three samples of copy you love. Pulp fingerprints the tone and holds the line on every page it writes.",
+                tag: "Voice locked",
+                dark: true,
+              },
+              {
+                n: "03",
+                title: "Press publish.",
+                body: "Approve in bulk, tweak inline, or auto-publish weekly. Your local pages never go stale again.",
+                tag: "Ship weekly",
+                dark: false,
+              },
+            ].map((step) => (
+              <div
+                key={step.n}
+                className={`border-[1.5px] border-ink rounded-[20px] p-8 min-h-[300px] flex flex-col gap-5 transition-all duration-200 cursor-default ${
+                  step.dark ? "bg-ink text-white" : "bg-white"
+                }`}
+                style={{
+                  boxShadow: step.dark
+                    ? "8px 8px 0 0 #fff, 8px 8px 0 1.5px var(--ink)"
+                    : "8px 8px 0 0 var(--ink)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translate(-2px, -2px)";
+                  e.currentTarget.style.boxShadow = step.dark
+                    ? "10px 10px 0 0 #fff, 10px 10px 0 1.5px var(--ink)"
+                    : "10px 10px 0 0 var(--ink)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "";
+                  e.currentTarget.style.boxShadow = step.dark
+                    ? "8px 8px 0 0 #fff, 8px 8px 0 1.5px var(--ink)"
+                    : "8px 8px 0 0 var(--ink)";
+                }}
+              >
+                <div className="font-display font-[800] text-[80px] leading-[0.9] tracking-[-0.04em]">
+                  {step.n}
+                </div>
+                <h3 className="font-display italic font-normal text-[28px] leading-[1.1] tracking-[-0.01em] m-0">
+                  {step.title}
+                </h3>
+                <p
+                  className={`text-[13px] leading-[1.6] m-0 ${
+                    step.dark ? "text-white/75" : "text-ink-70"
+                  }`}
+                >
+                  {step.body}
+                </p>
+                <div
+                  className={`mt-auto text-[10px] tracking-[0.22em] uppercase flex items-center gap-2 ${
+                    step.dark ? "text-white/55" : "text-ink-40"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full inline-block ${
+                      step.dark ? "bg-white" : "bg-ink"
+                    }`}
+                  />
+                  {step.tag}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ====== FEATURES ====== */}
+      <section
+        id="features"
+        className="py-[140px] relative overflow-hidden"
+        style={{ borderBottom: "1.5px solid var(--ink)" }}
+      >
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6">
+          {/* Head */}
+          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
+            <div className="text-[11px] tracking-[0.24em] uppercase text-ink">
+              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
+                02
+              </span>
+              What&apos;s inside
+            </div>
+            <h2
+              className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
+              style={{ fontSize: "clamp(44px, 6.8vw, 96px)" }}
+            >
+              A loud little{" "}
+              <span className="font-display italic font-normal tracking-[-0.015em]">
+                pressroom
+              </span>{" "}
+              for local copy.
+            </h2>
+          </div>
+
+          {/* Feature grid */}
+          <div className="grid grid-cols-3 max-[820px]:grid-cols-1 gap-4">
+            {/* F/01 — wide, dark */}
+            <div className="col-span-2 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-ink text-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+              <div className="text-[10px] tracking-[0.22em] uppercase text-white/55">
+                F / 01
+              </div>
+              <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
+                Your voice,{" "}
+                <em className="font-normal italic">held to the rind.</em>
+              </h4>
+              <p className="text-[13px] leading-[1.55] text-white/75 m-0">
+                Upload past copy once. Pulp extracts a fingerprint across six
+                tone dimensions — cadence, vocabulary, forbidden words, mood —
+                and enforces it on every word that ships.
+              </p>
+              <div className="mt-auto h-[100px] flex items-center justify-center text-white">
+                <svg viewBox="0 0 260 80" width="100%" height="100%">
+                  <path
+                    d="M10 40 Q 30 15, 55 40 T 100 40 Q 130 5, 160 40 T 210 40 Q 230 20, 250 40"
+                    stroke="#fff"
+                    strokeWidth="2.5"
+                    fill="none"
+                    strokeLinecap="round"
+                  />
+                  <g fill="#fff">
+                    <circle cx="55" cy="40" r="3" />
+                    <circle cx="100" cy="40" r="3" />
+                    <circle cx="160" cy="40" r="3" />
+                    <circle cx="210" cy="40" r="3" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+            {/* F/02 */}
+            <div className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70">
+                F / 02
+              </div>
+              <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
+                Neighbor&shy;hood <em className="font-normal italic">aware.</em>
+              </h4>
+              <p className="text-[13px] leading-[1.55] text-ink-70 m-0">
+                Every page knows its corner. Landmarks, transit, weather,
+                seasonality.
+              </p>
+              <div className="mt-auto h-[100px] flex items-center justify-center text-ink">
+                <svg viewBox="0 0 180 80" width="100%" height="100%">
+                  <g fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <rect x="10" y="10" width="160" height="60" rx="6" />
+                    <line x1="60" y1="10" x2="60" y2="70" opacity="0.3" />
+                    <line x1="110" y1="10" x2="110" y2="70" opacity="0.3" />
+                    <line x1="10" y1="40" x2="170" y2="40" opacity="0.3" />
+                  </g>
+                  <g fill="currentColor">
+                    <circle cx="40" cy="28" r="4" />
+                    <circle cx="90" cy="52" r="4" />
+                    <circle cx="140" cy="30" r="4" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+            {/* F/03 */}
+            <div className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70">
+                F / 03
+              </div>
+              <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
+                Ads + landings,{" "}
+                <em className="font-normal italic">paired.</em>
+              </h4>
+              <p className="text-[13px] leading-[1.55] text-ink-70 m-0">
+                Google &amp; Meta ad copy that matches the page it flies to.
+              </p>
+              <div className="mt-auto h-[100px] flex items-center justify-center text-ink">
+                <svg viewBox="0 0 180 80" width="100%" height="100%">
+                  <g fill="none" stroke="currentColor" strokeWidth="1.4">
+                    <rect x="10" y="20" width="70" height="40" rx="4" />
+                    <rect x="100" y="20" width="70" height="40" rx="4" />
+                    <line
+                      x1="80"
+                      y1="40"
+                      x2="100"
+                      y2="40"
+                      strokeDasharray="3 3"
+                    />
+                    <line x1="20" y1="32" x2="60" y2="32" />
+                    <line x1="20" y1="42" x2="50" y2="42" opacity="0.6" />
+                    <line x1="110" y1="32" x2="160" y2="32" />
+                    <line x1="110" y1="42" x2="140" y2="42" opacity="0.6" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+            {/* F/04 */}
+            <div className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70">
+                F / 04
+              </div>
+              <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
+                Ship <em className="font-normal italic">anywhere.</em>
+              </h4>
+              <p className="text-[13px] leading-[1.55] text-ink-70 m-0">
+                WordPress, Webflow, Shopify, Contentful, Sanity, CSV, Zapier,
+                API.
+              </p>
+              <div className="mt-auto h-[100px] flex items-center justify-center text-ink">
+                <svg viewBox="0 0 180 80" width="100%" height="100%">
+                  <g fill="none" stroke="currentColor" strokeWidth="1.4">
+                    <rect x="10" y="8" width="28" height="20" rx="3" />
+                    <rect x="46" y="8" width="28" height="20" rx="3" />
+                    <rect x="82" y="8" width="28" height="20" rx="3" />
+                    <rect x="118" y="8" width="28" height="20" rx="3" />
+                    <rect x="154" y="8" width="16" height="20" rx="3" />
+                    <path d="M90 30 L90 50" strokeDasharray="2 2" />
+                    <rect
+                      x="62"
+                      y="50"
+                      width="56"
+                      height="22"
+                      rx="11"
+                      fill="currentColor"
+                      stroke="none"
+                    />
+                  </g>
+                  <text
+                    x="90"
+                    y="66"
+                    textAnchor="middle"
+                    fontFamily="var(--font-fraunces), serif"
+                    fontWeight="800"
+                    fontSize="12"
+                    fill="#fff"
+                  >
+                    Pulp
+                  </text>
+                </svg>
+              </div>
+            </div>
+
+            {/* F/05 — wide */}
+            <div className="col-span-2 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70">
+                F / 05
+              </div>
+              <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
+                Never-stale.{" "}
+                <em className="font-normal italic">Refreshed weekly.</em>
+              </h4>
+              <p className="text-[13px] leading-[1.55] text-ink-70 m-0">
+                Seasonal, event-aware, inventory-aware. Google notices; so do
+                your regulars.
+              </p>
+              <div className="mt-auto h-[100px] flex items-center justify-center text-ink w-full">
+                <svg viewBox="0 0 260 60" width="100%" height="100%">
+                  <g
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    fill="none"
+                    opacity="0.35"
+                  >
+                    <line x1="0" y1="30" x2="260" y2="30" />
+                  </g>
+                  <g>
+                    <circle cx="20" cy="30" r="5" fill="currentColor" />
+                    <circle cx="70" cy="30" r="5" fill="currentColor" />
+                    <circle cx="120" cy="30" r="5" fill="currentColor" />
+                    <circle cx="170" cy="30" r="5" fill="currentColor" />
+                    <circle cx="220" cy="30" r="5" fill="currentColor" />
+                  </g>
+                  <g
+                    fontFamily="var(--font-mono), monospace"
+                    fontSize="8"
+                    fill="currentColor"
+                    opacity="0.55"
+                  >
+                    <text x="20" y="50" textAnchor="middle">
+                      W01
+                    </text>
+                    <text x="70" y="50" textAnchor="middle">
+                      W02
+                    </text>
+                    <text x="120" y="50" textAnchor="middle">
+                      W03
+                    </text>
+                    <text x="170" y="50" textAnchor="middle">
+                      W04
+                    </text>
+                    <text x="220" y="50" textAnchor="middle">
+                      W05
+                    </text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ====== DEMO ====== */}
+      <section
+        id="demo"
+        className="py-[140px] relative overflow-hidden"
+        style={{ borderBottom: "1.5px solid var(--ink)" }}
+      >
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6">
+          {/* Head */}
+          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
+            <div className="text-[11px] tracking-[0.24em] uppercase text-ink">
+              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
+                03
+              </span>
+              See it live
+            </div>
+            <h2
+              className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
+              style={{ fontSize: "clamp(44px, 6.8vw, 96px)" }}
+            >
+              Click a pin.
+              <br />
+              Read the{" "}
+              <span className="font-display italic font-normal tracking-[-0.015em]">
+                copy.
+              </span>
+            </h2>
+          </div>
+
+          {/* Map + Output */}
+          <div className="grid grid-cols-[1fr_1.05fr] max-[900px]:grid-cols-1 gap-5">
+            {/* Map */}
+            <div
+              className="relative border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden"
+              style={{
+                aspectRatio: "4 / 3",
+                backgroundImage:
+                  "linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px)",
+                backgroundSize: "40px 40px",
+              }}
+            >
+              {pins.map((pin, i) => (
+                <button
+                  key={pin.code}
+                  onClick={() => setActivePin(i)}
+                  className={`absolute w-8 h-8 rounded-full border-[1.5px] border-ink flex items-center justify-center font-display font-[800] text-[11px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-[180ms] ${
+                    activePin === i
+                      ? "bg-ink text-white"
+                      : "bg-white text-ink hover:bg-ink hover:text-white"
+                  }`}
+                  style={{
+                    left: pin.left,
+                    top: pin.top,
+                    boxShadow:
+                      activePin === i
+                        ? "0 0 0 6px rgba(20,18,16,0.08)"
+                        : "none",
+                  }}
+                >
+                  {pin.code}
+                </button>
+              ))}
+            </div>
+
+            {/* Output card */}
+            <div
+              className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 flex flex-col gap-[18px] min-h-full"
+              style={{ boxShadow: "6px 6px 0 0 var(--ink)" }}
+            >
+              <div
+                className="flex justify-between items-baseline pb-3.5"
+                style={{ borderBottom: "1.5px dashed var(--ink)" }}
+              >
+                <span className="font-display font-[800] text-[22px] tracking-[-0.02em]">
+                  {demo.loc} &middot;{" "}
+                  <em className="font-normal italic">{demo.locEm}</em>
+                </span>
+                <span className="text-[10px] tracking-[0.2em] uppercase text-ink-70">
+                  {demo.path}
+                </span>
+              </div>
+              <h5 className="font-display italic font-normal text-[28px] leading-[1.15] tracking-[-0.01em] m-0">
+                {demo.h}
+              </h5>
+              <p className="text-[13px] leading-[1.65] text-ink m-0 max-w-[48ch]">
+                {demo.p1}
+              </p>
+              <p className="text-[13px] leading-[1.65] text-ink m-0 max-w-[48ch]">
+                {demo.p2}
+              </p>
+              <div
+                className="mt-auto flex justify-between pt-3.5 text-[10px] tracking-[0.22em] uppercase text-ink-70"
+                style={{ borderTop: "1.5px dashed var(--ink)" }}
+              >
+                <span>Voice &middot; Ember Pizza</span>
+                <span className="inline-flex items-center gap-1.5 text-ink">
+                  <span className="w-1.5 h-1.5 bg-ink rounded-full inline-block" />
+                  Refreshed {demo.age}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ====== COMPARE ====== */}
+      <section
+        id="compare"
+        className="py-[140px] relative overflow-hidden"
+        style={{ borderBottom: "1.5px solid var(--ink)" }}
+      >
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6">
+          {/* Head */}
+          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
+            <div className="text-[11px] tracking-[0.24em] uppercase text-ink">
+              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
+                04
+              </span>
+              Pulp vs. Templates
+            </div>
+            <h2
+              className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
+              style={{ fontSize: "clamp(44px, 6.8vw, 96px)" }}
+            >
+              Local pages that sound{" "}
+              <span className="font-display italic font-normal tracking-[-0.015em]">
+                human
+              </span>
+              , not stamped.
+            </h2>
+          </div>
+
+          {/* Compare cards */}
+          <div className="grid grid-cols-2 max-[820px]:grid-cols-1 gap-5">
+            {/* Templates (left) */}
+            <div className="border-[1.5px] border-ink rounded-[18px] p-8 bg-white">
+              <h3 className="font-display font-[800] text-[36px] tracking-[-0.02em] m-0 mb-6 leading-none">
+                Templates.
+              </h3>
+              <ul className="list-none p-0 m-0 flex flex-col gap-3">
+                {[
+                  "Same paragraph, 400 cities",
+                  "\u201c[Services] in [City]\u201d meta tags",
+                  "Dead-give-away phrasing",
+                  "Quarterly manual re-writes",
+                  "Doorway-page risk with Google",
+                  "No voice control",
+                ].map((item, i) => (
+                  <li
+                    key={i}
+                    className="flex gap-3 items-start text-sm leading-[1.5] py-2.5 text-ink-70 line-through"
+                    style={{
+                      borderBottom: "1px dashed var(--ink)",
+                      textDecorationColor: "var(--ink-40)",
+                    }}
+                  >
+                    <span className="flex-none w-5 h-5 rounded-full flex items-center justify-center font-display font-[800] text-sm bg-white text-ink border-[1.5px] border-ink -mt-px">
+                      &times;
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Pulp (right, dark) */}
+            <div
+              className="border-[1.5px] border-ink rounded-[18px] p-8 bg-ink text-white"
+              style={{
+                boxShadow: "8px 8px 0 0 var(--ink)",
+                transform: "rotate(-0.8deg)",
+              }}
+            >
+              <h3 className="font-display font-[800] text-[36px] tracking-[-0.02em] m-0 mb-6 leading-none">
+                <em className="font-normal italic">Pulp.</em>
+              </h3>
+              <ul className="list-none p-0 m-0 flex flex-col gap-3">
+                {[
+                  "Every page written from scratch",
+                  "Neighborhood-aware openings",
+                  "Voice fingerprint locked to brand",
+                  "Weekly automatic refresh",
+                  "Human-in-the-loop approval",
+                  "Publishes direct to your stack",
+                ].map((item, i) => (
+                  <li
+                    key={i}
+                    className="flex gap-3 items-start text-sm leading-[1.5] py-2.5"
+                    style={{
+                      borderBottom: "1px dashed rgba(255,255,255,0.35)",
+                    }}
+                  >
+                    <span className="flex-none w-5 h-5 rounded-full flex items-center justify-center font-display font-[800] text-sm bg-white text-ink -mt-px">
+                      &#10022;
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ====== QUOTE ====== */}
+      <section
+        className="bg-ink text-white py-[140px] relative overflow-hidden"
+        style={{
+          borderTop: "1.5px solid var(--ink)",
+          borderBottom: "1.5px solid var(--ink)",
+        }}
+      >
+        <div
+          className="absolute right-[-40px] top-[-20px] text-[220px] font-display leading-none select-none"
+          style={{ color: "#1f1c19" }}
+        >
+          &#10033;
+        </div>
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6 relative z-[2]">
+          <blockquote
+            className="font-display font-normal leading-[1.05] tracking-[-0.025em] max-w-[24ch] m-0"
+            style={{ fontSize: "clamp(40px, 5.2vw, 76px)" }}
+          >
+            We shipped{" "}
+            <span className="font-[800]">412 location pages</span> in a
+            weekend. Google traffic <em className="italic">tripled</em> in six
+            weeks — and every page actually sounds like us.
+          </blockquote>
+          <div className="mt-11 flex gap-3.5 items-center text-[11px] tracking-[0.2em] uppercase text-white/70">
+            <div className="w-11 h-11 rounded-full bg-white text-ink flex items-center justify-center font-display font-[800] text-xl">
+              M
+            </div>
+            <div>
+              <div className="font-display font-[800] text-base tracking-[-0.01em] text-white normal-case mb-1">
+                Maya Ortiz
+              </div>
+              Head of Growth &middot; Halfmoon Hotels &middot; 89 properties
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ====== BIG CTA ====== */}
+      <section className="pt-[180px] pb-[160px] text-left relative overflow-hidden">
+        <SliceMark className="absolute right-[-80px] top-1/2 -translate-y-1/2 w-[520px] h-[520px] text-pulp overflow-visible max-[900px]:w-[280px] max-[900px]:h-[280px] max-[900px]:right-[-60px] max-[900px]:opacity-50" />
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6 relative z-[2]">
+          <h2
+            className="font-display font-[800] leading-[0.88] tracking-[-0.045em] mb-11 m-0"
+            style={{ fontSize: "clamp(88px, 13vw, 200px)" }}
+          >
+            Start{" "}
+            <span className="font-display italic font-normal text-ink">
+              squeezing.
+            </span>
+          </h2>
+          <div className="flex gap-3 items-center flex-wrap">
+            <a
+              href="#"
+              className="group inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] bg-ink text-white border border-transparent hover:-translate-y-px transition-transform"
+            >
+              Press publish free{" "}
+              <ArrowIcon className="transition-transform group-hover:translate-x-[3px]" />
+            </a>
+            <a
+              href="#"
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] border border-line text-ink hover:border-ink transition-all"
+            >
+              Book a 15-min tour
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ====== FOOTER ====== */}
+      <footer
+        className="bg-ink text-white pt-16 pb-8"
+        style={{ borderTop: "1.5px solid var(--ink)" }}
+      >
+        <div className="mx-auto max-w-[1200px] px-10 max-[720px]:px-6 grid grid-cols-[2fr_1fr_1fr_1fr] max-[820px]:grid-cols-2 gap-12">
+          {/* Brand */}
+          <div>
+            <a href="#" className="flex items-center gap-3">
+              <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
+              <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none text-white">
+                Pulp.
+              </span>
+            </a>
+            <p className="text-[13px] text-white/70 max-w-[36ch] mt-[18px] leading-[1.55]">
+              Fresh-squeezed copy for every location. Cold-pressed in Oakland,
+              sold to operators everywhere.
+            </p>
+          </div>
+
+          {/* Product */}
+          <div>
+            <h5 className="text-[10px] tracking-[0.22em] uppercase text-white/50 m-0 mb-4 font-medium">
+              Product
+            </h5>
+            <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
+              {["How it works", "Features", "Integrations", "Changelog"].map(
+                (link) => (
+                  <li key={link}>
+                    <a
+                      href="#"
+                      className="text-[13px] text-white/85 hover:text-white transition-colors"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                )
+              )}
+            </ul>
+          </div>
+
+          {/* Company */}
+          <div>
+            <h5 className="text-[10px] tracking-[0.22em] uppercase text-white/50 m-0 mb-4 font-medium">
+              Company
+            </h5>
+            <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
+              {["About", "Customers", "Careers", "Press kit", "Contact"].map(
+                (link) => (
+                  <li key={link}>
+                    <a
+                      href="#"
+                      className="text-[13px] text-white/85 hover:text-white transition-colors"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                )
+              )}
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div>
+            <h5 className="text-[10px] tracking-[0.22em] uppercase text-white/50 m-0 mb-4 font-medium">
+              Resources
+            </h5>
+            <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
+              {["Docs", "API", "Voice guide", "Security", "Status"].map(
+                (link) => (
+                  <li key={link}>
+                    <a
+                      href="#"
+                      className="text-[13px] text-white/85 hover:text-white transition-colors"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                )
+              )}
+            </ul>
+          </div>
+
+          {/* Bottom bar */}
+          <div
+            className="col-span-full mt-12 pt-6 flex justify-between text-[10px] tracking-[0.2em] uppercase text-white/50 flex-wrap gap-4"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}
+          >
+            <span>&copy; 2026 Pulp Copy, Inc.</span>
+            <span>Cold-pressed. No pulp-free settings.</span>
+            <span>Privacy &middot; Terms &middot; DPA</span>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }
