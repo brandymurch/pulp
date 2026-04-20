@@ -113,7 +113,7 @@ export function Rail({ onSignOut }: RailProps) {
       <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
         <SliceMark className="w-7 h-7 text-pulp overflow-visible" />
         <span className="font-display font-[800] text-[22px] tracking-[-0.03em] leading-none">
-          Pulp.
+          Pulp
         </span>
       </div>
 

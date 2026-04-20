@@ -27,7 +27,7 @@ export default function SignInPage() {
         <a href="/" className="flex items-center gap-3">
           <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
           <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none">
-            Pulp.
+            Pulp
           </span>
         </a>
 

@@ -144,7 +144,7 @@ export default function Home() {
           <a href="#" className="flex items-center gap-3">
             <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
             <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none">
-              Pulp.
+              Pulp
             </span>
           </a>
 
@@ -822,7 +822,7 @@ export default function Home() {
               }}
             >
               <h3 className="font-display font-[800] text-[36px] tracking-[-0.02em] m-0 mb-6 leading-none">
-                <em className="font-normal italic">Pulp.</em>
+                <em className="font-normal italic">Pulp</em>
               </h3>
               <ul className="list-none p-0 m-0 flex flex-col gap-3">
                 {[
@@ -932,7 +932,7 @@ export default function Home() {
             <a href="#" className="flex items-center gap-3">
               <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
               <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none text-white">
-                Pulp.
+                Pulp
               </span>
             </a>
             <p className="text-[13px] text-white/70 max-w-[36ch] mt-[18px] leading-[1.55]">
