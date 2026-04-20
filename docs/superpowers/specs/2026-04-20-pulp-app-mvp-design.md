@@ -59,7 +59,7 @@ All tables have RLS enabled with open policies (app has its own auth gate).
 | Column | Type | Notes |
 |--------|------|-------|
 | id | UUID PK | |
-| brand_id | UUID FK → brands | |
+| brand_id | UUID FK → brands ON DELETE CASCADE | |
 | title | TEXT | |
 | content | TEXT | sample copy |
 | url | TEXT | source URL |
@@ -196,7 +196,7 @@ src/app/
     page.tsx                     ← password form (adapted from handoff)
   (app)/
     layout.tsx                   ← app shell: Rail + Topbar
-    page.tsx                     ← redirect to /generate (today) → dashboard later
+    page.tsx                     ← server redirect (HTTP 307) to /generate today; becomes dashboard later
     generate/
       page.tsx                   ← the generation flow (today's primary UI)
     history/
@@ -363,6 +363,108 @@ When auto-revising, Claude receives:
 - POP score feedback: missing terms with target counts, word count gap
 - Instruction: "Incorporate the missing terms naturally. Do not change the overall structure or voice. Target the specified word count."
 
+## SSE Streaming Protocol
+
+`POST /api/generate` and `POST /api/generate/revise` return Server-Sent Events. Since `EventSource` only supports GET, the frontend uses `fetch()` + `getReader()` (same pattern as content-gen's `useGeneration` hook).
+
+### Event format
+```
+event: chunk
+data: {"text": "partial content..."}
+
+event: done
+data: {"content": "full content", "word_count": 1423, "input_tokens": 8200, "output_tokens": 3100}
+
+event: error
+data: {"message": "Claude API error: rate limited"}
+```
+
+### Frontend handling
+- `fetch(url, { method: 'POST', body, signal })` with `AbortController` for cancel
+- Read via `response.body.getReader()` + `TextDecoder`
+- Parse SSE lines: split on `\n\n`, extract `event:` and `data:` fields
+- On `chunk`: append to content state, render progressively
+- On `done`: finalize content, enable score/save/export actions
+- On `error`: show error toast, keep any partial content
+- On network interruption: keep partial content, show reconnect option
+
+## Outline Output Format
+
+`POST /api/generate/outline` returns JSON (not SSE — outlines are small):
+
+```json
+{
+  "h1": "Insulation Services in Columbus, OH",
+  "sections": [
+    {
+      "h2": "Why Columbus Homes Need Proper Insulation",
+      "key_points": ["Climate zones", "Energy cost savings", "Common home types"],
+      "suggested_terms": ["spray foam insulation", "energy efficiency"]
+    },
+    {
+      "h2": "Our Insulation Services",
+      "key_points": ["Spray foam", "Blown-in", "Injection foam"],
+      "suggested_terms": ["insulation contractor", "home insulation"]
+    }
+  ],
+  "internal_links": [
+    {"text": "Cincinnati insulation services", "href": "/cincinnati-oh"}
+  ],
+  "estimated_word_count": 1500
+}
+```
+
+The `OutlineReview` component renders this as an editable structured view. User can reorder sections, edit H2s, add/remove key points before approving.
+
+## Pipeline Error Handling
+
+Research steps (step 2) have different criticality:
+
+| Step | Required? | On failure |
+|------|-----------|------------|
+| POP brief | **Required** | Abort pipeline, show error |
+| Style examples | **Required** | Abort — no voice guardrails |
+| Notion template | **Required** | Abort — no page structure |
+| Competitor scrape | Optional | Continue without competitor context |
+| SERP/PAA | Optional | Continue without PAA headings |
+
+`PipelineProgress` shows per-step status: pending, loading, done, failed, skipped. Failed optional steps show a warning icon but don't block generation.
+
+## Revision Storage
+
+Revisions overwrite the `content` field on the `generations` row in place. `revision_count` tracks how many passes occurred. The outline is preserved in the `outline` field for reference. Previous content versions are not stored — the POP score improvement (before vs. after) is the meaningful signal, not the intermediate text.
+
+## Migration Notes
+
+The existing backend (`main.py`) has three endpoints that will be **replaced** by the new versions:
+
+| Existing endpoint | Change |
+|-------------------|--------|
+| `POST /api/brief` | Keep, compatible. Add optional `city`/`state` params for POP location targeting |
+| `POST /api/generate` | Replace. New version accepts outline + full context, returns SSE instead of JSON |
+| `POST /api/score` | Keep, compatible. No changes needed |
+
+New endpoints added: `/api/auth/login`, `/api/generate/outline`, `/api/generate/revise`, `/api/scrape`, `/api/serp`, `/api/notion/templates`, `/api/brands`, `/api/style-examples`, `/api/generations`, `/api/export/gdrive`.
+
+The existing `GenerateRequest`/`GenerateResponse` Pydantic models will be replaced with new models matching the expanded input/output contracts.
+
+## Google Drive Export Details
+
+- **Service account** creates docs inside a shared folder (no domain-wide delegation needed)
+- **Folder structure**: auto-created on first export per city
+  - `GOOGLE_DRIVE_FOLDER_ID` (root) → `USA Insulation/` (brand) → `Columbus OH/` (city) → docs
+  - Backend checks if folders exist before creating; caches folder IDs in memory
+- **Doc naming**: `"{keyword} - {city} - {date}"` (e.g. "Insulation Services - Columbus OH - 2026-04-20")
+- **Doc format**: Content converted from markdown to Google Docs API format (headings, bold, lists)
+- **Response**: Returns the Google Doc URL so user can open/share immediately
+- **Permissions**: Docs inherit sharing from the parent folder — share the root folder with your team/clients
+
+## Auth Details
+
+- **JWT expiry**: 7 days
+- **Frontend 401 handling**: On any API response with status 401, clear localStorage token and redirect to `/sign-in`
+- **CORS**: Tighten `allow_origins` to `[FRONTEND_URL]` env var (no more `*`)
+
 ## Environment Variables
 
 ### Backend
@@ -391,7 +493,7 @@ NEXT_PUBLIC_API_URL=       # backend URL
 
 Carried over from the landing page + handoff. No changes to tokens:
 
-- **Colors:** ink `#141210`, ink-70, ink-40, line, paper, green `#1F7A3A`, amber `#B5730F`, pulp `#FF6A1A` (logo only)
+- **Colors:** ink `#141210`, ink-70 `#4A4642`, ink-40 `#9A958E`, ink-20 `#D7D3CD`, line `#E8E5E0`, line-soft `#F3F1ED`, paper `#FFFFFF`, green `#1F7A3A`, amber `#B5730F`, pulp `#FF6A1A` (logo only)
 - **Typography:** Fraunces (display/headings), JetBrains Mono (body/UI)
 - **Borders:** 1.5px solid ink throughout
 - **Shadows:** hard-offset only (4px buttons, 6px cards) — no blur
