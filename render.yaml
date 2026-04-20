@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: pulp-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    envVars:
+      - key: POP_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+    healthCheckPath: /health
+
+  - type: web
+    name: pulp-web
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    plan: starter
+    region: oregon
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://pulp-api.onrender.com
