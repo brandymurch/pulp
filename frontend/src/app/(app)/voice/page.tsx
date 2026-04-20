@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { VoiceTuner } from "@/components/voice/VoiceTuner";
 import { StyleExamplesList } from "@/components/voice/StyleExamplesList";
 import { AddStyleExample } from "@/components/voice/AddStyleExample";
 
 export default function VoicePage() {
   const [brands, setBrands] = useState<any[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<any>(null);
   const [brandId, setBrandId] = useState("");
   const [brandName, setBrandName] = useState("");
   const [examples, setExamples] = useState<any[]>([]);
@@ -20,6 +22,7 @@ export default function VoicePage() {
           const data = await res.json();
           setBrands(data);
           if (data.length > 0) {
+            setSelectedBrand(data[0]);
             setBrandId(data[0].id);
             setBrandName(data[0].name);
           }
@@ -84,6 +87,7 @@ export default function VoicePage() {
           onChange={e => {
             const brand = brands.find(b => b.id === e.target.value);
             if (brand) {
+              setSelectedBrand(brand);
               setBrandId(brand.id);
               setBrandName(brand.name);
             }
@@ -96,6 +100,18 @@ export default function VoicePage() {
         </select>
       </div>
 
+      {/* Voice tuner */}
+      {selectedBrand && (
+        <VoiceTuner
+          brand={selectedBrand}
+          onSave={(updated) => {
+            setSelectedBrand(updated);
+            setBrands(prev => prev.map(b => b.id === updated.id ? updated : b));
+          }}
+        />
+      )}
+
+      {/* Style examples */}
       {loading ? (
         <div className="text-[13px] text-ink-40 animate-pulse">Loading style examples...</div>
       ) : (
