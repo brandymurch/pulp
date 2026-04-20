@@ -102,7 +102,7 @@ def list_templates(brand: Optional[str] = None) -> list[dict]:
     if brand:
         filter_obj = {"property": "Brand", "select": {"equals": brand}}
 
-    kwargs: dict[str, Any] = {"database_id": NOTION_DATABASE_ID}
+    kwargs: dict[str, Any] = {"data_source_id": NOTION_DATABASE_ID}
     if filter_obj:
         kwargs["filter"] = filter_obj
     kwargs["sorts"] = [
@@ -110,7 +110,7 @@ def list_templates(brand: Optional[str] = None) -> list[dict]:
         {"property": "Page Type", "direction": "ascending"},
     ]
 
-    result = client.databases.query(**kwargs)
+    result = client.data_sources.query(**kwargs)
     return [_page_to_summary(page) for page in result.get("results", [])]
 
 
