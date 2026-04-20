@@ -23,8 +23,8 @@ POP_TASK_URL = "https://app.pageoptimizer.pro/api/task"
 NOTION_API_KEY = os.environ.get("NOTION_API_KEY", "")
 NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID", "")
 
-# Jina Reader
-JINA_API_KEY = os.environ.get("JINA_API_KEY", "")
+# Firecrawl
+FIRECRAWL_API_KEY = os.environ.get("FIRECRAWL_API_KEY", "")
 
 # DataForSEO
 DATAFORSEO_LOGIN = os.environ.get("DATAFORSEO_LOGIN", "")
