@@ -625,6 +625,7 @@ async def get_brand(brand_id: str, _=Depends(require_auth)):
 
 ```python
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from app.auth import require_auth
 from app.db import get_db
 
@@ -636,9 +637,17 @@ async def list_examples(brand_id: str, _=Depends(require_auth)):
     result = db.table("style_examples").select("*").eq("brand_id", brand_id).execute()
     return result.data
 
+class CreateStyleExampleRequest(BaseModel):
+    brand_id: str
+    title: str
+    content: str
+    url: str | None = None
+
 @router.post("")
-async def create_example(data: dict, _=Depends(require_auth)):
+async def create_example(req: CreateStyleExampleRequest, _=Depends(require_auth)):
     db = get_db()
+    data = req.model_dump(exclude_none=True)
+    data["word_count"] = len(req.content.split())
     result = db.table("style_examples").insert(data).execute()
     return result.data[0]
 
@@ -1171,6 +1180,7 @@ Build the reusable UI primitives from the handoff design system.
 **Files:**
 - Create: `frontend/src/components/shared/Button.tsx`
 - Create: `frontend/src/components/shared/Input.tsx`
+- Create: `frontend/src/components/shared/Pill.tsx`
 - Modify: `frontend/src/app/globals.css` — add missing tokens
 - Modify: `frontend/tailwind.config.ts` — add missing colors
 
@@ -1239,11 +1249,48 @@ export function Input({ label, className = "", ...props }: InputProps) {
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Create `Pill.tsx`**
+
+```tsx
+"use client";
+
+interface PillProps {
+  variant?: "default" | "live" | "draft" | "stale" | "count";
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function Pill({ variant = "default", children, className = "" }: PillProps) {
+  const base = "inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] uppercase px-2.5 py-0.5 rounded-full border-[1.5px] border-ink";
+  const variants = {
+    default: "bg-white text-ink",
+    live: "bg-ink text-white",
+    draft: "bg-white text-ink",
+    stale: "bg-white text-ink-70",
+    count: "bg-white text-ink text-[10px] px-2 py-px",
+  };
+  const dotColors = {
+    live: "bg-[#7FE295]",
+    draft: "bg-amber",
+    stale: "bg-ink-40",
+  };
+
+  return (
+    <span className={`${base} ${variants[variant]} ${className}`}>
+      {(variant === "live" || variant === "draft" || variant === "stale") && (
+        <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]}`} />
+      )}
+      {children}
+    </span>
+  );
+}
+```
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add frontend/
-git commit -m "feat: shared UI components — Button, Input + design tokens"
+git commit -m "feat: shared UI components — Button, Input, Pill + design tokens"
 ```
 
 ---
@@ -1259,7 +1306,7 @@ git commit -m "feat: shared UI components — Button, Input + design tokens"
 - [ ] **Step 1: Create `frontend/src/lib/api.ts`**
 
 ```tsx
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== "undefined" ? localStorage.getItem("pulp_token") : null;
@@ -1435,6 +1482,7 @@ git commit -m "feat: app shell — Rail, Topbar, UserChip, auth-gated layout"
 **Files:**
 - Create: `frontend/src/components/generate/KeywordInput.tsx`
 - Create: `frontend/src/components/generate/TemplateSelector.tsx`
+- Create: `frontend/src/components/generate/CompetitorInput.tsx`
 - Create: `frontend/src/components/generate/PipelineProgress.tsx`
 - Create: `frontend/src/app/(app)/generate/page.tsx`
 
@@ -1446,7 +1494,51 @@ Three fields in a row: keyword (text input), city (text input), state (text inpu
 
 Dropdown that fetches from `GET /api/notion/templates?brand=USA Insulation`. Shows template name + page type. On select, fetches full template via `GET /api/notion/templates/:id`.
 
-- [ ] **Step 3: Create `PipelineProgress.tsx`**
+- [ ] **Step 3: Create `CompetitorInput.tsx`**
+
+Textarea for entering competitor URLs (one per line). Optional. Parses newlines into an array of URLs. Shows count of entered URLs.
+
+```tsx
+"use client";
+import { useState } from "react";
+
+interface CompetitorInputProps {
+  urls: string[];
+  onChange: (urls: string[]) => void;
+}
+
+export function CompetitorInput({ urls, onChange }: CompetitorInputProps) {
+  const [text, setText] = useState(urls.join("\n"));
+
+  function handleChange(value: string) {
+    setText(value);
+    const parsed = value.split("\n").map(u => u.trim()).filter(Boolean);
+    onChange(parsed);
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-baseline mb-2">
+        <label className="text-[10px] tracking-[0.22em] uppercase text-ink-70">
+          Competitor URLs (optional)
+        </label>
+        {urls.length > 0 && (
+          <span className="text-[10px] text-ink-40">{urls.length} URL{urls.length !== 1 ? "s" : ""}</span>
+        )}
+      </div>
+      <textarea
+        value={text}
+        onChange={e => handleChange(e.target.value)}
+        placeholder="https://competitor1.com/page&#10;https://competitor2.com/page"
+        rows={3}
+        className="w-full border-[1.5px] border-line rounded-[14px] bg-white text-ink px-4 py-3 font-mono text-[13px] outline-none transition-all duration-150 focus:border-ink focus:shadow-[4px_4px_0_0_var(--ink)] resize-none"
+      />
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Create `PipelineProgress.tsx`**
 
 Shows status of each research step: brief, competitors, PAA, style examples, template. Each step shows: pending (gray dot), loading (animated), done (green dot + check), failed (red + warning), skipped (gray + skip).
 
@@ -1500,8 +1592,7 @@ Port from `content-gen/frontend/src/hooks/useGeneration.js`:
 ```tsx
 "use client";
 import { useState, useRef, useCallback } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+import { API_URL } from "@/lib/api";
 
 export function useGeneration() {
   const [output, setOutput] = useState("");
@@ -1579,7 +1670,7 @@ export function useGeneration() {
     }
   }, []);
 
-  return { output, isGenerating, error, usage, generate, abort };
+  return { output, setOutput, isGenerating, error, usage, generate, abort };
 }
 ```
 
@@ -1627,49 +1718,92 @@ git commit -m "feat: generate components — outline review, content viewer, ter
 
 ---
 
-## Task 13: Frontend — wire up full generate pipeline
+## Task 13a: Frontend — wire research + outline phases
 
-Connect all generate components into the page with the state machine.
+Connect inputs to the research pipeline and outline review.
 
 **Files:**
 - Modify: `frontend/src/app/(app)/generate/page.tsx`
 
 - [ ] **Step 1: Wire research phase**
 
-On "Generate" click:
-1. Fire 5 parallel fetches: brief, scrape (if competitor URLs), serp, style examples, template
-2. Update PipelineProgress as each completes
-3. On all required done → advance to outline phase
+On "Generate" click, fire parallel fetches. **Error handling by criticality:**
+
+Required (abort pipeline on failure, show error):
+- POP brief (POST `/api/brief`)
+- Style examples (GET `/api/style-examples?brand_id=...`)
+- Notion template (GET `/api/notion/templates/:id`)
+
+Optional (mark as "skipped" on failure, continue):
+- Competitor scrape (POST `/api/scrape`) -- only if URLs entered
+- SERP/PAA (POST `/api/serp`)
+
+Update PipelineProgress per step. On all required done, advance to outline.
 
 - [ ] **Step 2: Wire outline phase**
 
-POST to `/api/generate/outline` with research results. Show OutlineReview. On approve → advance to generation phase.
+POST to `/api/generate/outline` with research results. Show OutlineReview. On approve, advance to generation.
 
-- [ ] **Step 3: Wire generation phase**
+- [ ] **Step 3: Test research + outline**
 
-Call `useGeneration.generate("/api/generate", payload)`. Show ContentViewer with streaming output. On done → advance to scoring phase.
+Enter keyword, select template, click Generate. Verify pipeline progress shows each step. Verify outline renders and approve button works.
 
-- [ ] **Step 4: Wire scoring phase**
-
-POST to `/api/score` with generated content + keyword. Show POPScoreCard. If score < 75 and revision_count < 2 → auto-revise. Otherwise → done.
-
-- [ ] **Step 5: Wire revision phase**
-
-Call `useGeneration.generate("/api/generate/revise", payload)`. Increment revision count. After revision completes → re-score.
-
-- [ ] **Step 6: Wire done phase**
-
-Show final content with term heatmap + POP score. Action buttons: Save to history (POST `/api/generations`), Copy (clipboard), Export to Drive (POST `/api/export/gdrive`).
-
-- [ ] **Step 7: Test full pipeline end-to-end**
-
-Enter keyword "insulation services" + city "Columbus" + state "OH". Select template. Generate. Verify: research → outline → content → score → review.
-
-- [ ] **Step 8: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add frontend/
-git commit -m "feat: wire full generation pipeline — research → outline → generate → score → revise"
+git commit -m "feat: wire research pipeline + outline review with error handling"
+```
+
+---
+
+## Task 13b: Frontend — wire generation + scoring + revision
+
+Connect streaming generation, POP scoring, and auto-revision loop.
+
+**Files:**
+- Modify: `frontend/src/app/(app)/generate/page.tsx`
+
+- [ ] **Step 1: Wire generation phase**
+
+Call `useGeneration.generate("/api/generate", payload)`. Show ContentViewer with streaming output. On done, advance to scoring.
+
+- [ ] **Step 2: Wire scoring phase**
+
+POST to `/api/score` with generated content + keyword. Show POPScoreCard. If score < 75 and revision_count < 2, auto-revise. Otherwise, advance to done.
+
+- [ ] **Step 3: Wire revision phase**
+
+Call `useGeneration.generate("/api/generate/revise", payload)`. Increment revision count. After revision completes, re-score.
+
+- [ ] **Step 4: Wire done phase**
+
+Show final content with term heatmap + POP score. Action buttons: Save to history (POST `/api/generations`), Copy (clipboard), Export to Drive (POST `/api/export/gdrive`). Content is editable via `setOutput` from `useGeneration`.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/
+git commit -m "feat: wire generation + POP scoring + auto-revision loop"
+```
+
+---
+
+## Task 13c: Frontend — full pipeline integration test
+
+- [ ] **Step 1: End-to-end test**
+
+Enter keyword "insulation services" + city "Columbus" + state "OH". Select template. Generate. Verify full flow: research, outline, content streaming, POP score, review. Test save to history. Test copy to clipboard.
+
+- [ ] **Step 2: Test error paths**
+
+Test with missing POP API key (should abort). Test with no competitor URLs (should skip scrape). Test abort button during generation.
+
+- [ ] **Step 3: Commit any fixes**
+
+```bash
+git add frontend/
+git commit -m "fix: pipeline integration fixes from end-to-end testing"
 ```
 
 ---
@@ -1678,13 +1812,18 @@ git commit -m "feat: wire full generation pipeline — research → outline → 
 
 **Files:**
 - Create: `frontend/src/components/history/GenerationsList.tsx`
+- Create: `frontend/src/components/history/GenerationDetail.tsx`
 - Create: `frontend/src/app/(app)/history/page.tsx`
 
 - [ ] **Step 1: Create `GenerationsList.tsx`**
 
-Table of past generations: keyword, city, template, word count, POP score, date. Click row to expand and see full content. Delete button per row.
+Table of past generations: keyword, city, template, word count, POP score, date. Click row to select. Delete button per row.
 
 Fetch from `GET /api/generations?brand_id=<brand_id>`.
+
+- [ ] **Step 1b: Create `GenerationDetail.tsx`**
+
+Expanded view for a selected generation: full content rendered as markdown, POP score card (if score exists), outline (if stored), metadata (model, tokens, revision count, date). Action buttons: Copy, Export to Drive, Delete.
 
 - [ ] **Step 2: Create history page**
 
@@ -1778,7 +1917,9 @@ Task 9: Frontend app shell (depends on 7, 8)
 Task 10: Frontend generate inputs (depends on 9)
 Task 11: useGeneration hook (depends on 7)
 Task 12: Generate review components (depends on 7, 11)
-Task 13: Wire full pipeline (depends on 10, 11, 12 + backend tasks 3-6)
+Task 13a: Wire research + outline (depends on 10, 11, 12 + backend tasks 3-5)
+Task 13b: Wire generation + scoring + revision (depends on 13a)
+Task 13c: Integration test (depends on 13b + backend task 6)
 Task 14: History page (depends on 9)
 Task 15: Voice page (depends on 9)
 Task 16: Render config (depends on all)
@@ -1786,6 +1927,6 @@ Task 16: Render config (depends on all)
 
 **Parallelizable groups:**
 - Group A (backend): Tasks 1 → 3, 4, 5, 6 (1 first, then 3-6 in parallel)
-- Group B (frontend): Tasks 7 → 8 → 9 → 10, 11, 12 → 13 → 14, 15
+- Group B (frontend): Tasks 7 → 8 → 9 → 10, 11, 12 → 13a → 13b → 13c → 14, 15
 - Task 2: Independent (Supabase dashboard)
 - Task 16: After everything

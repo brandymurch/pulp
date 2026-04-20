@@ -368,15 +368,15 @@ When auto-revising, Claude receives:
 `POST /api/generate` and `POST /api/generate/revise` return Server-Sent Events. Since `EventSource` only supports GET, the frontend uses `fetch()` + `getReader()` (same pattern as content-gen's `useGeneration` hook).
 
 ### Event format
+
+Uses `data:`-only format with a `type` discriminator (no named `event:` lines). This is simpler and more reliable with `fetch` + `getReader()`.
+
 ```
-event: chunk
-data: {"text": "partial content..."}
+data: {"type": "chunk", "text": "partial content..."}
 
-event: done
-data: {"content": "full content", "word_count": 1423, "input_tokens": 8200, "output_tokens": 3100}
+data: {"type": "done", "content": "full content", "word_count": 1423, "usage": {"input_tokens": 8200, "output_tokens": 3100}}
 
-event: error
-data: {"message": "Claude API error: rate limited"}
+data: {"type": "error", "message": "Claude API error: rate limited"}
 ```
 
 ### Frontend handling
