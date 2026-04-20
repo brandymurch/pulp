@@ -93,7 +93,7 @@ const demos: DemoEntry[] = [
     locEm: "Mission",
     path: "/sf-mission",
     h: "Pies pulled from a 900\u00b0 oven, two blocks from 24th St BART.",
-    p1: "Fog-proof crust, blistered at the edge, with a middle that still holds the slice. Our Mission location leans into the neighborhood \u2014 sourdough from Josey Baker, tomatoes from Dirty Girl, and a Saturday-only \u2018burrito pie\u2019 nobody asked for but everyone keeps ordering.",
+    p1: "Fog-proof crust, blistered at the edge, with a middle that still holds the slice. Our Mission location leans into the neighborhood. Sourdough from Josey Baker, tomatoes from Dirty Girl, and a Saturday-only \u2018burrito pie\u2019 nobody asked for but everyone keeps ordering.",
     p2: "Open till midnight Thursday through Saturday. Walk-ins welcome; the bar seat is the best seat.",
     age: "2 days ago",
   },
@@ -102,8 +102,8 @@ const demos: DemoEntry[] = [
     locEm: "Alberta",
     path: "/pdx-alberta",
     h: "Wet crust weather. Dry pizza oven. Meet us on Alberta.",
-    p1: "Portland rain is the crust\u2019s best friend \u2014 it keeps the dough slack and the kitchen honest. On Alberta we keep a rotating Oregon-mushroom pie, a sourdough starter we\u2019ve been feeding since 2016, and a natural-wine list that punches above its weight.",
-    p2: "Happy hour 4\u20136 weekdays. Dog-friendly patio when the gutters let us.",
+    p1: "Portland rain is the crust\u2019s best friend. It keeps the dough slack and the kitchen honest. On Alberta we keep a rotating Oregon-mushroom pie, a sourdough starter we\u2019ve been feeding since 2016, and a natural-wine list that punches above its weight.",
+    p2: "Happy hour 4-6 weekdays. Dog-friendly patio when the gutters let us.",
     age: "4 days ago",
   },
   {
@@ -111,8 +111,8 @@ const demos: DemoEntry[] = [
     locEm: "LoHi",
     path: "/den-lohi",
     h: "Altitude bakes a different pie. Ours leans crisp.",
-    p1: "At a mile up, dough behaves \u2014 less humidity, faster rise, sharper char. Our LoHi kitchen pushes the oven past 950\u00b0 to get that mountain-dry snap, with a green-chile honey drizzle that only lives here.",
-    p2: "Rooftop open May\u2013October. Ski-boot friendly in February.",
+    p1: "At a mile up, dough behaves. Less humidity, faster rise, sharper char. Our LoHi kitchen pushes the oven past 950\u00b0 to get that mountain-dry snap, with a green-chile honey drizzle that only lives here.",
+    p2: "Rooftop open May to October. Ski-boot friendly in February.",
     age: "Today",
   },
   {
@@ -120,7 +120,7 @@ const demos: DemoEntry[] = [
     locEm: "Logan Sq",
     path: "/chi-logan",
     h: "Not deep dish. We\u2019ll still take your tavern-cut question.",
-    p1: "Logan Square asked for thin, so we made ours thinner \u2014 14-inch rounds, cracker-crisp bottom, square-cut at the counter, whole-pie if you ask. Dough cold-fermented four days, topped with Midwest dairy we can walk to.",
+    p1: "Logan Square asked for thin, so we made ours thinner. 14-inch rounds, cracker-crisp bottom, square-cut at the counter, whole-pie if you ask. Dough cold-fermented four days, topped with Midwest dairy we can walk to.",
     p2: "Bears Sundays: $1 slices 1st and 3rd quarter. No exceptions for Packers fans.",
     age: "Yesterday",
   },
@@ -129,7 +129,7 @@ const demos: DemoEntry[] = [
     locEm: "Old Fourth",
     path: "/atl-o4w",
     h: "Peach-sweet summer nights. Pizza to match.",
-    p1: "Our Old Fourth Ward kitchen sits on the BeltLine \u2014 we see runners, strollers, and the last bikes of the night. Atlanta humidity softens the dough, so we pull it earlier and blister it harder. Peaches on pie in July, collards on pie in January.",
+    p1: "Our Old Fourth Ward kitchen sits on the BeltLine. We see runners, strollers, and the last bikes of the night. Atlanta humidity softens the dough, so we pull it earlier and blister it harder. Peaches on pie in July, collards on pie in January.",
     p2: "Walk up from the trail. Bike racks out front, water bowls on the patio.",
     age: "3 days ago",
   },
@@ -138,7 +138,7 @@ const demos: DemoEntry[] = [
     locEm: "East Side",
     path: "/aus-east",
     h: "Texas heat. Italian oven. No BBQ pizza, we promise.",
-    p1: "East Austin gets a crust with more hydration \u2014 the summer sun demands it. The oven runs hot, the A/C runs hotter, and the back patio has misters from May to October. Local Texas mozz, Blue Bonnet flour, jalape\u00f1os from the farm up the road.",
+    p1: "East Austin gets a crust with more hydration. The summer sun demands it. The oven runs hot, the A/C runs hotter, and the back patio has misters from May to October. Local Texas mozz, Blue Bonnet flour, jalape\u00f1os from the farm up the road.",
     p2: "SXSW hours posted weekly. Queso pizza exists. We admit nothing.",
     age: "Today",
   },
@@ -147,7 +147,7 @@ const demos: DemoEntry[] = [
     locEm: "Silver Lake",
     path: "/la-silverlake",
     h: "A Los Angeles pie that isn\u2019t trying to be New York.",
-    p1: "Sunset Boulevard gets our California angle \u2014 Weiser Farms onions, Bellwether burrata, a nettle pesto from early spring till we run out. Crust is lighter than our East-Coast cousins, and the dough ferments under the Silver Lake sun on the windowsill.",
+    p1: "Sunset Boulevard gets our California angle. Weiser Farms onions, Bellwether burrata, a nettle pesto from early spring till we run out. Crust is lighter than our East-Coast cousins, and the dough ferments under the Silver Lake sun on the windowsill.",
     p2: "Open for lunch. Parking is a myth; walk from the reservoir.",
     age: "Yesterday",
   },
@@ -262,7 +262,7 @@ export default function Home() {
             </h1>
             <p className="text-base leading-[1.55] text-ink-70 max-w-[46ch] mb-10 font-mono">
               Pulp writes local landing pages, menus, and ad copy for each of
-              your storefronts — in your voice, tuned to the neighborhood,
+              your storefronts, in your voice, tuned to the neighborhood,
               refreshed weekly.
             </p>
             <div className="flex gap-2.5 items-center flex-wrap">
@@ -511,7 +511,7 @@ export default function Home() {
               </h4>
               <p className="text-[13px] leading-[1.55] text-white/75 m-0">
                 Upload past copy once. Pulp extracts a fingerprint across six
-                tone dimensions — cadence, vocabulary, forbidden words, mood —
+                tone dimensions (cadence, vocabulary, forbidden words, mood)
                 and enforces it on every word that ships.
               </p>
               <div className="mt-auto h-[100px] flex items-center justify-center text-white">
@@ -925,7 +925,7 @@ export default function Home() {
             We shipped{" "}
             <span className="font-[800]">412 location pages</span> in a
             weekend. Google traffic <em className="italic">tripled</em> in six
-            weeks — and every page actually sounds like us.
+            weeks, and every page actually sounds like us.
           </blockquote>
           <div className="mt-11 flex gap-3.5 items-center text-[11px] tracking-[0.2em] uppercase text-white/70">
             <div className="w-11 h-11 rounded-full bg-white text-ink flex items-center justify-center font-display font-[800] text-xl">
