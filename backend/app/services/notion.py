@@ -4,8 +4,12 @@ import logging
 import re
 import uuid
 from typing import Any, Optional
+import httpx
 from notion_client import Client
 from app.config import NOTION_API_KEY, NOTION_DATABASE_ID
+
+NOTION_API_BASE = "https://api.notion.com/v1"
+NOTION_VERSION = "2022-06-28"
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +108,6 @@ def _blocks_to_markdown(blocks: list[dict]) -> str:
 
 
 def list_templates(brand: Optional[str] = None) -> list[dict]:
-    client = _get_client()
     body: dict[str, Any] = {}
     if brand:
         body["filter"] = {"property": "Brand", "select": {"equals": brand}}
@@ -114,11 +117,17 @@ def list_templates(brand: Optional[str] = None) -> list[dict]:
     ]
 
     db_id = _normalize_database_id(NOTION_DATABASE_ID)
-    result = client.request(
-        path=f"databases/{db_id}/query",
-        method="POST",
-        body=body,
-    )
+    url = f"{NOTION_API_BASE}/databases/{db_id}/query"
+    headers = {
+        "Authorization": f"Bearer {NOTION_API_KEY}",
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+    }
+
+    with httpx.Client(timeout=30) as http:
+        resp = http.post(url, json=body, headers=headers)
+        resp.raise_for_status()
+        result = resp.json()
 
     return [_page_to_summary(page) for page in result.get("results", [])]
 
