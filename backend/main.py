@@ -7,7 +7,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import FRONTEND_URL
-from app.routers import auth, brief, score, generate
+from app.routers import auth, brief, score, generate, brands, style_examples, generations
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,6 +25,9 @@ app.include_router(auth.router)
 app.include_router(brief.router)
 app.include_router(score.router)
 app.include_router(generate.router)
+app.include_router(brands.router)
+app.include_router(style_examples.router)
+app.include_router(generations.router)
 
 
 @app.get("/health")
