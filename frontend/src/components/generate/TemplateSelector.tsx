@@ -54,7 +54,7 @@ export function TemplateSelector({ brandName, selectedId, onSelect }: TemplateSe
       >
         <option value="">{loading ? "Loading templates..." : "Select a template"}</option>
         {templates.map(t => (
-          <option key={t.id} value={t.id}>{t.name} ({t.page_type})</option>
+          <option key={t.id} value={t.id}>{t.name === "Local Landing Page" ? "City Landing Page" : t.name}</option>
         ))}
       </select>
     </div>

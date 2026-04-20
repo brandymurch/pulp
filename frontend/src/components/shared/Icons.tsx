@@ -2,7 +2,7 @@ export function SliceMark({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      viewBox="0 0 280 260"
+      viewBox="-5 20 285 240"
       overflow="visible"
       fill="none"
       stroke="currentColor"

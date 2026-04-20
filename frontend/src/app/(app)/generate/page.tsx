@@ -19,6 +19,7 @@ export default function GeneratePage() {
   const [keyword, setKeyword] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [contentType, setContentType] = useState("landing_page");
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
 
@@ -368,7 +369,21 @@ export default function GeneratePage() {
             keyword={keyword} city={city} state={state}
             onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState}
           />
-          <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
+          <div className="grid grid-cols-3 gap-4 max-[820px]:grid-cols-1">
+            {/* Content type */}
+            <div>
+              <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Content type</label>
+              <select
+                value={contentType}
+                onChange={e => setContentType(e.target.value)}
+                className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
+              >
+                <option value="landing_page">Landing Page</option>
+                <option value="service_page">Service Page</option>
+                <option value="blog_post">Blog Post</option>
+                <option value="product_page">Product Page</option>
+              </select>
+            </div>
             <TemplateSelector
               brandName={brandName}
               selectedId={selectedTemplate?.id || ""}
