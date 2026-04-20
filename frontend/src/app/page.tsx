@@ -165,13 +165,13 @@ export default function Home() {
 
           <div className="flex gap-2">
             <a
-              href="#"
+              href="/sign-in"
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] border border-line text-ink hover:border-ink transition-all"
             >
               Sign in
             </a>
             <a
-              href="#"
+              href="/sign-in"
               className="group inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] bg-ink text-white border border-transparent hover:-translate-y-px transition-transform"
             >
               Start free{" "}
@@ -216,7 +216,7 @@ export default function Home() {
             </p>
             <div className="flex gap-2.5 items-center flex-wrap">
               <a
-                href="#"
+                href="/sign-in"
                 className="group inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] bg-ink text-white border border-transparent hover:-translate-y-px transition-transform"
               >
                 Start pressing{" "}
@@ -905,14 +905,14 @@ export default function Home() {
           </h2>
           <div className="flex gap-3 items-center flex-wrap">
             <a
-              href="#"
+              href="/sign-in"
               className="group inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] bg-ink text-white border border-transparent hover:-translate-y-px transition-transform"
             >
               Press publish free{" "}
               <ArrowIcon className="transition-transform group-hover:translate-x-[3px]" />
             </a>
             <a
-              href="#"
+              href="/sign-in"
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-medium tracking-[0.04em] border border-line text-ink hover:border-ink transition-all"
             >
               Book a 15-min tour
