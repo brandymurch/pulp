@@ -33,6 +33,7 @@ export default function GeneratePage() {
   const [outlineData, setOutlineData] = useState<any>(null);
   const [popScore, setPopScore] = useState<any>(null);
   const [revisionCount, setRevisionCount] = useState(0);
+  const [brands, setBrands] = useState<any[]>([]);
   const [brandId, setBrandId] = useState<string>("");
   const [brandName, setBrandName] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -41,23 +42,24 @@ export default function GeneratePage() {
 
   const gen = useGeneration();
 
-  // Load brand on mount so TemplateSelector can query by brand name
+  // Load brands on mount
   useEffect(() => {
-    async function loadBrand() {
+    async function loadBrands() {
       try {
         const res = await apiFetch("/api/brands");
         if (res.ok) {
-          const brands = await res.json();
-          if (brands.length > 0) {
-            setBrandId(brands[0].id);
-            setBrandName(brands[0].name);
+          const data = await res.json();
+          setBrands(data);
+          if (data.length > 0) {
+            setBrandId(data[0].id);
+            setBrandName(data[0].name);
           }
         }
       } catch {
         // brands endpoint not available
       }
     }
-    loadBrand();
+    loadBrands();
   }, []);
 
   // Helper to update a specific step
@@ -342,6 +344,26 @@ export default function GeneratePage() {
       {/* INPUTS (idle phase) */}
       {phase === "idle" && (
         <div className="space-y-4">
+          {/* Brand selector */}
+          <div>
+            <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Brand</label>
+            <select
+              value={brandId}
+              onChange={e => {
+                const brand = brands.find(b => b.id === e.target.value);
+                if (brand) {
+                  setBrandId(brand.id);
+                  setBrandName(brand.name);
+                  setSelectedTemplate(null);
+                }
+              }}
+              className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
+            >
+              {brands.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
           <KeywordInput
             keyword={keyword} city={city} state={state}
             onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState}
