@@ -29,11 +29,16 @@ class BriefResponse(BaseModel):
 # Generate
 class GenerateRequest(BaseModel):
     keyword: str
-    brief: dict[str, Any]
-    business_name: str
     city: str
+    state: str = ""
+    brief: dict[str, Any]
+    template: Optional[dict[str, Any]] = None
+    outline: Optional[dict[str, Any]] = None
+    style_examples: Optional[list[dict[str, Any]]] = None
+    competitor_content: Optional[list[dict[str, Any]]] = None
     services: list[str] = []
     content_type: str = "blog_post"
+    business_name: str = ""
 
 
 class GenerateResponse(BaseModel):
@@ -44,17 +49,21 @@ class GenerateResponse(BaseModel):
 
 class OutlineRequest(BaseModel):
     keyword: str
-    brief: dict[str, Any]
-    business_name: str
     city: str
+    state: str = ""
+    brief: dict[str, Any]
+    template: Optional[dict[str, Any]] = None
+    paa_questions: Optional[list[str]] = None
+    competitors: Optional[list[dict[str, Any]]] = None
     services: list[str] = []
-    content_type: str = "blog_post"
+    business_name: str = ""
 
 
 class ReviseRequest(BaseModel):
     content: str
     keyword: str
     brief: dict[str, Any]
+    pop_feedback: dict[str, Any] = {}
     instructions: str = ""
 
 
