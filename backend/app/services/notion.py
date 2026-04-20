@@ -106,17 +106,11 @@ def list_templates(brand: Optional[str] = None) -> list[dict]:
         {"property": "Page Type", "direction": "ascending"},
     ]
 
-    # notion-client v3 uses data_sources.query, but it requires the database
-    # to be a "data source". Fall back to the raw REST API if that fails.
-    try:
-        result = client.data_sources.query(data_source_id=NOTION_DATABASE_ID, **body)
-    except Exception:
-        # Fallback: use the raw POST /v1/databases/{id}/query endpoint
-        result = client.request(
-            path=f"databases/{NOTION_DATABASE_ID}/query",
-            method="POST",
-            body=body,
-        )
+    result = client.request(
+        path=f"databases/{NOTION_DATABASE_ID}/query",
+        method="POST",
+        body=body,
+    )
 
     return [_page_to_summary(page) for page in result.get("results", [])]
 
