@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { useGeneration } from "@/hooks/useGeneration";
 import { Button } from "@/components/shared/Button";
@@ -34,11 +34,31 @@ export default function GeneratePage() {
   const [popScore, setPopScore] = useState<any>(null);
   const [revisionCount, setRevisionCount] = useState(0);
   const [brandId, setBrandId] = useState<string>("");
+  const [brandName, setBrandName] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
 
   const gen = useGeneration();
+
+  // Load brand on mount so TemplateSelector can query by brand name
+  useEffect(() => {
+    async function loadBrand() {
+      try {
+        const res = await apiFetch("/api/brands");
+        if (res.ok) {
+          const brands = await res.json();
+          if (brands.length > 0) {
+            setBrandId(brands[0].id);
+            setBrandName(brands[0].name);
+          }
+        }
+      } catch {
+        // brands endpoint not available
+      }
+    }
+    loadBrand();
+  }, []);
 
   // Helper to update a specific step
   const updateStep = useCallback((label: string, status: PipelineStep["status"]) => {
@@ -328,6 +348,7 @@ export default function GeneratePage() {
           />
           <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
             <TemplateSelector
+              brandName={brandName}
               selectedId={selectedTemplate?.id || ""}
               onSelect={setSelectedTemplate}
             />

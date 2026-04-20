@@ -10,18 +10,23 @@ interface Template {
 }
 
 interface TemplateSelectorProps {
+  brandName: string;
   selectedId: string;
   onSelect: (template: Template | null) => void;
 }
 
-export function TemplateSelector({ selectedId, onSelect }: TemplateSelectorProps) {
+export function TemplateSelector({ brandName, selectedId, onSelect }: TemplateSelectorProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
+      if (!brandName) {
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await apiFetch("/api/notion/templates?brand=USA+Insulation");
+        const res = await apiFetch(`/api/notion/templates?brand=${encodeURIComponent(brandName)}`);
         if (res.ok) {
           const data = await res.json();
           setTemplates(data);
@@ -33,7 +38,7 @@ export function TemplateSelector({ selectedId, onSelect }: TemplateSelectorProps
       }
     }
     load();
-  }, []);
+  }, [brandName]);
 
   return (
     <div>
