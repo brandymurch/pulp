@@ -23,7 +23,7 @@ class BriefRequest(BaseModel):
 class BriefResponse(BaseModel):
     target_word_count: int
     term_targets: list[dict[str, Any]]
-    lsa_phrases: list[str]
+    lsa_phrases: list[Any]
 
 
 # Generate
