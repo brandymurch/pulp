@@ -240,6 +240,7 @@ export default function GeneratePage() {
   // -- SCORING PHASE --
   async function scoreContent(content: string, currentRevisions: number = 0) {
     try {
+      // Start score job
       const res = await apiFetch("/api/score", {
         method: "POST",
         body: JSON.stringify({ content, keyword }),
@@ -248,7 +249,34 @@ export default function GeneratePage() {
         setPhase("done");
         return;
       }
-      const score = await res.json();
+      const { job_id } = await res.json();
+
+      // Poll for result (same pattern as brief)
+      let score = null;
+      for (let i = 0; i < 36; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        const pollRes = await apiFetch(`/api/score/status/${job_id}`);
+        if (!pollRes.ok) {
+          setPhase("done");
+          return;
+        }
+        const pollData = await pollRes.json();
+        if (pollData.status === "done") {
+          score = pollData;
+          break;
+        }
+        if (pollData.status === "error") {
+          setPhase("done");
+          return;
+        }
+      }
+
+      if (!score) {
+        setError("Scoring timed out");
+        setPhase("done");
+        return;
+      }
+
       setPopScore(score);
 
       // Auto-revise if score < 75 and under 2 revisions
