@@ -51,20 +51,21 @@ REGION_ABBREV = {
 
 
 def _normalize_location(location: str) -> str:
-    """Convert 'Columbus, OH' to 'Columbus,Ohio,United States' for POP API.
-    Also handles Canadian provinces: 'Toronto, ON' -> 'Toronto,Ontario,Canada'."""
+    """Convert 'columbus, oh' to 'Columbus,Ohio,United States' for POP API.
+    Also handles Canadian provinces: 'toronto, on' -> 'Toronto,Ontario,Canada'.
+    POP API is case-sensitive, so we title-case the city."""
     if not location:
         return "United States"
     parts = [p.strip() for p in location.split(",")]
     if len(parts) == 2:
-        city = parts[0]
-        abbrev = parts[1].upper()
+        city = parts[0].title()
+        abbrev = parts[1].strip().upper()
         if abbrev in REGION_ABBREV:
             region, country = REGION_ABBREV[abbrev]
             return f"{city},{region},{country}"
         return f"{city},{abbrev},United States"
     if len(parts) == 1:
-        return f"{parts[0]},United States"
+        return f"{parts[0].title()},United States"
     return location
 
 
