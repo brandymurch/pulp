@@ -35,9 +35,28 @@ async def generate_outline(req: OutlineRequest, _=Depends(require_auth)):
 @router.post("")
 async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
     """Generate full content via SSE stream."""
+    # Load brand voice settings if brand_id provided
+    voice_dimensions = None
+    voice_notes = None
+    brand_banned_words = None
+    if req.brand_id:
+        try:
+            from app.db import get_db
+            db = get_db()
+            brand = db.table("brands").select("voice_dimensions,voice_notes,brand_banned_words,services").eq("id", req.brand_id).single().execute()
+            if brand.data:
+                voice_dimensions = brand.data.get("voice_dimensions")
+                voice_notes = brand.data.get("voice_notes")
+                brand_banned_words = brand.data.get("brand_banned_words")
+        except Exception as e:
+            logger.warning(f"Could not load brand voice settings: {e}")
+
     system = build_system_prompt(
         template=req.template,
         style_examples=req.style_examples,
+        voice_dimensions=voice_dimensions,
+        voice_notes=voice_notes,
+        brand_banned_words=brand_banned_words,
     )
     user = build_user_prompt(
         keyword=req.keyword, city=req.city, state=req.state,

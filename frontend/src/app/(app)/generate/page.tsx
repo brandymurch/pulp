@@ -214,6 +214,7 @@ export default function GeneratePage() {
       template: templateContent,
       style_examples: styleExamples,
       competitor_content: competitors,
+      brand_id: brandId,
     });
 
     // After generation completes, score

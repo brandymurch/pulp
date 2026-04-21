@@ -39,6 +39,7 @@ class GenerateRequest(BaseModel):
     services: list[str] = []
     content_type: str = "blog_post"
     business_name: str = ""
+    brand_id: Optional[str] = None
 
 
 class GenerateResponse(BaseModel):

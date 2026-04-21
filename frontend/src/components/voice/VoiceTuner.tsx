@@ -22,8 +22,9 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
 
   useEffect(() => {
     if (!brand) return;
+    const dims = brand.voice_dimensions;
     setDimensions(
-      brand.voice_dimensions || [
+      Array.isArray(dims) && dims.length > 0 ? dims : [
         { key: "Warmth", value: 50 },
         { key: "Wit", value: 50 },
         { key: "Formality", value: 50 },

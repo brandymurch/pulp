@@ -47,9 +47,14 @@ def build_system_prompt(
     template: Optional[dict] = None,
     style_examples: Optional[list] = None,
     services: Optional[list] = None,
+    voice_dimensions: Optional[list] = None,
+    voice_notes: Optional[str] = None,
+    brand_banned_words: Optional[list] = None,
 ) -> str:
     """Build system prompt for content generation."""
     banned = _load_banned_words()
+    if brand_banned_words:
+        banned = banned + brand_banned_words
 
     parts = [
         "You are an expert SEO content writer. Write comprehensive, well-structured content optimized for search engines.",
@@ -71,6 +76,19 @@ def build_system_prompt(
         parts.append("BANNED WORDS AND PHRASES (never use these):")
         for word in banned:
             parts.append(f'- "{word}"')
+
+    if voice_dimensions:
+        dims_with_values = [d for d in voice_dimensions if d.get("value", 0) > 0]
+        if dims_with_values:
+            parts.append("")
+            parts.append("VOICE TONE DIMENSIONS (calibrate your writing to match these levels, 0=none, 100=maximum):")
+            for d in dims_with_values:
+                parts.append(f"- {d['key']}: {d['value']}/100")
+
+    if voice_notes:
+        parts.append("")
+        parts.append("VOICE INSTRUCTIONS (follow these exactly):")
+        parts.append(voice_notes)
 
     if template:
         parts.append("")
