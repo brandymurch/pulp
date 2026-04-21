@@ -39,15 +39,17 @@ async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
     voice_dimensions = None
     voice_notes = None
     brand_banned_words = None
+    brand_guidelines = None
     if req.brand_id:
         try:
             from app.db import get_db
             db = get_db()
-            brand = db.table("brands").select("voice_dimensions,voice_notes,brand_banned_words,services").eq("id", req.brand_id).single().execute()
+            brand = db.table("brands").select("voice_dimensions,voice_notes,brand_banned_words,services,brand_guidelines").eq("id", req.brand_id).single().execute()
             if brand.data:
                 voice_dimensions = brand.data.get("voice_dimensions")
                 voice_notes = brand.data.get("voice_notes")
                 brand_banned_words = brand.data.get("brand_banned_words")
+                brand_guidelines = brand.data.get("brand_guidelines")
         except Exception as e:
             logger.warning(f"Could not load brand voice settings: {e}")
 
@@ -57,6 +59,7 @@ async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
         voice_dimensions=voice_dimensions,
         voice_notes=voice_notes,
         brand_banned_words=brand_banned_words,
+        brand_guidelines=brand_guidelines,
     )
     user = build_user_prompt(
         keyword=req.keyword, city=req.city, state=req.state,

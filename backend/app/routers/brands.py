@@ -15,6 +15,7 @@ class UpdateBrandRequest(BaseModel):
     brand_banned_words: Optional[list[str]] = None
     default_tone: Optional[str] = None
     services: Optional[list[str]] = None
+    brand_guidelines: Optional[str] = None
 
 
 @router.get("")

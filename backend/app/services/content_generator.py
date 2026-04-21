@@ -50,6 +50,7 @@ def build_system_prompt(
     voice_dimensions: Optional[list] = None,
     voice_notes: Optional[str] = None,
     brand_banned_words: Optional[list] = None,
+    brand_guidelines: Optional[str] = None,
 ) -> str:
     """Build system prompt for content generation."""
     banned = _load_banned_words()
@@ -107,6 +108,11 @@ def build_system_prompt(
         for s in services:
             parts.append(f"- {s}")
         parts.append("Do NOT mention services not in this list.")
+
+    if brand_guidelines:
+        parts.append("")
+        parts.append("BRAND GUIDELINES (follow these strictly):")
+        parts.append(brand_guidelines)
 
     return "\n".join(parts)
 
