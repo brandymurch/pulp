@@ -86,28 +86,23 @@ export default function GeneratePage() {
     ];
     setSteps(initialSteps);
 
-    // Fetch brand ID first
-    try {
-      const brandsRes = await apiFetch("/api/brands");
-      if (brandsRes.ok) {
-        const brands = await brandsRes.json();
-        if (brands.length > 0) setBrandId(brands[0].id);
-      }
-    } catch {}
-
     // Fire parallel research calls
+    const currentBrandId = brandId;
     const results = await Promise.allSettled([
       // 0: POP brief (REQUIRED)
       apiFetch("/api/brief", {
         method: "POST",
         body: JSON.stringify({ keyword, location: `${city}, ${state}` }),
       }).then(async r => {
-        if (!r.ok) throw new Error("Brief fetch failed");
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ detail: "Brief fetch failed" }));
+          throw new Error(err.detail || "Brief fetch failed");
+        }
         return r.json();
       }),
 
-      // 1: Style examples (REQUIRED)
-      apiFetch(`/api/style-examples?brand_id=${brandId || ""}`).then(async r => {
+      // 1: Style examples (OPTIONAL - empty is fine)
+      apiFetch(`/api/style-examples?brand_id=${currentBrandId}`).then(async r => {
         if (!r.ok) return [];
         return r.json();
       }),
@@ -143,16 +138,21 @@ export default function GeneratePage() {
 
     // Process results
     const labels = ["POP brief", "Style examples", "Template", "Competitors", "PAA questions"];
-    const required = [true, true, !!selectedTemplate, false, false];
+    // Only POP brief is truly required. Everything else degrades gracefully.
+    const required = [true, false, false, false, false];
 
     let aborted = false;
+    const failedSteps: string[] = [];
     results.forEach((result, i) => {
       if (initialSteps[i].status === "skipped") return;
       if (result.status === "fulfilled") {
         updateStep(labels[i], "done");
       } else {
+        const reason = (result as any).reason?.message || "Unknown error";
+        console.error(`Pipeline step "${labels[i]}" failed:`, reason);
         if (required[i]) {
           updateStep(labels[i], "failed");
+          failedSteps.push(`${labels[i]}: ${reason}`);
           aborted = true;
         } else {
           updateStep(labels[i], "skipped");
@@ -161,7 +161,7 @@ export default function GeneratePage() {
     });
 
     if (aborted) {
-      setError("Required research step failed. Check your API keys and try again.");
+      setError(`Required step failed: ${failedSteps.join("; ")}`);
       setPhase("idle");
       return;
     }
