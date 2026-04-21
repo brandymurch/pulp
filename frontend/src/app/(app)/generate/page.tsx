@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { useGeneration } from "@/hooks/useGeneration";
 import { Button } from "@/components/shared/Button";
@@ -42,6 +42,9 @@ export default function GeneratePage() {
   const [exportUrl, setExportUrl] = useState<string | null>(null);
 
   const gen = useGeneration();
+  // Ref to always have current content (avoids stale closure issues)
+  const contentRef = useRef("");
+  useEffect(() => { contentRef.current = gen.output; }, [gen.output]);
 
   // Load brands on mount
   useEffect(() => {
@@ -261,7 +264,7 @@ export default function GeneratePage() {
         });
         // Re-score after revision
         setPhase("scoring");
-        await scoreContent(gen.output || content, nextRevision);
+        await scoreContent(contentRef.current || gen.output || content, nextRevision);
       } else {
         setPhase("done");
       }
@@ -468,7 +471,7 @@ export default function GeneratePage() {
           <div className="flex gap-2">
             <Button variant="ink" size="sm" onClick={async () => {
               setPhase("scoring");
-              await scoreContent(gen.output || "");
+              await scoreContent(contentRef.current || gen.output || "");
             }}>
               Score content
             </Button>
