@@ -1,12 +1,13 @@
 """Brief router - POP optimization brief endpoint.
 
-Uses async task pattern to avoid Render's 30s request timeout.
+Uses background thread pattern to avoid Render's 30s request timeout.
 POST /api/brief starts the POP task, returns a job_id.
 GET /api/brief/status/:job_id polls for the result.
 """
 from __future__ import annotations
 import asyncio
 import logging
+import threading
 import uuid
 from typing import Any
 
@@ -21,22 +22,25 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["brief"])
 
-# In-memory job store (adequate for single-instance Render starter plan)
+# In-memory job store
 _jobs: dict[str, dict[str, Any]] = {}
 
 
-async def _run_brief_job(job_id: str, keyword: str, target_url: str, location: str):
-    """Run the POP brief in the background and store result."""
+def _run_brief_job_sync(job_id: str, keyword: str, target_url: str, location: str):
+    """Run the POP brief in a background thread with its own event loop."""
+    loop = asyncio.new_event_loop()
     try:
-        result = await get_enriched_brief(
+        result = loop.run_until_complete(get_enriched_brief(
             keyword=keyword,
             target_url=target_url,
             location_name=location,
-        )
+        ))
         _jobs[job_id] = {"status": "done", "result": result}
     except Exception as e:
         logger.error(f"Brief job {job_id} failed: {e}")
         _jobs[job_id] = {"status": "error", "error": str(e)}
+    finally:
+        loop.close()
 
 
 @router.post("/api/brief")
@@ -48,13 +52,13 @@ async def create_brief(req: BriefRequest, _auth: dict = Depends(require_auth)):
     job_id = str(uuid.uuid4())
     _jobs[job_id] = {"status": "pending"}
 
-    # Fire and forget - runs in the background
-    asyncio.create_task(_run_brief_job(
-        job_id=job_id,
-        keyword=req.keyword,
-        target_url=req.target_url or "",
-        location=req.location or "",
-    ))
+    # Run in a background thread so it survives the request lifecycle
+    thread = threading.Thread(
+        target=_run_brief_job_sync,
+        args=(job_id, req.keyword, req.target_url or "", req.location or ""),
+        daemon=True,
+    )
+    thread.start()
 
     return {"job_id": job_id, "status": "pending"}
 
@@ -70,13 +74,11 @@ async def get_brief_status(job_id: str, _auth: dict = Depends(require_auth)):
         return {"status": "pending"}
 
     if job["status"] == "error":
-        # Clean up
         _jobs.pop(job_id, None)
         raise HTTPException(status_code=500, detail=job["error"])
 
     if job["status"] == "done":
         result = job["result"]
-        # Clean up
         _jobs.pop(job_id, None)
         return {
             "status": "done",
