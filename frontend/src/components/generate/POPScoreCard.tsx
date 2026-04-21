@@ -21,7 +21,7 @@ export function POPScoreCard({ score, onRevise, isRevising }: POPScoreCardProps)
     <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
       <div className="px-6 py-4 border-b-[1.5px] border-ink">
         <h3 className="font-display font-[800] text-base tracking-[-0.02em] m-0">
-          POP <span className="font-display italic font-normal">score</span>
+          SEO <span className="font-display italic font-normal">score</span>
         </h3>
       </div>
 
@@ -62,7 +62,7 @@ export function POPScoreCard({ score, onRevise, isRevising }: POPScoreCardProps)
         {/* Revise button */}
         {onRevise && (
           <Button variant="ghost" size="sm" onClick={onRevise} disabled={isRevising}>
-            {isRevising ? "Revising..." : "Revise with POP feedback"}
+            {isRevising ? "Revising..." : "Revise with SEO feedback"}
           </Button>
         )}
       </div>

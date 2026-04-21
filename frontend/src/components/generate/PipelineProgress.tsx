@@ -76,7 +76,7 @@ export function PipelineProgress({ steps }: PipelineProgressProps) {
       </div>
       {hasLoading && (
         <div className="text-[11px] text-ink-40">
-          POP brief can take up to 2 minutes for competitive keywords.
+          SEO analysis can take up to 2 minutes for competitive keywords.
         </div>
       )}
     </div>

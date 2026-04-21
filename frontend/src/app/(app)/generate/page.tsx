@@ -78,7 +78,7 @@ export default function GeneratePage() {
     setRevisionCount(0);
 
     const initialSteps: PipelineStep[] = [
-      { label: "POP brief", status: "loading" },
+      { label: "SEO brief", status: "loading" },
       { label: "Style examples", status: "loading" },
       { label: "Template", status: selectedTemplate ? "loading" : "skipped" },
       { label: "Competitors", status: competitorUrls.length > 0 ? "loading" : "skipped" },
@@ -111,7 +111,7 @@ export default function GeneratePage() {
           if (pollData.status === "done") return pollData;
           if (pollData.status === "error") throw new Error(pollData.error || "Brief failed");
         }
-        throw new Error("POP brief timed out after 3 minutes");
+        throw new Error("SEO brief timed out after 3 minutes");
       }),
 
       // 1: Style examples (OPTIONAL - empty is fine)
@@ -150,8 +150,8 @@ export default function GeneratePage() {
     ]);
 
     // Process results
-    const labels = ["POP brief", "Style examples", "Template", "Competitors", "PAA questions"];
-    // Only POP brief is truly required. Everything else degrades gracefully.
+    const labels = ["SEO brief", "Style examples", "Template", "Competitors", "PAA questions"];
+    // Only SEO brief is truly required. Everything else degrades gracefully.
     const required = [true, false, false, false, false];
 
     let aborted = false;
@@ -348,11 +348,11 @@ export default function GeneratePage() {
           </h1>
           <p className="text-[13px] text-ink-70 mt-2">
             {phase === "idle" && "Enter a keyword and city, select a template, and let the pipeline do the rest."}
-            {phase === "researching" && `Pulling POP brief, competitors, and PAA data for "${keyword}"`}
+            {phase === "researching" && `Analyzing SEO landscape for "${keyword}"`}
             {phase === "outline" && "Review the outline below. Edit headings or key points, then approve to start writing."}
-            {phase === "generating" && "Claude is writing content against the POP brief and your voice settings."}
-            {phase === "scoring" && "Running POP score analysis on the generated content."}
-            {phase === "revising" && "Claude is revising based on POP feedback to improve the score."}
+            {phase === "generating" && "Writing content against the SEO brief and your voice settings."}
+            {phase === "scoring" && "Running SEO score analysis on the generated content."}
+            {phase === "revising" && "Revising based on SEO feedback to improve the score."}
             {phase === "done" && "Content is ready. Review, edit, save, or export."}
           </p>
         </div>
@@ -446,7 +446,7 @@ export default function GeneratePage() {
           {phase === "revising" && (
             <div className="text-[11px] tracking-[0.04em] text-ink-70 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber animate-pulse" />
-              Auto-revising (round {revisionCount}/2) based on POP feedback...
+              Auto-revising (round {revisionCount}/2) based on SEO feedback...
             </div>
           )}
           <ContentViewer content={gen.output} isStreaming={gen.isGenerating} />
@@ -460,7 +460,7 @@ export default function GeneratePage() {
       {phase === "scoring" && (
         <div className="text-[13px] text-ink-70 animate-pulse flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-ink animate-pulse" />
-          Scoring with POP...
+          Analyzing SEO score...
         </div>
       )}
 

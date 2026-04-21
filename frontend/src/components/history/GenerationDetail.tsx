@@ -33,7 +33,7 @@ export function GenerationDetail({ generation, onClose }: GenerationDetailProps)
           <span>Model: {g.model}</span>
           {g.input_tokens > 0 && <span>Tokens: {g.input_tokens.toLocaleString()} in / {g.output_tokens.toLocaleString()} out</span>}
           {g.revision_count > 0 && <span>Revisions: {g.revision_count}</span>}
-          {g.pop_score && <span className="text-ink-70">POP: {g.pop_score.overall_score}/100</span>}
+          {g.pop_score && <span className="text-ink-70">SEO: {g.pop_score.overall_score}/100</span>}
         </div>
 
         {/* Content */}
