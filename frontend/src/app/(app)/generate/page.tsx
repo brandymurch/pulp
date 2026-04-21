@@ -339,11 +339,11 @@ export default function GeneratePage() {
         <div>
           <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
             {phase === "idle" && "Generate"}
-            {phase === "researching" && "Researching"}
+            {phase === "researching" && <><span>Researching</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
             {phase === "outline" && "Review outline"}
-            {phase === "generating" && "Writing"}
-            {phase === "scoring" && "Scoring"}
-            {phase === "revising" && "Revising"}
+            {phase === "generating" && <><span>Writing</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
+            {phase === "scoring" && <><span>Scoring</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
+            {phase === "revising" && <><span>Revising</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
             {phase === "done" && "Done"}
           </h1>
           <p className="text-[13px] text-ink-70 mt-2">
