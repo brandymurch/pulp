@@ -123,9 +123,9 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
             </div>
 
             <div className="flex gap-2 items-center">
-              <Button variant="light" size="sm" onClick={handleSave} disabled={saving || saved} className="border-white text-white bg-transparent hover:bg-white hover:text-ink">
+              <button onClick={handleSave} disabled={saving || saved} className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] border-pulp bg-pulp text-white cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-[4px_4px_0_0_rgba(255,106,26,0.4)] disabled:opacity-50 disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-none">
                 {saving ? "Saving..." : saved ? "Saved" : "Save voice settings"}
-              </Button>
+              </button>
               {saved && <span className="text-[11px] text-[#7FE295]">Updated</span>}
             </div>
           </div>
