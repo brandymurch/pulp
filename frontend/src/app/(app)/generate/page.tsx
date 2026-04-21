@@ -89,7 +89,7 @@ export default function GeneratePage() {
     // Fire parallel research calls
     const currentBrandId = brandId;
     const results = await Promise.allSettled([
-      // 0: POP brief (REQUIRED)
+      // 0: POP brief (REQUIRED) - async job pattern to avoid 30s timeout
       apiFetch("/api/brief", {
         method: "POST",
         body: JSON.stringify({ keyword, location: `${city}, ${state}` }),
@@ -98,7 +98,20 @@ export default function GeneratePage() {
           const err = await r.json().catch(() => ({ detail: "Brief fetch failed" }));
           throw new Error(err.detail || "Brief fetch failed");
         }
-        return r.json();
+        const { job_id } = await r.json();
+        // Poll for result every 5 seconds, up to 3 minutes
+        for (let i = 0; i < 36; i++) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          const pollRes = await apiFetch(`/api/brief/status/${job_id}`);
+          if (!pollRes.ok) {
+            const err = await pollRes.json().catch(() => ({ detail: "Brief failed" }));
+            throw new Error(err.detail || "Brief failed");
+          }
+          const pollData = await pollRes.json();
+          if (pollData.status === "done") return pollData;
+          if (pollData.status === "error") throw new Error(pollData.error || "Brief failed");
+        }
+        throw new Error("POP brief timed out after 3 minutes");
       }),
 
       // 1: Style examples (OPTIONAL - empty is fine)
