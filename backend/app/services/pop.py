@@ -69,7 +69,7 @@ def _normalize_location(location: str) -> str:
     return location
 
 
-async def _poll_task(task_id: str, max_attempts: int = 30, interval: float = 3.0) -> dict:
+async def _poll_task(task_id: str, max_attempts: int = 60, interval: float = 3.0) -> dict:
     """Poll POP API for task results."""
     async with httpx.AsyncClient(timeout=15) as client:
         for _ in range(max_attempts):
