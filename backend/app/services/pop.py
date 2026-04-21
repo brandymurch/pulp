@@ -92,7 +92,13 @@ async def _get_terms(
     location_name: str | None = None,
 ) -> dict:
     """Get POP terms for a keyword."""
-    location = _normalize_location(location_name or "")
+    # POP API only accepts country-level locations (e.g. "United States", "Canada")
+    # City/state info is used in the Claude prompt, not here.
+    location = "United States"
+    if location_name:
+        normalized = _normalize_location(location_name)
+        if normalized.endswith(",Canada"):
+            location = "Canada"
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
