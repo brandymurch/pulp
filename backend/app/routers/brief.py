@@ -80,9 +80,7 @@ async def get_brief_status(job_id: str, _auth: dict = Depends(require_auth)):
         _jobs.pop(job_id, None)
         return {
             "status": "done",
-            "target_word_count": result["target_word_count"],
-            "term_targets": result["term_targets"],
-            "lsa_phrases": result["lsa_phrases"],
+            **result,
         }
 
     return {"status": "unknown"}

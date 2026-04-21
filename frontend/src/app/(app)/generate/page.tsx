@@ -338,10 +338,22 @@ export default function GeneratePage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
-            Generate
+            {phase === "idle" && "Generate"}
+            {phase === "researching" && "Researching"}
+            {phase === "outline" && "Review outline"}
+            {phase === "generating" && "Writing"}
+            {phase === "scoring" && "Scoring"}
+            {phase === "revising" && "Revising"}
+            {phase === "done" && "Done"}
           </h1>
           <p className="text-[13px] text-ink-70 mt-2">
-            Enter a keyword and city, select a template, and let the pipeline do the rest.
+            {phase === "idle" && "Enter a keyword and city, select a template, and let the pipeline do the rest."}
+            {phase === "researching" && `Pulling POP brief, competitors, and PAA data for "${keyword}"`}
+            {phase === "outline" && "Review the outline below. Edit headings or key points, then approve to start writing."}
+            {phase === "generating" && "Claude is writing content against the POP brief and your voice settings."}
+            {phase === "scoring" && "Running POP score analysis on the generated content."}
+            {phase === "revising" && "Claude is revising based on POP feedback to improve the score."}
+            {phase === "done" && "Content is ready. Review, edit, save, or export."}
           </p>
         </div>
         {phase !== "idle" && (

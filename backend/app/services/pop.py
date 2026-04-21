@@ -168,10 +168,49 @@ async def get_enriched_brief(
         and p.get("term", {}).get("type") != "keyword"
     ]
 
+    # Extract word count range
+    word_count_data = report.get("wordCount") or {}
+    target_word_count = word_count_data.get("target") or 1500
+    word_count_min = word_count_data.get("min") or 0
+    word_count_max = word_count_data.get("max") or 0
+    word_count_avg = word_count_data.get("average") or 0
+
+    # Extract keyword variations
+    variations = terms.get("variations", [])
+
+    # Extract competitor headings from the report
+    competitor_headings = []
+    structure = report.get("structureAnalysis") or report.get("structure") or {}
+    heading_data = structure.get("headings") or structure.get("h2") or []
+    if isinstance(heading_data, list):
+        for h in heading_data:
+            if isinstance(h, dict) and h.get("text"):
+                competitor_headings.append(h["text"])
+            elif isinstance(h, str):
+                competitor_headings.append(h)
+
+    # Also try to get headings from the brief's common headings
+    common_headings = []
+    for p in (brief.get("p") or []):
+        term_info = p.get("term") or {}
+        if term_info.get("type") == "heading":
+            common_headings.append(term_info.get("phrase", ""))
+
+    # Recommended heading count
+    recommended_headings = 0
+    if structure.get("avgHeadingCount"):
+        recommended_headings = int(structure["avgHeadingCount"])
+
     return {
-        "target_word_count": (report.get("wordCount") or {}).get("target") or 1500,
+        "target_word_count": target_word_count,
+        "word_count_min": word_count_min,
+        "word_count_max": word_count_max,
+        "word_count_avg": word_count_avg,
         "term_targets": term_targets,
         "lsa_phrases": terms.get("lsaPhrases", []),
+        "variations": [v.get("phrase", v) if isinstance(v, dict) else v for v in variations],
+        "competitor_headings": competitor_headings or common_headings,
+        "recommended_heading_count": recommended_headings,
     }
 
 

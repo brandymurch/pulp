@@ -124,15 +124,35 @@ def build_user_prompt(
 ) -> str:
     """Build user prompt with all context for full content generation."""
     target_word_count = brief.get("target_word_count", 1500)
+    word_count_min = brief.get("word_count_min", 0)
+    word_count_max = brief.get("word_count_max", 0)
     term_targets = brief.get("term_targets", [])
+    variations = brief.get("variations", [])
+    competitor_headings = brief.get("competitor_headings", [])
+    recommended_headings = brief.get("recommended_heading_count", 0)
 
     parts = [
         f"Write a landing page for **{city}, {state}**.",
         "",
         f"**Primary Keyword:** {keyword}",
         f"**Target Word Count:** {target_word_count} words",
-        "",
     ]
+
+    if word_count_min and word_count_max:
+        parts.append(f"  (Competitor range: {word_count_min}-{word_count_max} words, avg {brief.get('word_count_avg', 0)})")
+
+    if variations:
+        parts.append(f"**Keyword Variations (use naturally):** {', '.join(variations[:10])}")
+
+    if recommended_headings:
+        parts.append(f"**Recommended H2 count:** {recommended_headings} (based on top-ranking pages)")
+
+    if competitor_headings:
+        parts.append("**Common competitor headings (use as inspiration, do not copy):**")
+        for h in competitor_headings[:10]:
+            parts.append(f"  - {h}")
+
+    parts.append("")
 
     # Approved outline
     if outline:
@@ -215,11 +235,17 @@ def build_outline_prompt(
 
     target_wc = brief.get("target_word_count", 1500)
     terms = brief.get("term_targets", [])
+    variations = brief.get("variations", [])
+    pop_headings = brief.get("competitor_headings", [])
+    recommended_h2 = brief.get("recommended_heading_count", 0)
 
     user_parts = [
         f"Create a content outline for a landing page targeting \"{keyword}\" in {city}, {state}.",
         f"Target word count: {target_wc}",
     ]
+
+    if recommended_h2:
+        user_parts.append(f"Target approximately {recommended_h2} H2 sections (based on top-ranking competitors).")
 
     if terms:
         top_terms = sorted(terms, key=lambda t: t.get("weight", 0), reverse=True)[:15]
@@ -227,13 +253,21 @@ def build_outline_prompt(
         for t in top_terms:
             user_parts.append(f'  - "{t.get("phrase", "")}" ({t.get("target", 0)}x)')
 
+    if variations:
+        user_parts.append(f"Keyword variations to use naturally: {', '.join(variations[:8])}")
+
+    if pop_headings:
+        user_parts.append("Competitor headings from POP analysis (use as inspiration):")
+        for h in pop_headings[:10]:
+            user_parts.append(f"  - {h}")
+
     if paa:
         user_parts.append("People Also Ask questions (good H2 candidates):")
         for q in paa[:6]:
             user_parts.append(f"  - {q}")
 
     if competitors:
-        user_parts.append("Competitor headings for reference:")
+        user_parts.append("Scraped competitor headings for reference:")
         for comp in competitors[:3]:
             for h in (comp.get("headings") or [])[:5]:
                 user_parts.append(f"  - {h.get('text', '')}")
