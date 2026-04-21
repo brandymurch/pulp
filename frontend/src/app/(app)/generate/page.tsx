@@ -236,7 +236,7 @@ export default function GeneratePage() {
   }
 
   // -- SCORING PHASE --
-  async function scoreContent(content: string) {
+  async function scoreContent(content: string, currentRevisions: number = 0) {
     try {
       const res = await apiFetch("/api/score", {
         method: "POST",
@@ -250,9 +250,10 @@ export default function GeneratePage() {
       setPopScore(score);
 
       // Auto-revise if score < 75 and under 2 revisions
-      if (score.overall_score < 75 && revisionCount < 2) {
+      if (score.overall_score < 75 && currentRevisions < 2) {
+        const nextRevision = currentRevisions + 1;
+        setRevisionCount(nextRevision);
         setPhase("revising");
-        setRevisionCount(prev => prev + 1);
         await gen.generate("/api/generate/revise", {
           content,
           keyword,
@@ -261,7 +262,7 @@ export default function GeneratePage() {
         });
         // Re-score after revision
         setPhase("scoring");
-        await scoreContent(gen.output || content);
+        await scoreContent(gen.output || content, nextRevision);
       } else {
         setPhase("done");
       }
@@ -437,7 +438,10 @@ export default function GeneratePage() {
         <OutlineReview outline={outlineData} onApprove={startGeneration} />
       )}
       {phase === "outline" && !outlineData && (
-        <div className="text-[13px] text-ink-70 animate-pulse">Generating outline...</div>
+        <div className="border-[1.5px] border-line rounded-[14px] bg-white p-6 flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-ink animate-pulse" />
+          <span className="text-[13px] text-ink">Generating outline from SEO data...</span>
+        </div>
       )}
 
       {/* GENERATING / REVISING */}
