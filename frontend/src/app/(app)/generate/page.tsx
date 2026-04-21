@@ -12,7 +12,7 @@ import { ContentViewer } from "@/components/generate/ContentViewer";
 import { TermHeatmap } from "@/components/generate/TermHeatmap";
 import { POPScoreCard } from "@/components/generate/POPScoreCard";
 
-type Phase = "idle" | "researching" | "outline" | "generating" | "scoring" | "revising" | "done";
+type Phase = "idle" | "researching" | "outline" | "generating" | "review" | "scoring" | "revising" | "done";
 
 export default function GeneratePage() {
   // Inputs
@@ -190,7 +190,7 @@ export default function GeneratePage() {
     setStyleExamples(examples);
     setTemplateContent(tmpl);
     setCompetitors(comps);
-    setPaaQuestions(serpData.paa_questions || []);
+    setPaaQuestions([...(serpData.paa_questions || []), ...(serpData.ai_fanout_queries || [])]);
 
     // Move to outline phase
     setPhase("outline");
@@ -230,9 +230,8 @@ export default function GeneratePage() {
       brand_id: brandId,
     });
 
-    // After generation completes, score
-    setPhase("scoring");
-    await scoreContent(gen.output || "");
+    // After generation completes, show content for review before scoring
+    setPhase("review");
   }
 
   // -- SCORING PHASE --
@@ -343,6 +342,7 @@ export default function GeneratePage() {
             {phase === "researching" && <><span>Researching</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
             {phase === "outline" && "Review outline"}
             {phase === "generating" && <><span>Writing</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
+            {phase === "review" && "Review content"}
             {phase === "scoring" && <><span>Scoring</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
             {phase === "revising" && <><span>Revising</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
             {phase === "done" && "Done"}
@@ -352,6 +352,7 @@ export default function GeneratePage() {
             {phase === "researching" && `Analyzing SEO landscape for "${keyword}"`}
             {phase === "outline" && "Review the outline below. Edit headings or key points, then approve to start writing."}
             {phase === "generating" && "Writing content against the SEO brief and your voice settings."}
+            {phase === "review" && "Read through the content below. Edit if needed, then score to check SEO optimization."}
             {phase === "scoring" && "Running SEO score analysis on the generated content."}
             {phase === "revising" && "Revising based on SEO feedback to improve the score."}
             {phase === "done" && "Content is ready. Review, edit, save, or export."}
@@ -457,6 +458,24 @@ export default function GeneratePage() {
           {gen.isGenerating && (
             <Button variant="light" size="sm" onClick={gen.abort}>Cancel</Button>
           )}
+        </div>
+      )}
+
+      {/* REVIEW (read before scoring) */}
+      {phase === "review" && (
+        <div className="space-y-4">
+          <ContentViewer content={gen.output} onEdit={gen.setOutput} />
+          <div className="flex gap-2">
+            <Button variant="ink" size="sm" onClick={async () => {
+              setPhase("scoring");
+              await scoreContent(gen.output || "");
+            }}>
+              Score content
+            </Button>
+            <Button variant="light" size="sm" onClick={() => navigator.clipboard.writeText(gen.output)}>
+              Copy
+            </Button>
+          </div>
         </div>
       )}
 
