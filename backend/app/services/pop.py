@@ -11,6 +11,62 @@ from app.config import POP_API_KEY, POP_EXPOSE_URL, POP_TASK_URL
 
 logger = logging.getLogger(__name__)
 
+REGION_ABBREV = {
+    # US States
+    "AL": ("Alabama", "United States"), "AK": ("Alaska", "United States"),
+    "AZ": ("Arizona", "United States"), "AR": ("Arkansas", "United States"),
+    "CA": ("California", "United States"), "CO": ("Colorado", "United States"),
+    "CT": ("Connecticut", "United States"), "DE": ("Delaware", "United States"),
+    "FL": ("Florida", "United States"), "GA": ("Georgia", "United States"),
+    "HI": ("Hawaii", "United States"), "ID": ("Idaho", "United States"),
+    "IL": ("Illinois", "United States"), "IN": ("Indiana", "United States"),
+    "IA": ("Iowa", "United States"), "KS": ("Kansas", "United States"),
+    "KY": ("Kentucky", "United States"), "LA": ("Louisiana", "United States"),
+    "ME": ("Maine", "United States"), "MD": ("Maryland", "United States"),
+    "MA": ("Massachusetts", "United States"), "MI": ("Michigan", "United States"),
+    "MN": ("Minnesota", "United States"), "MS": ("Mississippi", "United States"),
+    "MO": ("Missouri", "United States"), "MT": ("Montana", "United States"),
+    "NE": ("Nebraska", "United States"), "NV": ("Nevada", "United States"),
+    "NH": ("New Hampshire", "United States"), "NJ": ("New Jersey", "United States"),
+    "NM": ("New Mexico", "United States"), "NY": ("New York", "United States"),
+    "NC": ("North Carolina", "United States"), "ND": ("North Dakota", "United States"),
+    "OH": ("Ohio", "United States"), "OK": ("Oklahoma", "United States"),
+    "OR": ("Oregon", "United States"), "PA": ("Pennsylvania", "United States"),
+    "RI": ("Rhode Island", "United States"), "SC": ("South Carolina", "United States"),
+    "SD": ("South Dakota", "United States"), "TN": ("Tennessee", "United States"),
+    "TX": ("Texas", "United States"), "UT": ("Utah", "United States"),
+    "VT": ("Vermont", "United States"), "VA": ("Virginia", "United States"),
+    "WA": ("Washington", "United States"), "WV": ("West Virginia", "United States"),
+    "WI": ("Wisconsin", "United States"), "WY": ("Wyoming", "United States"),
+    "DC": ("District of Columbia", "United States"),
+    # Canadian Provinces
+    "AB": ("Alberta", "Canada"), "BC": ("British Columbia", "Canada"),
+    "MB": ("Manitoba", "Canada"), "NB": ("New Brunswick", "Canada"),
+    "NL": ("Newfoundland and Labrador", "Canada"), "NS": ("Nova Scotia", "Canada"),
+    "NT": ("Northwest Territories", "Canada"), "NU": ("Nunavut", "Canada"),
+    "ON": ("Ontario", "Canada"), "PE": ("Prince Edward Island", "Canada"),
+    "QC": ("Quebec", "Canada"), "SK": ("Saskatchewan", "Canada"),
+    "YT": ("Yukon", "Canada"),
+}
+
+
+def _normalize_location(location: str) -> str:
+    """Convert 'Columbus, OH' to 'Columbus,Ohio,United States' for POP API.
+    Also handles Canadian provinces: 'Toronto, ON' -> 'Toronto,Ontario,Canada'."""
+    if not location:
+        return "United States"
+    parts = [p.strip() for p in location.split(",")]
+    if len(parts) == 2:
+        city = parts[0]
+        abbrev = parts[1].upper()
+        if abbrev in REGION_ABBREV:
+            region, country = REGION_ABBREV[abbrev]
+            return f"{city},{region},{country}"
+        return f"{city},{abbrev},United States"
+    if len(parts) == 1:
+        return f"{parts[0]},United States"
+    return location
+
 
 async def _poll_task(task_id: str, max_attempts: int = 30, interval: float = 3.0) -> dict:
     """Poll POP API for task results."""
@@ -35,7 +91,7 @@ async def _get_terms(
     location_name: str | None = None,
 ) -> dict:
     """Get POP terms for a keyword."""
-    location = location_name or "United States"
+    location = _normalize_location(location_name or "")
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
