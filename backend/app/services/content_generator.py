@@ -227,10 +227,11 @@ def build_outline_prompt(
     """Build system + user prompts for outline generation. Returns (system, user)."""
     system = (
         "You are an SEO content strategist. Generate a content outline as JSON.\n"
-        "Never use em dashes. Return ONLY valid JSON, no markdown fences.\n\n"
+        "Never use em dashes. Return ONLY valid JSON, no markdown fences.\n"
+        "Do NOT include internal_links in the output.\n\n"
         "Output format:\n"
         '{"h1": "...", "sections": [{"h2": "...", "key_points": ["..."], "suggested_terms": ["..."]}], '
-        '"internal_links": [{"text": "...", "href": "..."}], "estimated_word_count": 1500}'
+        '"estimated_word_count": 1500}'
     )
 
     target_wc = brief.get("target_word_count", 1500)
