@@ -40,14 +40,6 @@ export function Topbar() {
         </kbd>
       </div>
 
-      {/* Press publish button (disabled) */}
-      <button
-        disabled
-        title="Coming soon"
-        className="inline-flex items-center justify-center gap-2 h-8 px-3.5 rounded-full text-[11px] font-medium tracking-[0.04em] bg-ink text-white border-[1.5px] border-ink opacity-50 cursor-default"
-      >
-        Press publish
-      </button>
     </div>
   );
 }

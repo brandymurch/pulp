@@ -148,21 +148,16 @@ export default function LocationsPage() {
                           >
                             <div>
                               <div className="font-display font-[800] text-[14px] tracking-[-0.01em]">
-                                {loc.name || `${loc.city}, ${loc.state}`}
+                                {loc.name || `${brand.name} ${loc.city}`}, {loc.state}
                               </div>
                               <div className="text-[11px] text-ink-40">
-                                {loc.city}, {loc.state}
-                                {reviewCount > 0 && ` / ${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
+                                {reviewCount > 0 && `${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
                               </div>
                             </div>
                             <div className="flex items-center gap-4">
-                              <a
-                                href={`/generate?brand=${brand.id}&location=${loc.id}`}
-                                onClick={e => e.stopPropagation()}
-                                className="text-[11px] text-ink-70 hover:text-ink transition-colors border-b border-line hover:border-ink pb-px"
-                              >
-                                Generate
-                              </a>
+                              <span className="text-[11px] text-ink-40">
+                                {isSelected ? "Close" : "Details"}
+                              </span>
                               <button
                                 onClick={e => { e.stopPropagation(); handleDelete(brand.id, loc.id); }}
                                 className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors"
@@ -174,6 +169,14 @@ export default function LocationsPage() {
                           {/* Editor inline under selected location */}
                           {isSelected && (
                             <div className="p-4 border-b border-line bg-[#F3F1ED]/50">
+                              <div className="mb-3">
+                                <a
+                                  href={`/generate?brand=${brand.id}&location=${loc.id}`}
+                                  className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] bg-ink text-white border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp"
+                                >
+                                  Create new page
+                                </a>
+                              </div>
                               <LocationEditor
                                 location={selected}
                                 brandId={brand.id}
