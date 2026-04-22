@@ -156,6 +156,14 @@ async def get_enriched_brief(
     report = report_result.get("report") or {}
     brief = report.get("cleanedContentBrief") or {}
 
+    # Log all available POP data for debugging
+    logger.info(f"POP report top-level keys: {list(report.keys())}")
+    logger.info(f"POP brief keys: {list(brief.keys())}")
+    for key in ["structureAnalysis", "structure", "seoTitle", "metaDescription", "titleTag", "headerRecommendations"]:
+        if report.get(key):
+            val = report[key]
+            logger.info(f"POP {key}: {val if isinstance(val, str) else list(val.keys()) if isinstance(val, dict) else type(val)}")
+
     term_targets = [
         {
             "phrase": p["term"]["phrase"],
@@ -201,6 +209,28 @@ async def get_enriched_brief(
     if structure.get("avgHeadingCount"):
         recommended_headings = int(structure["avgHeadingCount"])
 
+    # Extract SEO title and meta description recommendations if available
+    seo_title = report.get("seoTitle") or report.get("titleTag") or ""
+    meta_description = report.get("metaDescription") or ""
+
+    # Extract section/paragraph recommendations
+    section_recommendations = []
+    header_recs = report.get("headerRecommendations") or report.get("headers") or {}
+    if isinstance(header_recs, dict):
+        for key, val in header_recs.items():
+            if isinstance(val, list):
+                section_recommendations.extend(val)
+            elif isinstance(val, str):
+                section_recommendations.append(val)
+    elif isinstance(header_recs, list):
+        section_recommendations = header_recs
+
+    # Extract paragraph/content recommendations
+    paragraph_recs = report.get("paragraphRecommendations") or report.get("contentRecommendations") or []
+
+    # POP optimization score if available
+    pop_score = report.get("score") or report.get("optimizationScore") or None
+
     return {
         "target_word_count": target_word_count,
         "word_count_min": word_count_min,
@@ -211,6 +241,11 @@ async def get_enriched_brief(
         "variations": [v.get("phrase", v) if isinstance(v, dict) else v for v in variations],
         "competitor_headings": competitor_headings or common_headings,
         "recommended_heading_count": recommended_headings,
+        "seo_title": seo_title if isinstance(seo_title, str) else "",
+        "meta_description": meta_description if isinstance(meta_description, str) else "",
+        "section_recommendations": section_recommendations[:10] if section_recommendations else [],
+        "paragraph_recommendations": paragraph_recs[:10] if isinstance(paragraph_recs, list) else [],
+        "pop_optimization_score": pop_score,
     }
 
 
