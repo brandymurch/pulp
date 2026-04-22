@@ -595,6 +595,7 @@ export default function GeneratePage() {
               {popScore && (
                 <POPScoreCard
                   score={popScore}
+                  contentWordCount={gen.output ? gen.output.split(/\s+/).filter(Boolean).length : 0}
                   onRevise={revisionCount < 2 ? async () => {
                     setPhase("revising");
                     setRevisionCount(prev => prev + 1);
