@@ -44,16 +44,19 @@ async def search_google_business(
     results = []
     for place in places[:3]:
         reviews = []
-        for r in (place.get("reviews") or [])[:10]:
+        for r in (place.get("reviews") or []):
             text = (r.get("text") or {}).get("text", "")
             author = (r.get("authorAttribution") or {}).get("displayName", "Customer")
             rating = r.get("rating", 5)
-            if text and len(text) > 15:
+            # Only import 5-star reviews for content reference
+            if text and len(text) > 15 and rating == 5:
                 reviews.append({
                     "author": author,
                     "text": text,
                     "rating": rating,
                 })
+                if len(reviews) >= 10:
+                    break
 
         display_name = place.get("displayName", {})
         result = {
