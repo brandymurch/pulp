@@ -23,9 +23,11 @@ const textareaClass = "w-full border-[1.5px] border-line rounded-lg bg-white tex
 const labelClass = "block text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-1.5";
 
 export function LocationEditor({ location, brandId, brandName, onSave, onCancel }: LocationEditorProps) {
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
+  const [name, setName] = useState(""); // DBA name
+  const [city, setCity] = useState(""); // Service area city (for content)
   const [state, setState] = useState("");
+  const [officeCity, setOfficeCity] = useState(""); // Actual office city (for GBP)
+  const [officeState, setOfficeState] = useState("");
   const [slug, setSlug] = useState("");
   const [status, setStatus] = useState("draft");
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -51,6 +53,8 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       setSlug(location.slug || "");
       setStatus(location.status || "draft");
       const ctx = location.local_context || {};
+      setOfficeCity(ctx.office_city || "");
+      setOfficeState(ctx.office_state || "");
       setTeamLead(ctx.team_lead || "");
       setNeighborhoods(Array.isArray(ctx.neighborhoods) ? ctx.neighborhoods.join(", ") : ctx.neighborhoods || "");
       setCommonJob(ctx.common_job || "");
@@ -66,7 +70,8 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         setAdditionalOpen(true);
       }
     } else {
-      setName(""); setCity(""); setState(""); setSlug(""); setStatus("draft");
+      setName(""); setCity(""); setState(""); setOfficeCity(""); setOfficeState("");
+      setSlug(""); setStatus("draft");
       setReviews([]); setTeamLead(""); setNeighborhoods(""); setCommonJob("");
       setLocalChallenge(""); setFunFact(""); setCompetitorsToAvoid("");
       setCertifications(""); setClimateNotes(""); setHousingNotes("");
@@ -79,13 +84,15 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
   }
 
   async function searchGoogle() {
-    if (!city || !state) return;
+    const searchCity = officeCity || city;
+    const searchState = officeState || state;
+    if (!searchCity || !searchState) return;
     setSearching(true);
     setSearchResults([]);
     try {
       const res = await apiFetch("/api/locations/google-search", {
         method: "POST",
-        body: JSON.stringify({ business_name: brandName, city, state }),
+        body: JSON.stringify({ business_name: name || brandName, city: searchCity, state: searchState }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -122,6 +129,8 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
     setSaving(true);
     try {
       const local_context: any = { reviews };
+      if (officeCity) local_context.office_city = officeCity;
+      if (officeState) local_context.office_state = officeState;
       if (teamLead) local_context.team_lead = teamLead;
       if (neighborhoods) local_context.neighborhoods = commaToArray(neighborhoods);
       if (commonJob) local_context.common_job = commonJob;
@@ -133,7 +142,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       if (housingNotes) local_context.housing_notes = housingNotes;
 
       const payload: any = {
-        name: name || `${city}, ${state}`,
+        name: name || `${brandName} ${city}`,
         city, state, slug, status, local_context,
       };
       if (!location) payload.brand_id = brandId;
@@ -154,21 +163,44 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       </div>
 
       <div className="p-6 space-y-5">
-        {/* Basic info */}
-        <div className="grid grid-cols-[1fr_1fr_80px_1fr] gap-3 max-[820px]:grid-cols-2">
-          <div>
-            <label className={labelClass}>City</label>
-            <input className={inputClass} value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" />
+        {/* DBA Name */}
+        <div>
+          <label className={labelClass}>DBA / Display name</label>
+          <input className={inputClass} value={name} onChange={e => setName(e.target.value)} placeholder="USA Insulation of Chicago" />
+        </div>
+
+        {/* Office location (for GBP search) */}
+        <div>
+          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Office location (for Google Business lookup)</div>
+          <div className="grid grid-cols-[1fr_100px] gap-3">
+            <div>
+              <label className={labelClass}>Office city</label>
+              <input className={inputClass} value={officeCity} onChange={e => setOfficeCity(e.target.value)} placeholder="Naperville" />
+            </div>
+            <div>
+              <label className={labelClass}>State</label>
+              <input className={inputClass} value={officeState} onChange={e => setOfficeState(e.target.value)} placeholder="IL" />
+            </div>
           </div>
-          <div>
-            <label className={labelClass}>State</label>
-            <input className={inputClass} value={state} onChange={e => setState(e.target.value)} placeholder="OH" />
-          </div>
-          <div>
-            <label className={labelClass}>Status</label>
-            <select className={inputClass} value={status} onChange={e => setStatus(e.target.value)}>
-              <option value="draft">Draft</option>
-              <option value="live">Live</option>
+        </div>
+
+        {/* Service area (the city this content page targets) */}
+        <div>
+          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Service area (content page target)</div>
+          <div className="grid grid-cols-[1fr_100px_80px_1fr] gap-3 max-[820px]:grid-cols-2">
+            <div>
+              <label className={labelClass}>City</label>
+              <input className={inputClass} value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" />
+            </div>
+            <div>
+              <label className={labelClass}>State</label>
+              <input className={inputClass} value={state} onChange={e => setState(e.target.value)} placeholder="OH" />
+            </div>
+            <div>
+              <label className={labelClass}>Status</label>
+              <select className={inputClass} value={status} onChange={e => setStatus(e.target.value)}>
+                <option value="draft">Draft</option>
+                <option value="live">Live</option>
               <option value="stale">Stale</option>
             </select>
           </div>
@@ -179,7 +211,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         </div>
 
         {/* Google search */}
-        {city && state && (
+        {(officeCity || city) && (officeState || state) && (
           <div className="bg-line-soft rounded-[14px] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[12px] text-ink-70">
