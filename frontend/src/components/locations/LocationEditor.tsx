@@ -154,7 +154,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         <div className="grid grid-cols-[2fr_1fr_80px] gap-3 max-[820px]:grid-cols-1">
           <div>
             <label className={labelClass}>DBA / Display name</label>
-            <input className={inputClass} value={name} onChange={e => setName(e.target.value)} placeholder={`${brandName} Columbus`} />
+            <input className={inputClass} value={name} onChange={e => setName(e.target.value)} placeholder="USAI Columbus" />
           </div>
           <div>
             <label className={labelClass}>City</label>
