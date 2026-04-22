@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 20 285 240" fill="none" stroke="#FF6A1A" stroke-linecap="round" stroke-linejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 20 285 240" fill="none" stroke="#FFB020" stroke-linecap="round" stroke-linejoin="round">
   <g transform="translate(10 0)">
     <g transform="rotate(30 120 90) scale(1 -1) translate(0 -180)">
       <path stroke-width="11" d="M20 150 L220 150 M20 150 A 100 110 0 0 1 220 150"/>

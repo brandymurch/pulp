@@ -13,7 +13,7 @@ export function Button({ variant = "ink", size = "default", children, className 
     sm: "h-8 px-3.5 text-[11px]",
   };
   const variants = {
-    ink: "bg-ink text-white border-ink hover:-translate-y-px hover:shadow-[4px_4px_0_0_var(--ink)]",
+    ink: "bg-ink text-white border-ink hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp hover:shadow-[4px_4px_0_0_var(--ink)]",
     ghost: "bg-transparent text-ink border-ink hover:bg-ink hover:text-white",
     light: "bg-white text-ink border-line hover:border-ink",
   };

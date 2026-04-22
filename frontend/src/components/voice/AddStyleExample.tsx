@@ -32,7 +32,7 @@ export function AddStyleExample({ onAdd }: AddStyleExampleProps) {
   return (
     <form onSubmit={handleSubmit} className="border-[1.5px] border-ink rounded-[18px] p-6 space-y-4">
       <h3 className="font-display font-[800] text-base tracking-[-0.02em] m-0">
-        Add <span className="font-display italic font-normal">example</span>
+        Add <span className="font-display font-normal text-pulp-deep">example</span>
       </h3>
 
       <div className="grid grid-cols-2 gap-3 max-[820px]:grid-cols-1">

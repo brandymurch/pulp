@@ -136,7 +136,7 @@ export default function LocationsPage() {
                           <div className="flex items-center gap-4">
                             <div>
                               <div className="font-display font-[800] text-[14px] tracking-[-0.01em]">
-                                {loc.city}, <span className="font-display italic font-normal">{loc.state}</span>
+                                {loc.city}, <span className="font-display font-normal text-pulp-deep">{loc.state}</span>
                               </div>
                               {loc.slug && (
                                 <div className="text-[11px] text-ink-40 font-mono">{loc.slug}</div>

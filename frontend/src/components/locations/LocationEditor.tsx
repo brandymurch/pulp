@@ -148,7 +148,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
     <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
       <div className="px-6 py-5 border-b-[1.5px] border-ink flex items-center justify-between">
         <h2 className="font-display font-[800] text-xl tracking-[-0.02em] m-0">
-          {location ? "Edit" : "Add"} <span className="font-display italic font-normal">location</span>
+          {location ? "Edit" : "Add"} <span className="font-display font-normal text-pulp-deep">location</span>
         </h2>
         <Button variant="light" size="sm" onClick={onCancel}>Cancel</Button>
       </div>

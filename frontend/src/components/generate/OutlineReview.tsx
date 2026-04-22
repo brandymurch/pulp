@@ -45,7 +45,7 @@ export function OutlineReview({ outline, onApprove }: OutlineReviewProps) {
     <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b-[1.5px] border-ink">
         <h3 className="font-display font-[800] text-lg tracking-[-0.02em] m-0">
-          Outline <span className="font-display italic font-normal">review</span>
+          Outline <span className="font-display font-normal text-pulp-deep">review</span>
         </h3>
         {current.estimated_word_count && (
           <span className="text-[10px] tracking-[0.22em] uppercase text-ink-70">

@@ -119,7 +119,7 @@ export default function VoicePage() {
           <AddStyleExample onAdd={handleAdd} />
           <div className="mt-2">
             <h2 className="font-display font-[800] text-xl tracking-[-0.02em] mb-4">
-              {brandName} <span className="font-display italic font-normal">examples</span>
+              {brandName} <span className="font-display font-normal text-pulp-deep">examples</span>
               <span className="text-[10px] tracking-[0.22em] uppercase text-ink-40 ml-3 font-mono font-normal">{examples.length} total</span>
             </h2>
             <StyleExamplesList examples={examples} onDelete={handleDelete} />

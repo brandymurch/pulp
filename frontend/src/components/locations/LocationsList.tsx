@@ -85,7 +85,7 @@ export function LocationsList({ locations, onSelect, onDelete, selectedId }: Loc
             >
               <td className="px-5 py-3 border-b border-line">
                 <div className="font-display font-[800] text-[13px]">{loc.name}</div>
-                <div className="font-display italic text-ink-40 text-[11px]">
+                <div className="font-display text-ink-40 text-[11px]">
                   {loc.city}, {loc.state}
                 </div>
               </td>

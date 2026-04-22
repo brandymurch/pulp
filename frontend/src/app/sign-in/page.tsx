@@ -27,7 +27,7 @@ export default function SignInPage() {
         <a href="/" className="flex items-center gap-3">
           <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
           <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none">
-            Pulp
+            Pulp.
           </span>
         </a>
 
@@ -44,7 +44,7 @@ export default function SignInPage() {
             <h1 className="font-display font-[800] text-[54px] max-[720px]:text-[40px] leading-[0.92] tracking-[-0.035em] mb-5">
               Fresh-squeezed,
               <br />
-              <span className="font-display italic font-normal tracking-[-0.015em]">
+              <span className="font-display font-normal tracking-[-0.015em] text-pulp-deep">
                 freshly signed in.
               </span>
             </h1>
@@ -68,7 +68,7 @@ export default function SignInPage() {
               <button
                 type="submit"
                 disabled={loading || !password}
-                className="group w-full h-[46px] rounded-full bg-ink text-white font-medium text-xs tracking-[0.04em] inline-flex items-center justify-center gap-2 border-[1.5px] border-ink transition-transform hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group w-full h-[46px] rounded-full bg-ink text-white font-medium text-xs tracking-[0.04em] inline-flex items-center justify-center gap-2 border-[1.5px] border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Signing in..." : "Sign in"}
                 {!loading && (
@@ -114,7 +114,7 @@ export default function SignInPage() {
           <blockquote className="font-display font-normal text-[44px] max-[720px]:text-[32px] leading-[1.05] tracking-[-0.025em] m-0 mb-12">
             We shipped <span className="font-[800]">412 location pages</span> in
             a weekend. Google traffic{" "}
-            <em className="italic">tripled</em> in six weeks.
+            <em className="font-display font-normal text-pulp-deep">tripled</em> in six weeks.
           </blockquote>
 
           {/* Attribution */}

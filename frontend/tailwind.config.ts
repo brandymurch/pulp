@@ -12,7 +12,10 @@ const config: Config = {
         "ink-70": "#4A4642",
         "ink-40": "#9A958E",
         line: "#E8E5E0",
+        "line-soft": "#F3F1ED",
         paper: "#FFFFFF",
+        green: "#1F7A3A",
+        amber: "#B5730F",
       },
       fontFamily: {
         display: [
