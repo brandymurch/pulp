@@ -277,10 +277,12 @@ export default function GeneratePage() {
         return;
       }
 
-      setPopScore(score);
+      // Strip polling metadata, keep only score fields
+      const { status: _status, ...scoreData } = score;
+      setPopScore(scoreData);
 
       // Auto-revise if score < 75 and under 2 revisions
-      if (score.overall_score < 75 && currentRevisions < 2) {
+      if (scoreData.overall_score < 75 && currentRevisions < 2) {
         const nextRevision = currentRevisions + 1;
         setRevisionCount(nextRevision);
         setPhase("revising");
@@ -288,7 +290,7 @@ export default function GeneratePage() {
           content,
           keyword,
           brief,
-          pop_feedback: score,
+          pop_feedback: scoreData,
         });
         // Re-score after revision
         setPhase("scoring");

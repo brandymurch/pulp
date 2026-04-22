@@ -15,6 +15,7 @@ interface POPScoreCardProps {
 }
 
 export function POPScoreCard({ score, onRevise, isRevising }: POPScoreCardProps) {
+  if (!score || typeof score.overall_score !== "number") return null;
   const scoreColor = score.overall_score >= 80 ? "text-green" : score.overall_score >= 60 ? "text-amber" : "text-[#b91c1c]";
 
   return (
