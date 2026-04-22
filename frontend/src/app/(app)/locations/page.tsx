@@ -5,6 +5,52 @@ import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/shared/Button";
 import { LocationEditor } from "@/components/locations/LocationEditor";
 
+function LocationHistory({ locationId, brandId }: { locationId: string; brandId: string }) {
+  const [pages, setPages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await apiFetch(`/api/generations?brand_id=${brandId}&location_id=${locationId}&limit=10`);
+        if (res.ok) setPages(await res.json());
+      } catch {} finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [locationId, brandId]);
+
+  if (loading) return <div className="text-[11px] text-ink-40 animate-pulse">Loading pages...</div>;
+  if (pages.length === 0) return <div className="text-[11px] text-ink-40">No pages generated yet.</div>;
+
+  return (
+    <div>
+      <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Generated pages ({pages.length})</div>
+      <div className="space-y-1.5">
+        {pages.map(p => (
+          <div key={p.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-line">
+            <div>
+              <div className="text-[12px] text-ink font-medium">{p.keyword}</div>
+              <div className="text-[10px] text-ink-40">
+                {p.word_count} words
+                {p.pop_score && ` / Score: ${p.pop_score.overall_score}`}
+                {` / ${new Date(p.created_at).toLocaleDateString()}`}
+              </div>
+            </div>
+            <button
+              onClick={() => navigator.clipboard.writeText(p.content || "")}
+              className="text-[10px] text-ink-40 hover:text-ink transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function LocationsPage() {
   const [brands, setBrands] = useState<any[]>([]);
   const [allLocations, setAllLocations] = useState<Record<string, any[]>>({});
@@ -150,8 +196,12 @@ export default function LocationsPage() {
                               <div className="font-display font-[800] text-[14px] tracking-[-0.01em]">
                                 {loc.name || `${brand.name} ${loc.city}`}, {loc.state}
                               </div>
-                              <div className="text-[11px] text-ink-40">
-                                {reviewCount > 0 && `${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
+                              <div className="text-[11px] text-ink-40 flex gap-3">
+                                {reviewCount > 0 && <span>{reviewCount} review{reviewCount !== 1 ? "s" : ""}</span>}
+                                {loc.last_refresh_at && (
+                                  <span>Last refreshed {new Date(loc.last_refresh_at).toLocaleDateString()}</span>
+                                )}
+                                {!loc.last_refresh_at && <span>No content yet</span>}
                               </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -166,10 +216,10 @@ export default function LocationsPage() {
                               </button>
                             </div>
                           </div>
-                          {/* Editor inline under selected location */}
+                          {/* Expanded location details */}
                           {isSelected && (
-                            <div className="p-4 border-b border-line bg-[#F3F1ED]/50">
-                              <div className="mb-3">
+                            <div className="p-4 border-b border-line bg-[#F3F1ED]/50 space-y-4">
+                              <div className="flex gap-2">
                                 <a
                                   href={`/generate?brand=${brand.id}&location=${loc.id}`}
                                   className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] bg-ink text-white border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp"
@@ -177,6 +227,10 @@ export default function LocationsPage() {
                                   Create new page
                                 </a>
                               </div>
+
+                              {/* Content history for this location */}
+                              <LocationHistory locationId={loc.id} brandId={brand.id} />
+
                               <LocationEditor
                                 location={selected}
                                 brandId={brand.id}

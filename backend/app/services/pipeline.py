@@ -269,5 +269,15 @@ async def _run_pipeline_async(
         if score_result:
             gen_data["pop_score"] = score_result
         db.table("generations").insert(gen_data).execute()
+
+        # Update location's last_refresh_at
+        if location_id:
+            try:
+                db.table("locations").update({
+                    "last_refresh_at": "now()",
+                    "status": "live",
+                }).eq("id", location_id).execute()
+            except Exception:
+                pass
     except Exception as e:
         logger.warning(f"Failed to auto-save generation: {e}")
