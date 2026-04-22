@@ -180,7 +180,7 @@ export default function LocationsPage() {
                   </div>
                 ) : (
                   <div className="border-t border-line">
-                    {locs.map((loc, i) => {
+                    {[...locs].sort((a, b) => (a.city || "").localeCompare(b.city || "")).map((loc, i) => {
                       const ctx = loc.local_context || {};
                       const reviewCount = (ctx.reviews || []).length;
                       const isSelected = selected?.id === loc.id;
