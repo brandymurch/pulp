@@ -40,9 +40,10 @@ async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
     voice_notes = None
     brand_banned_words = None
     brand_guidelines = None
+    local_context = None
+    from app.db import get_db
     if req.brand_id:
         try:
-            from app.db import get_db
             db = get_db()
             brand = db.table("brands").select("voice_dimensions,voice_notes,brand_banned_words,services,brand_guidelines").eq("id", req.brand_id).single().execute()
             if brand.data:
@@ -52,6 +53,16 @@ async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
                 brand_guidelines = brand.data.get("brand_guidelines")
         except Exception as e:
             logger.warning(f"Could not load brand voice settings: {e}")
+
+    # Load location context if location_id provided
+    if req.location_id:
+        try:
+            db = get_db()
+            loc = db.table("locations").select("local_context").eq("id", req.location_id).single().execute()
+            if loc.data:
+                local_context = loc.data.get("local_context")
+        except Exception as e:
+            logger.warning(f"Could not load location context: {e}")
 
     system = build_system_prompt(
         template=req.template,
@@ -66,6 +77,7 @@ async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
         brief=req.brief, template=req.template, outline=req.outline,
         competitors=req.competitor_content,
         style_examples=req.style_examples,
+        local_context=local_context,
     )
     return StreamingResponse(
         stream_claude(system, user),

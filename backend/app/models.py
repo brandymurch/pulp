@@ -40,6 +40,7 @@ class GenerateRequest(BaseModel):
     content_type: str = "blog_post"
     business_name: str = ""
     brand_id: Optional[str] = None
+    location_id: Optional[str] = None
 
 
 class GenerateResponse(BaseModel):

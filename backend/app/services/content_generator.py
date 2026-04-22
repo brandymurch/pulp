@@ -154,6 +154,7 @@ def build_user_prompt(
     competitors: Optional[list] = None,
     paa_questions: Optional[list] = None,
     style_examples: Optional[list] = None,
+    local_context: Optional[dict] = None,
 ) -> str:
     """Build user prompt with all context for full content generation."""
     target_word_count = brief.get("target_word_count", 1500)
@@ -184,6 +185,44 @@ def build_user_prompt(
         parts.append("**Common competitor headings (use as inspiration, do not copy):**")
         for h in competitor_headings[:10]:
             parts.append(f"  - {h}")
+
+    # Local context (location-specific details)
+    if local_context:
+        parts.append("")
+        parts.append("**LOCAL CONTEXT (weave these details naturally into the content):**")
+        if local_context.get("team_lead"):
+            parts.append(f"- Team lead: {local_context['team_lead']}")
+        if local_context.get("neighborhoods"):
+            neighborhoods = local_context["neighborhoods"]
+            if isinstance(neighborhoods, list):
+                parts.append(f"- Key neighborhoods served: {', '.join(neighborhoods)}")
+        if local_context.get("common_job"):
+            parts.append(f"- Most common job type: {local_context['common_job']}")
+        if local_context.get("local_challenge"):
+            parts.append(f"- Local challenge: {local_context['local_challenge']}")
+        if local_context.get("fun_fact"):
+            parts.append(f"- Local connection: {local_context['fun_fact']}")
+        if local_context.get("certifications"):
+            certs = local_context["certifications"]
+            if isinstance(certs, list):
+                parts.append(f"- Certifications: {', '.join(certs)}")
+        if local_context.get("climate_notes"):
+            parts.append(f"- Climate: {local_context['climate_notes']}")
+        if local_context.get("housing_notes"):
+            parts.append(f"- Housing stock: {local_context['housing_notes']}")
+        if local_context.get("competitors_to_avoid"):
+            comps = local_context["competitors_to_avoid"]
+            if isinstance(comps, list):
+                parts.append(f"- DO NOT mention these competitors: {', '.join(comps)}")
+        if local_context.get("reviews"):
+            reviews = local_context["reviews"]
+            if isinstance(reviews, list) and len(reviews) > 0:
+                parts.append("- **Customer reviews to quote (use 1-2 naturally in the content):**")
+                for r in reviews[:3]:
+                    author = r.get("author", "Customer")
+                    text = r.get("text", "")
+                    if text:
+                        parts.append(f'  - "{text}" - {author}')
 
     parts.append("")
 
