@@ -1,0 +1,72 @@
+"""Locations CRUD router."""
+from __future__ import annotations
+import logging
+from typing import Any, Optional
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from app.auth import require_auth
+from app.db import get_db
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/locations", tags=["locations"])
+
+
+class CreateLocationRequest(BaseModel):
+    brand_id: str
+    name: str
+    city: str
+    state: str
+    slug: Optional[str] = None
+    local_context: Optional[dict[str, Any]] = None
+
+
+class UpdateLocationRequest(BaseModel):
+    name: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    slug: Optional[str] = None
+    status: Optional[str] = None
+    local_context: Optional[dict[str, Any]] = None
+
+
+@router.get("")
+async def list_locations(brand_id: str, _=Depends(require_auth)):
+    db = get_db()
+    result = db.table("locations").select("*").eq("brand_id", brand_id).order("city").execute()
+    return result.data
+
+
+@router.get("/{location_id}")
+async def get_location(location_id: str, _=Depends(require_auth)):
+    db = get_db()
+    result = db.table("locations").select("*").eq("id", location_id).single().execute()
+    return result.data
+
+
+@router.post("")
+async def create_location(req: CreateLocationRequest, _=Depends(require_auth)):
+    db = get_db()
+    data = req.model_dump(exclude_none=True)
+    if "local_context" not in data:
+        data["local_context"] = {}
+    if "slug" not in data or not data["slug"]:
+        data["slug"] = f"/{data['city'].lower().replace(' ', '-')}-{data['state'].lower()}"
+    result = db.table("locations").insert(data).execute()
+    return result.data[0]
+
+
+@router.patch("/{location_id}")
+async def update_location(location_id: str, req: UpdateLocationRequest, _=Depends(require_auth)):
+    db = get_db()
+    data = req.model_dump(exclude_none=True)
+    if not data:
+        return {"ok": True}
+    result = db.table("locations").update(data).eq("id", location_id).execute()
+    return result.data[0] if result.data else {"ok": True}
+
+
+@router.delete("/{location_id}")
+async def delete_location(location_id: str, _=Depends(require_auth)):
+    db = get_db()
+    db.table("locations").delete().eq("id", location_id).execute()
+    return {"ok": True}
