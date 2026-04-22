@@ -148,6 +148,7 @@ async def _run_pipeline_async(
         system_prompt = build_system_prompt(
             template=template_content,
             style_examples=style_examples,
+            services=brand_data.get("services") or [],
             voice_dimensions=brand_data.get("voice_dimensions"),
             voice_notes=brand_data.get("voice_notes"),
             brand_banned_words=brand_data.get("brand_banned_words"),
