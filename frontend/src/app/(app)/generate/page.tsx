@@ -196,10 +196,15 @@ export default function GeneratePage() {
     setExportUrl(null);
 
     try {
+      // For city landing pages, auto-derive keyword from brand's primary keyword
+      const derivedKeyword = contentType === "landing_page"
+        ? `${brands.find(b => b.id === brandId)?.primary_keyword || brandName} ${city} ${state}`.trim()
+        : keyword;
+
       const res = await apiFetch("/api/pipeline/start", {
         method: "POST",
         body: JSON.stringify({
-          keyword,
+          keyword: derivedKeyword,
           city,
           state,
           brand_id: brandId,
@@ -348,13 +353,26 @@ export default function GeneratePage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
-            <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
+          {/* Keyword + slug: city landing pages auto-derive keyword from brand */}
+          {contentType === "landing_page" ? (
             <div>
-              <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
-              <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/insulation-services-columbus-oh" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+              <div className="text-[12px] text-ink-40 mb-2">
+                Keyword: <span className="text-ink">{brands.find(b => b.id === brandId)?.primary_keyword || brandName} {city} {state}</span>
+              </div>
+              <div>
+                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
+                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder={`/${city.toLowerCase().replace(/\s+/g, '-')}-${state.toLowerCase()}`} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
+              <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
+              <div>
+                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
+                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/insulation-services-columbus-oh" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-4 max-[820px]:grid-cols-1">
             <div>
@@ -370,7 +388,9 @@ export default function GeneratePage() {
             <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
           </div>
 
-          <Button variant="ink" onClick={startPipeline} disabled={!keyword.trim() || !city.trim() || !selectedLocationId || !pageSlug.trim()}>
+          <Button variant="ink" onClick={startPipeline} disabled={
+            (contentType !== "landing_page" && !keyword.trim()) || !city.trim() || !selectedLocationId || !pageSlug.trim()
+          }>
             Generate content
           </Button>
         </div>
