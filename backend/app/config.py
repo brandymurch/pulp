@@ -34,5 +34,8 @@ DATAFORSEO_PASSWORD = os.environ.get("DATAFORSEO_PASSWORD", "")
 GOOGLE_SERVICE_ACCOUNT_KEY = os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY", "")
 GOOGLE_DRIVE_FOLDER_ID = os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "")
 
+# Google Places
+GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
+
 # Frontend
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
