@@ -9,6 +9,7 @@ import { LocationEditor } from "@/components/locations/LocationEditor";
 export default function LocationsPage() {
   const [brands, setBrands] = useState<any[]>([]);
   const [brandId, setBrandId] = useState("");
+  const [brandName, setBrandName] = useState("");
   const [locations, setLocations] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [adding, setAdding] = useState(false);
@@ -24,6 +25,7 @@ export default function LocationsPage() {
           setBrands(data);
           if (data.length > 0) {
             setBrandId(data[0].id);
+            setBrandName(data[0].name);
           }
         }
       } catch {
@@ -123,6 +125,7 @@ export default function LocationsPage() {
               const brand = brands.find((b) => b.id === e.target.value);
               if (brand) {
                 setBrandId(brand.id);
+                setBrandName(brand.name);
                 setSelected(null);
                 setAdding(false);
               }
@@ -160,6 +163,7 @@ export default function LocationsPage() {
         <LocationEditor
           location={selected || null}
           brandId={brandId}
+          brandName={brandName}
           onSave={handleSave}
           onCancel={handleCancel}
         />

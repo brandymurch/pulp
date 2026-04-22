@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/shared/Button";
 import { Input } from "@/components/shared/Input";
+import { apiFetch } from "@/lib/api";
 
 interface Review {
   author: string;
@@ -26,6 +27,7 @@ interface LocalContext {
 interface LocationEditorProps {
   location: any; // null for new
   brandId: string;
+  brandName: string;
   onSave: (data: any) => void;
   onCancel: () => void;
 }
@@ -58,7 +60,7 @@ function commaToArray(val: string): string[] {
     .filter(Boolean);
 }
 
-export function LocationEditor({ location, brandId, onSave, onCancel }: LocationEditorProps) {
+export function LocationEditor({ location, brandId, brandName, onSave, onCancel }: LocationEditorProps) {
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -66,6 +68,8 @@ export function LocationEditor({ location, brandId, onSave, onCancel }: Location
   const [status, setStatus] = useState("draft");
   const [ctx, setCtx] = useState<LocalContext>(emptyContext());
   const [saving, setSaving] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   useEffect(() => {
     if (location) {
@@ -100,6 +104,41 @@ export function LocationEditor({ location, brandId, onSave, onCancel }: Location
 
   function updateCtx(key: keyof LocalContext, value: any) {
     setCtx((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function searchGoogle() {
+    if (!city || !state) return;
+    setSearching(true);
+    setSearchResults([]);
+    try {
+      const res = await apiFetch("/api/locations/google-search", {
+        method: "POST",
+        body: JSON.stringify({ business_name: brandName, city, state }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.results || []);
+      }
+    } catch {
+      // search failed
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function importResult(result: any) {
+    // Import reviews
+    const reviews = (result.reviews || []).filter((r: any) => r.text).map((r: any) => ({
+      author: r.author || "Customer",
+      text: r.text,
+      rating: r.rating || 5,
+    }));
+
+    setCtx(prev => ({
+      ...prev,
+      reviews: [...prev.reviews, ...reviews],
+    }));
+    setSearchResults([]);
   }
 
   function addReview() {
@@ -213,6 +252,39 @@ export function LocationEditor({ location, brandId, onSave, onCancel }: Location
             </div>
           </div>
         </div>
+
+        {/* Google Search */}
+        {city && state && (
+          <div className="border-[1.5px] border-line rounded-[14px] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
+                Pull from Google
+              </div>
+              <Button variant="ink" size="sm" onClick={searchGoogle} disabled={searching}>
+                {searching ? "Searching..." : `Search "${brandName} ${city}"`}
+              </Button>
+            </div>
+            {searchResults.length > 0 && (
+              <div className="space-y-2">
+                {searchResults.map((r, i) => (
+                  <div key={i} className="border border-line rounded-[10px] p-3 flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display font-[800] text-[13px]">{r.title}</div>
+                      <div className="text-[11px] text-ink-40 mt-0.5">{r.address}</div>
+                      {r.rating && <div className="text-[11px] text-ink-70 mt-0.5">Rating: {r.rating}/5 ({r.total_reviews} reviews)</div>}
+                      {r.reviews && r.reviews.length > 0 && (
+                        <div className="text-[11px] text-ink-40 mt-1">{r.reviews.length} reviews available to import</div>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => importResult(r)}>
+                      Import
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Local context */}
         <div>
