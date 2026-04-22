@@ -94,10 +94,10 @@ function SettingsIcon() {
 }
 
 const navItems: NavItem[] = [
+  { label: "Overview", href: "/overview", icon: <OverviewIcon /> },
   { label: "Generate", href: "/generate", icon: <GenerateIcon /> },
   { label: "History", href: "/history", icon: <HistoryIcon /> },
   { label: "Voice", href: "/voice", icon: <VoiceIcon /> },
-  { label: "Overview", href: "/overview", icon: <OverviewIcon />, disabled: true },
   { label: "Locations", href: "/locations", icon: <LocationsIcon /> },
   { label: "Copy queue", href: "/queue", icon: <QueueIcon />, disabled: true },
   { label: "Integrations", href: "/integrations", icon: <IntegrationsIcon />, disabled: true },
