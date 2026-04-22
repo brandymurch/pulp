@@ -201,12 +201,13 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
               <select className={inputClass} value={status} onChange={e => setStatus(e.target.value)}>
                 <option value="draft">Draft</option>
                 <option value="live">Live</option>
-              <option value="stale">Stale</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>URL slug</label>
-            <input className={inputClass} value={slug} onChange={e => setSlug(e.target.value)} placeholder="/columbus-oh" />
+                <option value="stale">Stale</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>URL slug</label>
+              <input className={inputClass} value={slug} onChange={e => setSlug(e.target.value)} placeholder="/columbus-oh" />
+            </div>
           </div>
         </div>
 
