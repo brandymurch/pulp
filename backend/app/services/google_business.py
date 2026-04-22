@@ -21,10 +21,65 @@ def _get_headers() -> dict:
     }
 
 
-async def _fetch_reviews(business_name: str, city: str, state: str, place_id: str, headers: dict) -> list[dict]:
-    """Fetch reviews for a specific Google place using DataForSEO."""
+async def _fetch_reviews_firecrawl(business_name: str, city: str, state: str) -> list[dict]:
+    """Fetch reviews by scraping Google search results via Firecrawl."""
+    from app.config import FIRECRAWL_API_KEY
+    if not FIRECRAWL_API_KEY:
+        return []
+
     try:
-        # Try with place_id first, fall back to keyword search
+        search_url = f"https://www.google.com/search?q={business_name}+{city}+{state}+reviews"
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                "https://api.firecrawl.dev/v1/scrape",
+                json={"url": search_url, "formats": ["markdown"]},
+                headers={
+                    "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+            )
+            if resp.status_code != 200:
+                return []
+
+            data = resp.json()
+            content = data.get("data", {}).get("markdown", "")
+
+        # Parse review-like content from the scraped page
+        import re
+        reviews = []
+        # Look for patterns like "★★★★★" or star ratings followed by review text
+        # Also look for quoted text that looks like reviews
+        lines = content.split("\n")
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if not line or len(line) < 30:
+                continue
+            # Skip navigation, headers, etc.
+            if line.startswith("#") or line.startswith("[") or line.startswith("!"):
+                continue
+            # Look for lines that contain star ratings or look like review snippets
+            star_match = re.search(r"(\d(?:\.\d)?)\s*/\s*5|(\d(?:\.\d)?)\s*star|★{3,5}", line)
+            if star_match and len(line) > 40:
+                rating = 5
+                if star_match.group(1):
+                    rating = int(float(star_match.group(1)))
+                elif star_match.group(2):
+                    rating = int(float(star_match.group(2)))
+                # Clean the review text
+                text = re.sub(r"★+|\d+(\.\d+)?\s*/\s*5|\d+(\.\d+)?\s*star(s)?", "", line).strip()
+                text = re.sub(r"^\W+|\W+$", "", text)
+                if len(text) > 20:
+                    reviews.append({"author": "Google Reviewer", "text": text, "rating": min(rating, 5)})
+
+        return reviews[:10]
+    except Exception as e:
+        logger.warning(f"Firecrawl review scrape failed: {e}")
+        return []
+
+
+async def _fetch_reviews_dataforseo(business_name: str, city: str, state: str, place_id: str, headers: dict) -> list[dict]:
+    """Try fetching reviews via DataForSEO business data API."""
+    try:
         payload = {
             "keyword": f"{business_name} {city} {state}",
             "depth": 10,
@@ -44,7 +99,6 @@ async def _fetch_reviews(business_name: str, city: str, state: str, place_id: st
         data = resp.json()
         tasks = data.get("tasks", [])
         if not tasks or tasks[0].get("status_code") != 20000:
-            logger.warning(f"Reviews fetch failed: {tasks[0].get('status_message') if tasks else 'no tasks'}")
             return []
 
         items = (tasks[0].get("result", [{}])[0] or {}).get("items", []) or []
@@ -60,8 +114,16 @@ async def _fetch_reviews(business_name: str, city: str, state: str, place_id: st
             })
         return reviews[:10]
     except Exception as e:
-        logger.warning(f"Failed to fetch reviews: {e}")
+        logger.warning(f"DataForSEO reviews failed: {e}")
         return []
+
+
+async def _fetch_reviews(business_name: str, city: str, state: str, place_id: str, headers: dict) -> list[dict]:
+    """Try DataForSEO first, fall back to Firecrawl scraping."""
+    reviews = await _fetch_reviews_dataforseo(business_name, city, state, place_id, headers)
+    if reviews:
+        return reviews
+    return await _fetch_reviews_firecrawl(business_name, city, state)
 
 
 async def search_google_business(
