@@ -22,6 +22,8 @@ export default function GeneratePage() {
   const [contentType, setContentType] = useState("landing_page");
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
 
   // Pipeline state
   const [phase, setPhase] = useState<Phase>("idle");
@@ -47,6 +49,21 @@ export default function GeneratePage() {
   useEffect(() => { contentRef.current = gen.output; }, [gen.output]);
 
   // Load brands on mount
+  // Load locations when brand changes
+  useEffect(() => {
+    if (!brandId) return;
+    async function loadLocations() {
+      try {
+        const res = await apiFetch(`/api/locations?brand_id=${brandId}`);
+        if (res.ok) {
+          setLocations(await res.json());
+          setSelectedLocationId("");
+        }
+      } catch {}
+    }
+    loadLocations();
+  }, [brandId]);
+
   useEffect(() => {
     async function loadBrands() {
       try {
@@ -231,6 +248,7 @@ export default function GeneratePage() {
       style_examples: styleExamples,
       competitor_content: competitors,
       brand_id: brandId,
+      location_id: selectedLocationId || undefined,
     });
 
     // After generation completes, show content for review before scoring
@@ -426,6 +444,29 @@ export default function GeneratePage() {
               ))}
             </select>
           </div>
+          {/* Location selector (optional, auto-fills city/state) */}
+          {locations.length > 0 && (
+            <div>
+              <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Location (optional)</label>
+              <select
+                value={selectedLocationId}
+                onChange={e => {
+                  const loc = locations.find(l => l.id === e.target.value);
+                  setSelectedLocationId(e.target.value);
+                  if (loc) {
+                    setCity(loc.city);
+                    setState(loc.state);
+                  }
+                }}
+                className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
+              >
+                <option value="">Manual entry (no location data)</option>
+                {locations.map(l => (
+                  <option key={l.id} value={l.id}>{l.name} ({l.city}, {l.state})</option>
+                ))}
+              </select>
+            </div>
+          )}
           <KeywordInput
             keyword={keyword} city={city} state={state}
             onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState}
