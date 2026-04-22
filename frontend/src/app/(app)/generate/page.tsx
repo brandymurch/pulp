@@ -9,7 +9,6 @@ import { CompetitorInput } from "@/components/generate/CompetitorInput";
 import { ContentViewer } from "@/components/generate/ContentViewer";
 import { TermHeatmap } from "@/components/generate/TermHeatmap";
 import { POPScoreCard } from "@/components/generate/POPScoreCard";
-import { OutlineReview } from "@/components/generate/OutlineReview";
 
 type Phase = "idle" | "pending" | "brief" | "outline" | "generating" | "scoring" | "revising" | "done" | "error";
 

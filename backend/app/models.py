@@ -26,7 +26,7 @@ class BriefResponse(BaseModel):
     lsa_phrases: list[Any]
 
 
-# Generate
+# Generate (legacy, kept for standalone endpoint)
 class GenerateRequest(BaseModel):
     keyword: str
     city: str
@@ -37,16 +37,10 @@ class GenerateRequest(BaseModel):
     style_examples: Optional[list[dict[str, Any]]] = None
     competitor_content: Optional[list[dict[str, Any]]] = None
     services: list[str] = []
-    content_type: str = "blog_post"
+    content_type: str = "landing_page"
     business_name: str = ""
     brand_id: Optional[str] = None
     location_id: Optional[str] = None
-
-
-class GenerateResponse(BaseModel):
-    title: str
-    content: str
-    word_count: int
 
 
 class OutlineRequest(BaseModel):
@@ -57,8 +51,7 @@ class OutlineRequest(BaseModel):
     template: Optional[dict[str, Any]] = None
     paa_questions: Optional[list[str]] = None
     competitors: Optional[list[dict[str, Any]]] = None
-    services: list[str] = []
-    business_name: str = ""
+    style_examples: Optional[list[dict[str, Any]]] = None
 
 
 class ReviseRequest(BaseModel):
@@ -66,7 +59,6 @@ class ReviseRequest(BaseModel):
     keyword: str
     brief: dict[str, Any]
     pop_feedback: dict[str, Any] = {}
-    instructions: str = ""
 
 
 # Score
@@ -98,21 +90,32 @@ class SerpRequest(BaseModel):
 
 # Google Drive Export
 class ExportGDriveRequest(BaseModel):
-    content: str
     title: str
-    folder_id: Optional[str] = None
+    content: str
+    keyword: str = ""
+    city: str = ""
+    brand_id: str
 
 
 class ExportGDriveResponse(BaseModel):
-    file_id: str
-    web_view_link: str
+    doc_url: str
+    doc_id: str
 
 
 # Save Generation
 class SaveGenerationRequest(BaseModel):
+    brand_id: str
     keyword: str
-    title: str
+    city: str = ""
     content: str
-    word_count: int
-    score: Optional[dict[str, Any]] = None
-    brief: Optional[dict[str, Any]] = None
+    location_id: Optional[str] = None
+    outline: Optional[str] = None
+    content_type: str = "landing_page"
+    template_name: Optional[str] = None
+    model: str = "sonnet"
+    word_count: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    pop_brief: Optional[dict[str, Any]] = None
+    pop_score: Optional[dict[str, Any]] = None
+    revision_count: int = 0
