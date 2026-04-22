@@ -158,6 +158,7 @@ async def _run_pipeline_async(
             brief=brief, template=template_content, outline=outline,
             competitors=[], style_examples=style_examples,
             local_context=local_context,
+            content_type=content_type,
         )
 
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)

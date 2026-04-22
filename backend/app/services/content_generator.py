@@ -144,6 +144,21 @@ def build_system_prompt(
     return "\n".join(parts)
 
 
+CONTENT_TYPE_LABELS = {
+    "landing_page": "city landing page",
+    "service_page": "service page",
+    "blog_post": "blog post",
+    "product_page": "product page",
+}
+
+CONTENT_TYPE_INSTRUCTIONS = {
+    "landing_page": "This is a city-specific landing page. Lead with the city name and local relevance. Include a strong H1 with the keyword and city. Address local homeowners directly. End with a location-specific CTA (free estimate, call today, etc.).",
+    "service_page": "This is a service-specific page. Lead with the service name. Explain what the service is, who needs it, and how your process works. Include pricing context if relevant. End with a CTA to schedule or get a quote.",
+    "blog_post": "This is an informational blog post. Lead with a question or problem the reader has. Provide genuinely useful information they can act on. Be educational, not salesy. Light CTA at the end.",
+    "product_page": "This is a product page. Lead with the product/solution name and what it does. Include specifications, benefits, and use cases. Compare to alternatives if relevant. Clear purchase/inquiry CTA.",
+}
+
+
 def build_user_prompt(
     keyword: str,
     city: str,
@@ -155,6 +170,7 @@ def build_user_prompt(
     paa_questions: Optional[list] = None,
     style_examples: Optional[list] = None,
     local_context: Optional[dict] = None,
+    content_type: str = "landing_page",
 ) -> str:
     """Build user prompt with all context for full content generation."""
     target_word_count = brief.get("target_word_count", 1500)
@@ -165,12 +181,19 @@ def build_user_prompt(
     competitor_headings = brief.get("competitor_headings", [])
     recommended_headings = brief.get("recommended_heading_count", 0)
 
+    type_label = CONTENT_TYPE_LABELS.get(content_type, "landing page")
+    type_instructions = CONTENT_TYPE_INSTRUCTIONS.get(content_type, "")
+
     parts = [
-        f"Write a landing page for **{city}, {state}**.",
+        f"Write a {type_label} for **{city}, {state}**.",
         "",
+        f"**Content type:** {type_label}",
         f"**Primary Keyword:** {keyword}",
         f"**Target Word Count:** {target_word_count} words",
     ]
+
+    if type_instructions:
+        parts.append(f"**Content type instructions:** {type_instructions}")
 
     if word_count_min and word_count_max:
         parts.append(f"  (Competitor range: {word_count_min}-{word_count_max} words, avg {brief.get('word_count_avg', 0)})")
