@@ -70,3 +70,21 @@ async def delete_location(location_id: str, _=Depends(require_auth)):
     db = get_db()
     db.table("locations").delete().eq("id", location_id).execute()
     return {"ok": True}
+
+
+class GoogleSearchRequest(BaseModel):
+    business_name: str
+    city: str
+    state: str
+
+
+@router.post("/google-search")
+async def google_search(req: GoogleSearchRequest, _=Depends(require_auth)):
+    """Search Google Maps for a business and return profile data + reviews."""
+    from app.services.google_business import search_google_business
+    result = await search_google_business(
+        business_name=req.business_name,
+        city=req.city,
+        state=req.state,
+    )
+    return result
