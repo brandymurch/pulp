@@ -38,66 +38,66 @@ interface DemoEntry {
 
 const demos: DemoEntry[] = [
   {
-    loc: "Ember",
+    loc: "ProShield",
     locEm: "Mission",
     path: "/sf-mission",
-    h: "Pies pulled from a 900\u00b0 oven, two blocks from 24th St BART.",
-    p1: "Fog-proof crust, blistered at the edge, with a middle that still holds the slice. Our Mission location leans into the neighborhood. Sourdough from Josey Baker, tomatoes from Dirty Girl, and a Saturday-only \u2018burrito pie\u2019 nobody asked for but everyone keeps ordering.",
-    p2: "Open till midnight Thursday through Saturday. Walk-ins welcome; the bar seat is the best seat.",
+    h: "Victorian row houses, fog-season moisture, and termites that never left the 1906 foundations.",
+    p1: "San Francisco\u2019s Mission District runs warm and dry by local standards, which is exactly what drywood termites prefer. The Victorians on Guerrero and Valencia sit on pier-and-post foundations with original redwood framing. We inspect from the subfloor up, treat with localized heat, and warranty the work for five years.",
+    p2: "Same-day inspections available Tuesday through Saturday. Two blocks from 24th St BART.",
     age: "2 days ago",
   },
   {
-    loc: "Ember",
+    loc: "BrightHome",
     locEm: "Alberta",
     path: "/pdx-alberta",
-    h: "Wet crust weather. Dry pizza oven. Meet us on Alberta.",
-    p1: "Portland rain is the crust\u2019s best friend. It keeps the dough slack and the kitchen honest. On Alberta we keep a rotating Oregon-mushroom pie, a sourdough starter we\u2019ve been feeding since 2016, and a natural-wine list that punches above its weight.",
-    p2: "Happy hour 4-6 weekdays. Dog-friendly patio when the gutters let us.",
+    h: "Portland rain gets in. We keep the heat from getting out.",
+    p1: "Alberta Street homes were mostly built in the 1920s with balloon framing and zero vapor barrier. That means forty-degree mornings in January hit your furnace before they hit the thermostat. We blow dense-pack cellulose into wall cavities without removing siding, seal the attic plane, and cut heating bills by a third on average.",
+    p2: "Free energy audit for Alberta Arts District homeowners. Book online or call before 5 PM.",
     age: "4 days ago",
   },
   {
-    loc: "Ember",
+    loc: "CleanSlate",
     locEm: "LoHi",
     path: "/den-lohi",
-    h: "Altitude bakes a different pie. Ours leans crisp.",
-    p1: "At a mile up, dough behaves. Less humidity, faster rise, sharper char. Our LoHi kitchen pushes the oven past 950\u00b0 to get that mountain-dry snap, with a green-chile honey drizzle that only lives here.",
-    p2: "Rooftop open May to October. Ski-boot friendly in February.",
+    h: "Altitude dries everything faster. Including your patience after a burst pipe.",
+    p1: "Denver\u2019s low humidity is a gift for drying but a curse for timing. Water damage at 5,280 feet wicks into drywall and subfloor faster than sea-level crews expect. Our LoHi team runs commercial dehumidifiers and thermal imaging within two hours of your call, document everything for insurance, and handle the rebuild from studs to paint.",
+    p2: "24/7 emergency line. Licensed, bonded, and insured in Colorado since 2014.",
     age: "Today",
   },
   {
-    loc: "Ember",
+    loc: "ProShield",
     locEm: "Logan Sq",
     path: "/chi-logan",
-    h: "Not deep dish. We\u2019ll still take your tavern-cut question.",
-    p1: "Logan Square asked for thin, so we made ours thinner. 14-inch rounds, cracker-crisp bottom, square-cut at the counter, whole-pie if you ask. Dough cold-fermented four days, topped with Midwest dairy we can walk to.",
-    p2: "Bears Sundays: $1 slices 1st and 3rd quarter. No exceptions for Packers fans.",
+    h: "Chicago rats are bold. Our bait stations are bolder.",
+    p1: "Logan Square sits between the 606 trail and the Kennedy, which means rodent pressure from both green corridors and commercial waste. We run a four-visit quarterly program: perimeter bait stations, interior snap traps, entry-point exclusion with copper mesh, and a follow-up thermal scan to confirm clearance. No contracts longer than a year.",
+    p2: "Winter mouse season starts in October. Book your fall exclusion before the first freeze.",
     age: "Yesterday",
   },
   {
-    loc: "Ember",
+    loc: "BrightHome",
     locEm: "Old Fourth",
     path: "/atl-o4w",
-    h: "Peach-sweet summer nights. Pizza to match.",
-    p1: "Our Old Fourth Ward kitchen sits on the BeltLine. We see runners, strollers, and the last bikes of the night. Atlanta humidity softens the dough, so we pull it earlier and blister it harder. Peaches on pie in July, collards on pie in January.",
-    p2: "Walk up from the trail. Bike racks out front, water bowls on the patio.",
+    h: "Atlanta summers start in April. Your attic already knows.",
+    p1: "Old Fourth Ward bungalows and new BeltLine condos share the same problem: an attic that hits 150\u00b0 by June. We install radiant barrier and blow R-38 fiberglass on the attic floor, cutting cooling costs and taking load off your HVAC. Georgia Power rebates cover up to $500 of the job.",
+    p2: "Walk-in estimates at our Irwin Street office, or we come to you. Free for O4W residents.",
     age: "3 days ago",
   },
   {
-    loc: "Ember",
+    loc: "CleanSlate",
     locEm: "East Side",
     path: "/aus-east",
-    h: "Texas heat. Italian oven. No BBQ pizza, we promise.",
-    p1: "East Austin gets a crust with more hydration. The summer sun demands it. The oven runs hot, the A/C runs hotter, and the back patio has misters from May to October. Local Texas mozz, Blue Bonnet flour, jalape\u00f1os from the farm up the road.",
-    p2: "SXSW hours posted weekly. Queso pizza exists. We admit nothing.",
+    h: "Texas storms flood fast. We show up faster.",
+    p1: "East Austin\u2019s clay soil doesn\u2019t drain. When a spring storm drops three inches in an hour, water pools against slab foundations and pushes through weep holes into living spaces. Our crew arrives with extractors and air movers the same day, maps the moisture with FLIR cameras, and files your insurance claim before we leave.",
+    p2: "Serving East Austin, Mueller, and Manor Road. Hablamos espa\u00f1ol.",
     age: "Today",
   },
   {
-    loc: "Ember",
+    loc: "ProShield",
     locEm: "Silver Lake",
     path: "/la-silverlake",
-    h: "A Los Angeles pie that isn\u2019t trying to be New York.",
-    p1: "Sunset Boulevard gets our California angle. Weiser Farms onions, Bellwether burrata, a nettle pesto from early spring till we run out. Crust is lighter than our East-Coast cousins, and the dough ferments under the Silver Lake sun on the windowsill.",
-    p2: "Open for lunch. Parking is a myth; walk from the reservoir.",
+    h: "Hillside homes, canyon brush, and the rodents that come with both.",
+    p1: "Silver Lake\u2019s steep lots back up to wild hillside, which means roof rats, field mice, and the occasional opossum finding gaps in Spanish tile and stucco. We seal every entry point with galvanized steel, set monitored bait stations along the slope line, and clear attic contamination if they already got comfortable.",
+    p2: "Serving Silver Lake, Echo Park, and Los Feliz. Parking is still a myth, but we bring our own van.",
     age: "Yesterday",
   },
 ];
@@ -115,14 +115,14 @@ const pins: { code: string; left: string; top: string }[] = [
 
 /* Ticker names */
 const tickerNames = [
-  "Flour & Field",
-  "Saltbox Co.",
-  "Halfmoon Hotels",
-  "Ember Pizza",
-  "North Fork Dental",
-  "Rivet Gym",
-  "Brightline Optical",
-  "Otter & Oak",
+  "ProShield Pest Control",
+  "BrightHome Insulation",
+  "CleanSlate Restoration",
+  "SparkClean Maids",
+  "TrueLevel Foundations",
+  "GreenEdge Landscaping",
+  "PeakAir HVAC",
+  "IronGate Roofing",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -210,8 +210,8 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-base leading-[1.55] text-ink-70 max-w-[46ch] mb-10 font-mono">
-              Pulp writes local landing pages, menus, and ad copy for each of
-              your storefronts, in your voice, tuned to the neighborhood,
+              Pulp writes local landing pages, service pages, and ad copy for
+              each of your locations, in your voice, tuned to the neighborhood,
               refreshed weekly.
             </p>
             <div className="flex gap-2.5 items-center flex-wrap">
@@ -238,27 +238,27 @@ export default function Home() {
                 rotate: "-2deg",
                 mr: "20px",
                 ml: "0",
-                meta: "Ember \u00b7 Mission",
+                meta: "ProShield \u00b7 Mission",
                 path: "/sf-mission",
-                h: "Pies pulled from a 900\u00b0 oven, two blocks from 24th St BART.",
+                h: "Victorian row houses, fog-season moisture, and termites that never left.",
                 age: "Refreshed 2 days ago",
               },
               {
                 rotate: "1.5deg",
                 mr: "0",
                 ml: "24px",
-                meta: "Ember \u00b7 Alberta",
+                meta: "BrightHome \u00b7 Alberta",
                 path: "/pdx-alberta",
-                h: "Wet crust weather. Dry pizza oven. Meet us on Alberta.",
+                h: "Portland rain gets in. We keep the heat from getting out.",
                 age: "Refreshed today",
               },
               {
                 rotate: "-1deg",
                 mr: "8px",
                 ml: "0",
-                meta: "Ember \u00b7 LoHi",
+                meta: "CleanSlate \u00b7 LoHi",
                 path: "/den-lohi",
-                h: "Altitude bakes a different pie. Ours leans crisp.",
+                h: "Altitude dries everything faster. Including your patience after a burst pipe.",
                 age: "Refreshed 4 days ago",
               },
             ].map((card, i) => (
@@ -347,7 +347,7 @@ export default function Home() {
               {
                 n: "01",
                 title: "Plug in your locations.",
-                body: "CSV, Google Business Profile, or your CMS. Pulp pulls the neighborhood, hours, menu, and local signals automatically.",
+                body: "CSV, Google Business Profile, or your CMS. Pulp pulls the neighborhood, hours, services, and local signals automatically.",
                 tag: "5-min setup",
                 dark: false,
               },
@@ -742,7 +742,7 @@ export default function Home() {
                 className="mt-auto flex justify-between pt-3.5 text-[10px] tracking-[0.22em] uppercase text-ink-70"
                 style={{ borderTop: "1.5px dashed var(--ink)" }}
               >
-                <span>Voice &middot; Ember Pizza</span>
+                <span>Voice &middot; {demo.loc}</span>
                 <span className="inline-flex items-center gap-1.5 text-ink">
                   <span className="w-1.5 h-1.5 bg-ink rounded-full inline-block" />
                   Refreshed {demo.age}
@@ -871,20 +871,20 @@ export default function Home() {
             className="font-display font-normal leading-[1.05] tracking-[-0.025em] max-w-[24ch] m-0"
             style={{ fontSize: "clamp(40px, 5.2vw, 76px)" }}
           >
-            We shipped{" "}
-            <span className="font-[800]">412 location pages</span> in a
-            weekend. Google traffic <em className="italic">tripled</em> in six
-            weeks, and every page actually sounds like us.
+            We launched{" "}
+            <span className="font-[800]">83 city pages</span> in a single
+            weekend. Organic leads <em className="italic">doubled</em> in five
+            weeks, and every page reads like our local team wrote it.
           </blockquote>
           <div className="mt-11 flex gap-3.5 items-center text-[11px] tracking-[0.2em] uppercase text-white/70">
             <div className="w-11 h-11 rounded-full bg-white text-ink flex items-center justify-center font-display font-[800] text-xl">
-              M
+              R
             </div>
             <div>
               <div className="font-display font-[800] text-base tracking-[-0.01em] text-white normal-case mb-1">
-                Maya Ortiz
+                Rachel Teague
               </div>
-              Head of Growth &middot; Halfmoon Hotels &middot; 89 properties
+              VP Marketing &middot; ProShield Pest Control &middot; 83 territories
             </div>
           </div>
         </div>
@@ -936,8 +936,8 @@ export default function Home() {
               </span>
             </a>
             <p className="text-[13px] text-white/70 max-w-[36ch] mt-[18px] leading-[1.55]">
-              Fresh-squeezed copy for every location. Cold-pressed in Oakland,
-              sold to operators everywhere.
+              Fresh-squeezed copy for every location. Built for franchises,
+              loved by operators.
             </p>
           </div>
 
@@ -1010,7 +1010,7 @@ export default function Home() {
             style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}
           >
             <span>&copy; 2026 Pulp Copy, Inc.</span>
-            <span>Cold-pressed. No pulp-free settings.</span>
+            <span>Fresh-squeezed. Never from concentrate.</span>
             <span>Privacy &middot; Terms &middot; DPA</span>
           </div>
         </div>
