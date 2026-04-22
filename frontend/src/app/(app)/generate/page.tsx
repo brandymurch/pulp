@@ -360,7 +360,7 @@ export default function GeneratePage() {
             <div>
               <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Content type</label>
               <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
-                <option value="landing_page">Landing Page</option>
+                <option value="landing_page">City Landing Page</option>
                 <option value="service_page">Service Page</option>
                 <option value="blog_post">Blog Post</option>
                 <option value="product_page">Product Page</option>
