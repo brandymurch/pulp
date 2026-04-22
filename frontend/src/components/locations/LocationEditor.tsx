@@ -262,7 +262,6 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
               <div><label className={labelClass}>Climate notes</label><input className={inputClass} value={climateNotes} onChange={e => setClimateNotes(e.target.value)} placeholder="Hot summers, cold winters" /></div>
             </div>
             <div><label className={labelClass}>Housing stock</label><input className={inputClass} value={housingNotes} onChange={e => setHousingNotes(e.target.value)} placeholder="Mostly 1950s ranch and colonial" /></div>
-            </div>
             <div>
               <label className={labelClass}>General notes</label>
               <textarea className={textareaClass} value={generalNotes} onChange={e => setGeneralNotes(e.target.value)} placeholder="Any other details about this location that should inform content..." rows={3} />
