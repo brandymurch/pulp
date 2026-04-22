@@ -96,7 +96,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
     }
   }
 
-  const [imported, setImported] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
 
   function importResult(result: any) {
     const newReviews = (result.reviews || []).filter((r: any) => r.text).map((r: any) => ({
@@ -107,7 +107,11 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
     setReviews(prev => [...prev, ...newReviews]);
     if (!name) setName(result.title || `${city}, ${state}`);
     setSearchResults([]);
-    setImported(true);
+    if (newReviews.length > 0) {
+      setImportMessage(`Imported ${newReviews.length} review${newReviews.length !== 1 ? "s" : ""} from ${result.title}`);
+    } else {
+      setImportMessage(`Found ${result.title} but no reviews available. You can add reviews manually below.`);
+    }
   }
 
   function removeReview(index: number) {
@@ -179,12 +183,10 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
           <div className="bg-line-soft rounded-[14px] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[12px] text-ink-70">
-                {imported && reviews.length > 0
-                  ? `Imported ${reviews.length} review${reviews.length !== 1 ? "s" : ""} from Google`
-                  : "Pull reviews and data from Google"}
+                {importMessage || "Pull reviews and data from Google"}
               </span>
-              <Button variant="ink" size="sm" onClick={() => { setImported(false); searchGoogle(); }} disabled={searching}>
-                {searching ? "Searching..." : imported ? "Search again" : "Search Google"}
+              <Button variant="ink" size="sm" onClick={() => { setImportMessage(""); searchGoogle(); }} disabled={searching}>
+                {searching ? "Searching..." : importMessage ? "Search again" : "Search Google"}
               </Button>
             </div>
             {searchResults.length > 0 && (
@@ -210,22 +212,59 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         )}
 
         {/* Reviews */}
-        {reviews.length > 0 && (
-          <div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
             <label className={labelClass}>Reviews ({reviews.length})</label>
+            <button
+              onClick={() => setReviews(prev => [...prev, { author: "", text: "", rating: 5 }])}
+              className="text-[11px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0"
+            >
+              + Add manually
+            </button>
+          </div>
+          {reviews.length === 0 ? (
+            <div className="text-[12px] text-ink-40 py-3">No reviews yet. Import from Google or add manually.</div>
+          ) : (
             <div className="space-y-2">
               {reviews.map((r, i) => (
-                <div key={i} className="border border-line rounded-lg p-3 flex gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[12px] text-ink font-mono leading-[1.5]">"{r.text}"</div>
-                    <div className="text-[11px] text-ink-40 mt-1">{r.author} {"*".repeat(r.rating)}</div>
-                  </div>
-                  <button onClick={() => removeReview(i)} className="text-[11px] text-ink-40 hover:text-[#b91c1c] shrink-0">Remove</button>
+                <div key={i} className="border border-line rounded-lg p-3">
+                  {r.text ? (
+                    <div className="flex gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] text-ink font-mono leading-[1.5]">"{r.text}"</div>
+                        <div className="text-[11px] text-ink-40 mt-1">{r.author} {"*".repeat(r.rating)}</div>
+                      </div>
+                      <button onClick={() => removeReview(i)} className="text-[11px] text-ink-40 hover:text-[#b91c1c] shrink-0">Remove</button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <input className={inputClass} placeholder="Review text" value={r.text} onChange={e => {
+                        const updated = [...reviews];
+                        updated[i] = { ...r, text: e.target.value };
+                        setReviews(updated);
+                      }} />
+                      <div className="flex gap-2">
+                        <input className={`${inputClass} max-w-[200px]`} placeholder="Author name" value={r.author} onChange={e => {
+                          const updated = [...reviews];
+                          updated[i] = { ...r, author: e.target.value };
+                          setReviews(updated);
+                        }} />
+                        <select className={`${inputClass} max-w-[80px]`} value={r.rating} onChange={e => {
+                          const updated = [...reviews];
+                          updated[i] = { ...r, rating: Number(e.target.value) };
+                          setReviews(updated);
+                        }}>
+                          {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n !== 1 ? "s" : ""}</option>)}
+                        </select>
+                        <button onClick={() => removeReview(i)} className="text-[11px] text-ink-40 hover:text-[#b91c1c]">Remove</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Additional info toggle */}
         <button
