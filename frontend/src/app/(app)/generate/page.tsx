@@ -1,19 +1,43 @@
 "use client";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { useGeneration } from "@/hooks/useGeneration";
 import { Button } from "@/components/shared/Button";
 import { KeywordInput } from "@/components/generate/KeywordInput";
 import { TemplateSelector } from "@/components/generate/TemplateSelector";
 import { CompetitorInput } from "@/components/generate/CompetitorInput";
-import { PipelineProgress, PipelineStep } from "@/components/generate/PipelineProgress";
-import { OutlineReview } from "@/components/generate/OutlineReview";
 import { ContentViewer } from "@/components/generate/ContentViewer";
 import { TermHeatmap } from "@/components/generate/TermHeatmap";
 import { POPScoreCard } from "@/components/generate/POPScoreCard";
+import { OutlineReview } from "@/components/generate/OutlineReview";
 
-type Phase = "idle" | "researching" | "outline" | "generating" | "review" | "scoring" | "revising" | "done";
+type Phase = "idle" | "pending" | "brief" | "outline" | "generating" | "scoring" | "revising" | "done" | "error";
+
+const phaseLabels: Record<Phase, string> = {
+  idle: "Generate",
+  pending: "Starting",
+  brief: "Analyzing SEO landscape",
+  outline: "Building outline",
+  generating: "Writing content",
+  scoring: "Scoring content",
+  revising: "Revising based on SEO feedback",
+  done: "Done",
+  error: "Error",
+};
+
+const phaseDescriptions: Record<Phase, string> = {
+  idle: "Enter a keyword and city, select a template, and let the pipeline do the rest.",
+  pending: "Starting the content pipeline...",
+  brief: "Pulling competitive SERP data and analyzing term targets. This can take up to 2 minutes.",
+  outline: "Claude is building a content outline from the SEO data.",
+  generating: "Writing content against the SEO brief and your voice settings.",
+  scoring: "Running SEO score analysis. This can take a minute.",
+  revising: "Revising based on SEO feedback to improve the score.",
+  done: "Content is ready. Review, edit, save, or export.",
+  error: "Something went wrong.",
+};
+
+const activePhases = new Set(["pending", "brief", "outline", "generating", "scoring", "revising"]);
 
 export default function GeneratePage() {
   const searchParams = useSearchParams();
@@ -30,30 +54,48 @@ export default function GeneratePage() {
   const [locations, setLocations] = useState<any[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
 
+  // Brand
+  const [brands, setBrands] = useState<any[]>([]);
+  const [brandId, setBrandId] = useState("");
+  const [brandName, setBrandName] = useState("");
+
   // Pipeline state
+  const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
-  const [steps, setSteps] = useState<PipelineStep[]>([]);
+  const [content, setContent] = useState("");
   const [brief, setBrief] = useState<any>(null);
-  const [templateContent, setTemplateContent] = useState<any>(null);
-  const [styleExamples, setStyleExamples] = useState<any[]>([]);
-  const [paaQuestions, setPaaQuestions] = useState<string[]>([]);
-  const [competitors, setCompetitors] = useState<any[]>([]);
   const [outlineData, setOutlineData] = useState<any>(null);
   const [popScore, setPopScore] = useState<any>(null);
   const [revisionCount, setRevisionCount] = useState(0);
-  const [brands, setBrands] = useState<any[]>([]);
-  const [brandId, setBrandId] = useState<string>("");
-  const [brandName, setBrandName] = useState<string>("");
+  const [wordCount, setWordCount] = useState(0);
+  const [usage, setUsage] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
 
-  const gen = useGeneration();
-  // Ref to always have current content (avoids stale closure issues)
-  const contentRef = useRef("");
-  useEffect(() => { contentRef.current = gen.output; }, [gen.output]);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load brands on mount
+  useEffect(() => {
+    async function loadBrands() {
+      try {
+        const res = await apiFetch("/api/brands");
+        if (res.ok) {
+          const data = await res.json();
+          setBrands(data);
+          const target = urlBrandId ? data.find((b: any) => b.id === urlBrandId) : data[0];
+          if (target) {
+            setBrandId(target.id);
+            setBrandName(target.name);
+          }
+        }
+      } catch {}
+    }
+    loadBrands();
+  }, [urlBrandId]);
+
   // Load locations when brand changes
   useEffect(() => {
     if (!brandId) return;
@@ -63,300 +105,119 @@ export default function GeneratePage() {
         if (res.ok) {
           const locs = await res.json();
           setLocations(locs);
-          // Pre-select from URL params
           if (urlLocationId) {
-            const targetLoc = locs.find((l: any) => l.id === urlLocationId);
-            if (targetLoc) {
-              setSelectedLocationId(targetLoc.id);
-              setCity(targetLoc.city);
-              setState(targetLoc.state);
-            } else {
-              setSelectedLocationId("");
+            const target = locs.find((l: any) => l.id === urlLocationId);
+            if (target) {
+              setSelectedLocationId(target.id);
+              setCity(target.city);
+              setState(target.state);
             }
-          } else {
-            setSelectedLocationId("");
           }
         }
       } catch {}
     }
     loadLocations();
-  }, [brandId]);
+  }, [brandId, urlLocationId]);
 
-  useEffect(() => {
-    async function loadBrands() {
+  // Poll pipeline status
+  function startPolling(id: string) {
+    stopPolling();
+    setElapsed(0);
+    elapsedRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+    pollRef.current = setInterval(async () => {
       try {
-        const res = await apiFetch("/api/brands");
-        if (res.ok) {
-          const data = await res.json();
-          setBrands(data);
-          // Pre-select from URL params or default to first brand
-          const targetBrand = urlBrandId ? data.find((b: any) => b.id === urlBrandId) : data[0];
-          if (targetBrand) {
-            setBrandId(targetBrand.id);
-            setBrandName(targetBrand.name);
-          }
+        const res = await apiFetch(`/api/pipeline/status/${id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        setPhase(data.phase as Phase);
+        if (data.brief) setBrief(data.brief);
+        if (data.outline) setOutlineData(data.outline);
+        if (data.content) setContent(data.content);
+        if (data.score) setPopScore(data.score);
+        if (data.revision_count) setRevisionCount(data.revision_count);
+        if (data.word_count) setWordCount(data.word_count);
+        if (data.input_tokens || data.output_tokens) {
+          setUsage({ input_tokens: data.input_tokens, output_tokens: data.output_tokens });
         }
-      } catch {
-        // brands endpoint not available
-      }
-    }
-    loadBrands();
-  }, []);
+        if (data.error) setError(data.error);
 
-  // Helper to update a specific step
-  const updateStep = useCallback((label: string, status: PipelineStep["status"]) => {
-    setSteps(prev => prev.map(s => s.label === label ? { ...s, status } : s));
-  }, []);
+        // Stop polling when done or errored
+        if (data.phase === "done" || data.phase === "error") {
+          stopPolling();
+        }
+      } catch {}
+    }, 3000);
+  }
 
-  // -- RESEARCH PHASE --
-  async function startResearch() {
-    setPhase("researching");
+  function stopPolling() {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null; }
+  }
+
+  // Cleanup on unmount
+  useEffect(() => () => stopPolling(), []);
+
+  // Start pipeline
+  async function startPipeline() {
+    setPhase("pending");
     setError(null);
-    setSaved(false);
-    setExportUrl(null);
+    setContent("");
+    setBrief(null);
+    setOutlineData(null);
     setPopScore(null);
     setRevisionCount(0);
+    setWordCount(0);
+    setUsage(null);
+    setSaved(false);
+    setExportUrl(null);
 
-    const initialSteps: PipelineStep[] = [
-      { label: "SEO brief", status: "loading" },
-      { label: "Style examples", status: "loading" },
-      { label: "Template", status: selectedTemplate ? "loading" : "skipped" },
-      { label: "Competitors", status: competitorUrls.length > 0 ? "loading" : "skipped" },
-      { label: "PAA questions", status: "loading" },
-    ];
-    setSteps(initialSteps);
-
-    // Fire parallel research calls
-    const currentBrandId = brandId;
-    const results = await Promise.allSettled([
-      // 0: POP brief (REQUIRED) - async job pattern to avoid 30s timeout
-      apiFetch("/api/brief", {
-        method: "POST",
-        body: JSON.stringify({ keyword, location: `${city}, ${state}` }),
-      }).then(async r => {
-        if (!r.ok) {
-          const err = await r.json().catch(() => ({ detail: "Brief fetch failed" }));
-          throw new Error(err.detail || "Brief fetch failed");
-        }
-        const { job_id } = await r.json();
-        // Poll for result every 5 seconds, up to 3 minutes
-        for (let i = 0; i < 36; i++) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          const pollRes = await apiFetch(`/api/brief/status/${job_id}`);
-          if (!pollRes.ok) {
-            const err = await pollRes.json().catch(() => ({ detail: "Brief failed" }));
-            throw new Error(err.detail || "Brief failed");
-          }
-          const pollData = await pollRes.json();
-          if (pollData.status === "done") return pollData;
-          if (pollData.status === "error") throw new Error(pollData.error || "Brief failed");
-        }
-        throw new Error("SEO brief timed out after 3 minutes");
-      }),
-
-      // 1: Style examples (OPTIONAL - empty is fine)
-      apiFetch(`/api/style-examples?brand_id=${currentBrandId}`).then(async r => {
-        if (!r.ok) return [];
-        return r.json();
-      }),
-
-      // 2: Template (REQUIRED if selected)
-      selectedTemplate
-        ? apiFetch(`/api/notion/templates/${selectedTemplate.id}`).then(async r => {
-            if (!r.ok) throw new Error("Template fetch failed");
-            return r.json();
-          })
-        : Promise.resolve(null),
-
-      // 3: Competitors (OPTIONAL)
-      competitorUrls.length > 0
-        ? Promise.all(
-            competitorUrls.map(url =>
-              apiFetch("/api/scrape", { method: "POST", body: JSON.stringify({ url }) })
-                .then(r => r.ok ? r.json() : null)
-                .catch(() => null)
-            )
-          ).then(results => results.filter(Boolean))
-        : Promise.resolve([]),
-
-      // 4: PAA questions (OPTIONAL)
-      apiFetch("/api/serp", {
-        method: "POST",
-        body: JSON.stringify({ keyword, location: `${city}, ${state}` }),
-      }).then(async r => {
-        if (!r.ok) return { paa_questions: [] };
-        return r.json();
-      }),
-    ]);
-
-    // Process results
-    const labels = ["SEO brief", "Style examples", "Template", "Competitors", "PAA questions"];
-    // Only SEO brief is truly required. Everything else degrades gracefully.
-    const required = [true, false, false, false, false];
-
-    let aborted = false;
-    const failedSteps: string[] = [];
-    results.forEach((result, i) => {
-      if (initialSteps[i].status === "skipped") return;
-      if (result.status === "fulfilled") {
-        updateStep(labels[i], "done");
-      } else {
-        const reason = (result as any).reason?.message || "Unknown error";
-        console.error(`Pipeline step "${labels[i]}" failed:`, reason);
-        if (required[i]) {
-          updateStep(labels[i], "failed");
-          failedSteps.push(`${labels[i]}: ${reason}`);
-          aborted = true;
-        } else {
-          updateStep(labels[i], "skipped");
-        }
-      }
-    });
-
-    if (aborted) {
-      setError(`Required step failed: ${failedSteps.join("; ")}`);
-      setPhase("idle");
-      return;
-    }
-
-    // Extract values
-    const briefData = results[0].status === "fulfilled" ? (results[0] as any).value : null;
-    const examples = results[1].status === "fulfilled" ? (results[1] as any).value : [];
-    const tmpl = results[2].status === "fulfilled" ? (results[2] as any).value : null;
-    const comps = results[3].status === "fulfilled" ? (results[3] as any).value : [];
-    const serpData = results[4].status === "fulfilled" ? (results[4] as any).value : { paa_questions: [] };
-
-    setBrief(briefData);
-    setStyleExamples(examples);
-    setTemplateContent(tmpl);
-    setCompetitors(comps);
-    setPaaQuestions([...(serpData.paa_questions || []), ...(serpData.ai_fanout_queries || [])]);
-
-    // Move to outline phase
-    setPhase("outline");
     try {
-      const outlineRes = await apiFetch("/api/generate/outline", {
+      const res = await apiFetch("/api/pipeline/start", {
         method: "POST",
         body: JSON.stringify({
-          keyword, city, state,
-          brief: briefData,
-          template: tmpl,
-          paa_questions: serpData.paa_questions || [],
-          competitors: comps,
-          style_examples: examples,
+          keyword,
+          city,
+          state,
+          brand_id: brandId,
+          location_id: selectedLocationId || undefined,
+          template_id: selectedTemplate?.id || undefined,
+          content_type: contentType,
+          competitor_urls: competitorUrls.length > 0 ? competitorUrls : undefined,
         }),
       });
-      if (!outlineRes.ok) throw new Error("Outline generation failed");
-      const outline = await outlineRes.json();
-      setOutlineData(outline);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to start pipeline" }));
+        setError(err.detail || "Failed to start pipeline");
+        setPhase("idle");
+        return;
+      }
+      const { pipeline_id } = await res.json();
+      setPipelineId(pipeline_id);
+      startPolling(pipeline_id);
     } catch (err: any) {
-      setError(err.message || "Outline generation failed");
+      setError(err.message || "Failed to start pipeline");
       setPhase("idle");
     }
   }
 
-  // -- GENERATION PHASE --
-  async function startGeneration(approvedOutline: any) {
-    setOutlineData(approvedOutline);
-    setPhase("generating");
-
-    await gen.generate("/api/generate", {
-      keyword, city, state,
-      brief,
-      outline: approvedOutline,
-      template: templateContent,
-      style_examples: styleExamples,
-      competitor_content: competitors,
-      brand_id: brandId,
-      location_id: selectedLocationId || undefined,
-    });
-
-    // After generation completes, show content for review before scoring
-    setPhase("review");
-  }
-
-  // -- SCORING PHASE --
-  async function scoreContent(content: string, currentRevisions: number = 0) {
-    try {
-      // Start score job
-      const res = await apiFetch("/api/score", {
-        method: "POST",
-        body: JSON.stringify({ content, keyword }),
-      });
-      if (!res.ok) {
-        setPhase("done");
-        return;
-      }
-      const { job_id } = await res.json();
-
-      // Poll for result (same pattern as brief)
-      let score = null;
-      for (let i = 0; i < 36; i++) {
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        const pollRes = await apiFetch(`/api/score/status/${job_id}`);
-        if (!pollRes.ok) {
-          setPhase("done");
-          return;
-        }
-        const pollData = await pollRes.json();
-        if (pollData.status === "done") {
-          score = pollData;
-          break;
-        }
-        if (pollData.status === "error") {
-          setPhase("done");
-          return;
-        }
-      }
-
-      if (!score) {
-        setError("Scoring timed out");
-        setPhase("done");
-        return;
-      }
-
-      // Strip polling metadata, keep only score fields
-      const { status: _status, ...scoreData } = score;
-      setPopScore(scoreData);
-
-      // Auto-revise if score < 75 and under 2 revisions
-      if (scoreData.overall_score < 75 && currentRevisions < 2) {
-        const nextRevision = currentRevisions + 1;
-        setRevisionCount(nextRevision);
-        setPhase("revising");
-        await gen.generate("/api/generate/revise", {
-          content,
-          keyword,
-          brief,
-          pop_feedback: scoreData,
-        });
-        // Re-score after revision
-        setPhase("scoring");
-        await scoreContent(contentRef.current || gen.output || content, nextRevision);
-      } else {
-        setPhase("done");
-      }
-    } catch {
-      setPhase("done");
-    }
-  }
-
-  // -- SAVE --
+  // Save to history
   async function saveToHistory() {
     try {
       await apiFetch("/api/generations", {
         method: "POST",
         body: JSON.stringify({
           brand_id: brandId,
+          location_id: selectedLocationId || undefined,
           keyword, city,
-          content: gen.output,
+          content,
           outline: outlineData ? JSON.stringify(outlineData) : null,
-          content_type: "landing_page",
+          content_type: contentType,
           template_name: selectedTemplate?.name || null,
           model: "sonnet",
-          word_count: gen.output.split(/\s+/).filter(Boolean).length,
-          input_tokens: gen.usage?.input_tokens || 0,
-          output_tokens: gen.usage?.output_tokens || 0,
+          word_count: wordCount || content.split(/\s+/).filter(Boolean).length,
+          input_tokens: usage?.input_tokens || 0,
+          output_tokens: usage?.output_tokens || 0,
           pop_brief: brief,
           pop_score: popScore,
           revision_count: revisionCount,
@@ -366,14 +227,14 @@ export default function GeneratePage() {
     } catch {}
   }
 
-  // -- EXPORT TO DRIVE --
+  // Export to Drive
   async function exportToDrive() {
     try {
       const res = await apiFetch("/api/export/gdrive", {
         method: "POST",
         body: JSON.stringify({
           title: `${keyword} - ${city} ${state}`,
-          content: gen.output,
+          content,
           keyword, city,
           brand_id: brandId,
         }),
@@ -385,23 +246,27 @@ export default function GeneratePage() {
     } catch {}
   }
 
-  // -- RESET --
+  // Reset
   function reset() {
+    stopPolling();
     setPhase("idle");
-    setSteps([]);
+    setPipelineId(null);
+    setContent("");
     setBrief(null);
-    setTemplateContent(null);
-    setStyleExamples([]);
-    setPaaQuestions([]);
-    setCompetitors([]);
     setOutlineData(null);
     setPopScore(null);
     setRevisionCount(0);
+    setWordCount(0);
+    setUsage(null);
     setError(null);
     setSaved(false);
     setExportUrl(null);
-    gen.abort();
   }
+
+  const isActive = activePhases.has(phase);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const timerDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}s`;
 
   return (
     <div className="space-y-6">
@@ -409,24 +274,12 @@ export default function GeneratePage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
-            {phase === "idle" && "Generate"}
-            {phase === "researching" && <><span>Researching</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
-            {phase === "outline" && "Review outline"}
-            {phase === "generating" && <><span>Writing</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
-            {phase === "review" && "Review content"}
-            {phase === "scoring" && <><span>Scoring</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
-            {phase === "revising" && <><span>Revising</span><span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span></>}
-            {phase === "done" && "Done"}
+            {phaseLabels[phase]}
+            {isActive && <span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span>}
           </h1>
-          <p className="text-[13px] text-ink-70 mt-2">
-            {phase === "idle" && "Enter a keyword and city, select a template, and let the pipeline do the rest."}
-            {phase === "researching" && `Analyzing SEO landscape for "${keyword}"`}
-            {phase === "outline" && "Review the outline below. Edit headings or key points, then approve to start writing."}
-            {phase === "generating" && "Writing content against the SEO brief and your voice settings."}
-            {phase === "review" && "Read through the content below. Edit if needed, then score to check SEO optimization."}
-            {phase === "scoring" && "Running SEO score analysis on the generated content."}
-            {phase === "revising" && "Revising based on SEO feedback to improve the score."}
-            {phase === "done" && "Content is ready. Review, edit, save, or export."}
+          <p className="text-[13px] text-ink-70 mt-2 flex items-center gap-2">
+            {phaseDescriptions[phase]}
+            {isActive && <span className="text-[10px] text-ink-40 font-mono">{timerDisplay}</span>}
           </p>
         </div>
         {phase !== "idle" && (
@@ -435,181 +288,128 @@ export default function GeneratePage() {
       </div>
 
       {/* Error */}
-      {(error || gen.error) && (
+      {error && (
         <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
-          {error || gen.error}
+          {error}
         </div>
       )}
 
       {/* INPUTS (idle phase) */}
       {phase === "idle" && (
         <div className="space-y-4">
-          {/* Brand selector */}
+          {/* Brand */}
           <div>
             <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Brand</label>
-            <select
-              value={brandId}
-              onChange={e => {
-                const brand = brands.find(b => b.id === e.target.value);
-                if (brand) {
-                  setBrandId(brand.id);
-                  setBrandName(brand.name);
-                  setSelectedTemplate(null);
-                }
-              }}
-              className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
-            >
-              {brands.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
+            <select value={brandId} onChange={e => {
+              const brand = brands.find(b => b.id === e.target.value);
+              if (brand) { setBrandId(brand.id); setBrandName(brand.name); setSelectedTemplate(null); setSelectedLocationId(""); }
+            }} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
+              {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
-          {/* Location selector (optional, auto-fills city/state) */}
+
+          {/* Location */}
           {locations.length > 0 && (
             <div>
               <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Location (optional)</label>
-              <select
-                value={selectedLocationId}
-                onChange={e => {
-                  const loc = locations.find(l => l.id === e.target.value);
-                  setSelectedLocationId(e.target.value);
-                  if (loc) {
-                    setCity(loc.city);
-                    setState(loc.state);
-                  }
-                }}
-                className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
-              >
+              <select value={selectedLocationId} onChange={e => {
+                const loc = locations.find(l => l.id === e.target.value);
+                setSelectedLocationId(e.target.value);
+                if (loc) { setCity(loc.city); setState(loc.state); }
+              }} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
                 <option value="">Manual entry (no location data)</option>
-                {locations.map(l => (
-                  <option key={l.id} value={l.id}>{l.name} ({l.city}, {l.state})</option>
-                ))}
+                {locations.map(l => <option key={l.id} value={l.id}>{l.name || l.city} ({l.city}, {l.state})</option>)}
               </select>
             </div>
           )}
-          <KeywordInput
-            keyword={keyword} city={city} state={state}
-            onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState}
-          />
+
+          <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
+
           <div className="grid grid-cols-3 gap-4 max-[820px]:grid-cols-1">
-            {/* Content type */}
             <div>
               <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Content type</label>
-              <select
-                value={contentType}
-                onChange={e => setContentType(e.target.value)}
-                className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
-              >
+              <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
                 <option value="landing_page">Landing Page</option>
                 <option value="service_page">Service Page</option>
                 <option value="blog_post">Blog Post</option>
                 <option value="product_page">Product Page</option>
               </select>
             </div>
-            <TemplateSelector
-              brandName={brandName}
-              selectedId={selectedTemplate?.id || ""}
-              onSelect={setSelectedTemplate}
-            />
+            <TemplateSelector brandName={brandName} selectedId={selectedTemplate?.id || ""} onSelect={setSelectedTemplate} />
             <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
           </div>
-          <Button
-            variant="ink"
-            onClick={startResearch}
-            disabled={!keyword.trim() || !city.trim()}
-          >
+
+          <Button variant="ink" onClick={startPipeline} disabled={!keyword.trim() || !city.trim()}>
             Generate content
           </Button>
         </div>
       )}
 
-      {/* PIPELINE PROGRESS (researching) */}
-      {phase !== "idle" && steps.length > 0 && (
-        <PipelineProgress steps={steps} />
-      )}
-
-      {/* OUTLINE REVIEW */}
-      {phase === "outline" && outlineData && (
-        <OutlineReview outline={outlineData} onApprove={startGeneration} />
-      )}
-      {phase === "outline" && !outlineData && (
-        <div className="border-[1.5px] border-line rounded-[14px] bg-white p-6 flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-ink animate-pulse" />
-          <span className="text-[13px] text-ink">Generating outline from SEO data...</span>
-        </div>
-      )}
-
-      {/* GENERATING / REVISING */}
-      {(phase === "generating" || phase === "revising") && (
-        <div className="space-y-4">
-          {phase === "revising" && (
-            <div className="text-[11px] tracking-[0.04em] text-ink-70 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber animate-pulse" />
-              Auto-revising (round {revisionCount}/2) based on SEO feedback...
-            </div>
-          )}
-          <ContentViewer content={gen.output} isStreaming={gen.isGenerating} />
-          {gen.isGenerating && (
-            <Button variant="light" size="sm" onClick={gen.abort}>Cancel</Button>
-          )}
-        </div>
-      )}
-
-      {/* REVIEW (read before scoring) */}
-      {phase === "review" && (
-        <div className="space-y-4">
-          <ContentViewer content={gen.output} onEdit={gen.setOutput} />
-          <div className="flex gap-2">
-            <Button variant="ink" size="sm" onClick={async () => {
-              setPhase("scoring");
-              await scoreContent(contentRef.current || gen.output || "");
-            }}>
-              Score content
-            </Button>
-            <Button variant="light" size="sm" onClick={() => navigator.clipboard.writeText(gen.output)}>
-              Copy
-            </Button>
+      {/* Progress indicator for active phases */}
+      {isActive && (
+        <div className="border-[1.5px] border-line rounded-[14px] bg-white p-5">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-ink animate-pulse" />
+            <span className="text-[13px] text-ink">{phaseDescriptions[phase]}</span>
+          </div>
+          {/* Phase dots */}
+          <div className="flex gap-4 mt-4">
+            {(["brief", "outline", "generating", "scoring"] as Phase[]).map(p => {
+              const pIdx = ["brief", "outline", "generating", "scoring"].indexOf(p);
+              const currentIdx = ["brief", "outline", "generating", "scoring"].indexOf(phase === "revising" ? "scoring" : phase);
+              const isDone = pIdx < currentIdx || phase === "done";
+              const isCurrent = p === phase || (phase === "revising" && p === "scoring");
+              return (
+                <div key={p} className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isDone ? "bg-[#1F7A3A]" : isCurrent ? "bg-ink animate-pulse" : "bg-ink-40"}`} />
+                  <span className={`text-[10px] tracking-[0.04em] ${isDone ? "text-[#1F7A3A]" : isCurrent ? "text-ink" : "text-ink-40"}`}>
+                    {p === "brief" ? "SEO Brief" : p === "outline" ? "Outline" : p === "generating" ? "Writing" : "Scoring"}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* SCORING */}
-      {phase === "scoring" && (
-        <div className="text-[13px] text-ink-70 animate-pulse flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-ink animate-pulse" />
-          Analyzing SEO score...
+      {/* Outline preview (while running) */}
+      {outlineData && phase !== "done" && phase !== "idle" && (
+        <div className="border border-line rounded-[14px] p-5">
+          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Outline</div>
+          <div className="font-display font-[800] text-lg mb-2">{outlineData.h1}</div>
+          <div className="flex flex-wrap gap-2">
+            {(outlineData.sections || []).map((s: any, i: number) => (
+              <span key={i} className="text-[11px] text-ink-70 bg-[#F3F1ED] px-2 py-1 rounded-lg">{s.h2}</span>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* DONE */}
-      {phase === "done" && (
+      {/* Content preview (while generating/scoring/revising) */}
+      {content && isActive && (
+        <ContentViewer content={content} isStreaming={phase === "generating" || phase === "revising"} />
+      )}
+
+      {/* DONE STATE */}
+      {phase === "done" && content && (
         <div className="space-y-4">
           <div className="grid grid-cols-[1fr_320px] gap-4 max-[980px]:grid-cols-1">
             <div className="space-y-4">
-              <ContentViewer content={gen.output} onEdit={gen.setOutput} />
+              <ContentViewer content={content} onEdit={setContent} />
               {brief?.term_targets && (
-                <TermHeatmap content={gen.output} termTargets={brief.term_targets} />
+                <TermHeatmap content={content} termTargets={brief.term_targets} />
               )}
             </div>
             <div className="space-y-4">
               {popScore && (
                 <POPScoreCard
                   score={popScore}
-                  contentWordCount={gen.output ? gen.output.split(/\s+/).filter(Boolean).length : 0}
-                  onRevise={revisionCount < 2 ? async () => {
-                    setPhase("revising");
-                    setRevisionCount(prev => prev + 1);
-                    await gen.generate("/api/generate/revise", {
-                      content: gen.output, keyword, brief, pop_feedback: popScore,
-                    });
-                    setPhase("scoring");
-                    await scoreContent(gen.output);
-                  } : undefined}
+                  contentWordCount={wordCount || content.split(/\s+/).filter(Boolean).length}
                 />
               )}
-              {gen.usage && (
+              {usage && (
                 <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 space-y-1">
-                  <div>Tokens: {gen.usage.input_tokens.toLocaleString()} in / {gen.usage.output_tokens.toLocaleString()} out</div>
+                  <div>Tokens: {(usage.input_tokens || 0).toLocaleString()} in / {(usage.output_tokens || 0).toLocaleString()} out</div>
                   {revisionCount > 0 && <div>Revisions: {revisionCount}</div>}
                 </div>
               )}
@@ -621,15 +421,14 @@ export default function GeneratePage() {
             <Button variant="ink" size="sm" onClick={saveToHistory} disabled={saved}>
               {saved ? "Saved" : "Save to history"}
             </Button>
-            <Button variant="light" size="sm" onClick={() => navigator.clipboard.writeText(gen.output)}>
+            <Button variant="light" size="sm" onClick={() => navigator.clipboard.writeText(content)}>
               Copy
             </Button>
             <Button variant="ghost" size="sm" onClick={exportToDrive} disabled={!!exportUrl}>
               {exportUrl ? "Exported" : "Export to Drive"}
             </Button>
             {exportUrl && (
-              <a href={exportUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-ink-70 underline">
+              <a href={exportUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-ink-70 underline">
                 Open in Drive
               </a>
             )}
