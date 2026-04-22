@@ -95,6 +95,29 @@ export default function GeneratePage() {
     loadBrands();
   }, [urlBrandId]);
 
+  // Check for running pipeline when brand loads
+  useEffect(() => {
+    if (!brandId) return;
+    async function checkRunning() {
+      try {
+        const res = await apiFetch(`/api/pipeline/list?brand_id=${brandId}&limit=1`);
+        if (!res.ok) return;
+        const jobs = await res.json();
+        if (jobs.length > 0) {
+          const latest = jobs[0];
+          const activePhasesList = ["pending", "brief", "outline", "generating", "scoring", "revising"];
+          if (activePhasesList.includes(latest.phase)) {
+            setPipelineId(latest.id);
+            setPhase(latest.phase as Phase);
+            setKeyword(latest.keyword || "");
+            startPolling(latest.id);
+          }
+        }
+      } catch {}
+    }
+    checkRunning();
+  }, [brandId]);
+
   // Load locations when brand changes
   useEffect(() => {
     if (!brandId) return;

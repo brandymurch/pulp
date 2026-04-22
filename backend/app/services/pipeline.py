@@ -243,5 +243,25 @@ async def _run_pipeline_async(
                 logger.warning(f"Revision round {rev_round + 1} failed: {e}")
                 break
 
-    # -- Done --
+    # -- Done: auto-save to generations table --
     _update_job(job_id, phase="done")
+    try:
+        db.table("generations").insert({
+            "brand_id": brand_id,
+            "location_id": location_id,
+            "keyword": keyword,
+            "city": city,
+            "content": full_text,
+            "outline": json.dumps(outline) if outline else None,
+            "content_type": content_type,
+            "template_name": template_content.get("name") if template_content else None,
+            "model": "sonnet",
+            "word_count": word_count,
+            "input_tokens": usage.get("input_tokens", 0),
+            "output_tokens": usage.get("output_tokens", 0),
+            "pop_brief": brief,
+            "pop_score": score_result,
+            "revision_count": revision_count,
+        }).execute()
+    except Exception as e:
+        logger.warning(f"Failed to auto-save generation: {e}")
