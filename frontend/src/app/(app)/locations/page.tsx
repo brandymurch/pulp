@@ -194,7 +194,7 @@ export default function LocationsPage() {
                           >
                             <div>
                               <div className="text-[14px] tracking-[-0.01em]">
-                                <span className="font-display font-[800]">{loc.name || `${brand.name} ${loc.city}`}</span>
+                                <span className="font-display font-[800]">{loc.name || `${brand.short_name || brand.name} ${loc.city}`}</span>
                                 <span className="text-ink-40">: {loc.city}, {loc.state}</span>
                               </div>
                               <div className="text-[11px] text-ink-40 flex gap-3">
