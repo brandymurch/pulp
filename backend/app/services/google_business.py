@@ -21,22 +21,30 @@ def _get_headers() -> dict:
     }
 
 
-async def _fetch_reviews(place_id: str, headers: dict) -> list[dict]:
+async def _fetch_reviews(business_name: str, city: str, state: str, place_id: str, headers: dict) -> list[dict]:
     """Fetch reviews for a specific Google place using DataForSEO."""
     try:
+        # Try with place_id first, fall back to keyword search
+        payload = {
+            "keyword": f"{business_name} {city} {state}",
+            "depth": 10,
+            "sort_by": "highest_rating",
+            "location_name": "United States",
+            "language_name": "English",
+        }
+        if place_id:
+            payload["place_id"] = place_id
+
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
                 f"{DATAFORSEO_BASE}/business_data/google/reviews/live",
-                json=[{
-                    "keyword": place_id,
-                    "depth": 10,
-                    "sort_by": "highest_rating",
-                }],
+                json=[payload],
                 headers=headers,
             )
         data = resp.json()
         tasks = data.get("tasks", [])
         if not tasks or tasks[0].get("status_code") != 20000:
+            logger.warning(f"Reviews fetch failed: {tasks[0].get('status_message') if tasks else 'no tasks'}")
             return []
 
         items = (tasks[0].get("result", [{}])[0] or {}).get("items", []) or []
@@ -105,10 +113,8 @@ async def search_google_business(
             rating_val = rating_data
             review_count = item.get("reviews_count", 0)
 
-        # Step 2: Fetch actual reviews if we have a place_id
-        reviews = []
-        if place_id:
-            reviews = await _fetch_reviews(place_id, headers)
+        # Step 2: Fetch actual reviews
+        reviews = await _fetch_reviews(business_name, city, state, place_id, headers)
 
         result = {
             "title": item.get("title", ""),
