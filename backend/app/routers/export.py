@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from app.auth import require_auth
 from app.db import get_db
@@ -5,6 +6,7 @@ from app.models import ExportGDriveRequest, ExportGDriveResponse
 from app.services.gdrive import export_to_drive
 from app.config import GOOGLE_SERVICE_ACCOUNT_KEY
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 
@@ -13,14 +15,18 @@ async def export_gdrive(req: ExportGDriveRequest, _=Depends(require_auth)):
     if not GOOGLE_SERVICE_ACCOUNT_KEY:
         raise HTTPException(status_code=503, detail="Google Drive not configured")
 
-    db = get_db()
-    brand = db.table("brands").select("name").eq("id", req.brand_id).single().execute()
-    brand_name = brand.data["name"]
+    try:
+        db = get_db()
+        brand = db.table("brands").select("name").eq("id", req.brand_id).single().execute()
+        brand_name = brand.data["name"]
 
-    result = export_to_drive(
-        title=req.title,
-        content=req.content,
-        brand_name=brand_name,
-        city=req.city,
-    )
-    return ExportGDriveResponse(**result)
+        result = export_to_drive(
+            title=req.title,
+            content=req.content,
+            brand_name=brand_name,
+            city=req.city,
+        )
+        return ExportGDriveResponse(**result)
+    except Exception as e:
+        logger.error(f"Drive export failed: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Drive export failed: {str(e)}")
