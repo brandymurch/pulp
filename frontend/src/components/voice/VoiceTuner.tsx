@@ -25,6 +25,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
   const [guidelines, setGuidelines] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (!brand) return;
@@ -65,6 +66,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
       if (res.ok) {
         onSave(await res.json());
         setSaved(true);
+        setEditing(false);
       }
     } finally {
       setSaving(false);
@@ -73,10 +75,24 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
 
   if (!brand) return null;
 
+  const lockedClass = !editing ? " opacity-70 pointer-events-none" : "";
+
   return (
     <div className="space-y-6">
+      {/* Edit toggle */}
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
+          {editing ? "Editing voice settings" : "Voice settings (locked)"}
+        </div>
+        {!editing && (
+          <button onClick={() => setEditing(true)} className="text-[11px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 underline">
+            Edit
+          </button>
+        )}
+      </div>
+
       {/* Tone sliders */}
-      <div>
+      <div className={lockedClass}>
         <label className={labelClass}>Tone dimensions</label>
         <div className="space-y-3 mt-2">
           {dimensions.map(dim => (
@@ -84,6 +100,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
               <span className="text-[11px] text-ink-70 w-[100px] shrink-0">{dim.key}</span>
               <input
                 type="range" min={0} max={100} value={dim.value}
+                disabled={!editing}
                 onChange={e => {
                   setDimensions(prev => prev.map(d => d.key === dim.key ? { ...d, value: Number(e.target.value) } : d));
                   markDirty();
@@ -97,39 +114,44 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
       </div>
 
       {/* Voice instructions */}
-      <div>
+      <div className={lockedClass}>
         <label className={labelClass}>Voice instructions</label>
-        <textarea className={textareaClass} value={notes} onChange={e => { setNotes(e.target.value); markDirty(); }} placeholder="Never use exclamation marks. Keep sentences under 20 words." rows={3} />
+        <textarea className={textareaClass} value={notes} disabled={!editing} onChange={e => { setNotes(e.target.value); markDirty(); }} placeholder="Never use exclamation marks. Keep sentences under 20 words." rows={3} />
       </div>
 
       {/* Brand guidelines */}
-      <div>
+      <div className={lockedClass}>
         <label className={labelClass}>Brand guidelines</label>
-        <textarea className={textareaClass} value={guidelines} onChange={e => { setGuidelines(e.target.value); markDirty(); }} placeholder={"Target audience: homeowners 30-65\nDo not mention competitors by name\nAlways include a free estimate CTA"} rows={4} />
+        <textarea className={textareaClass} value={guidelines} disabled={!editing} onChange={e => { setGuidelines(e.target.value); markDirty(); }} placeholder={"Target audience: homeowners 30-65\nDo not mention competitors by name\nAlways include a free estimate CTA"} rows={4} />
         <div className="text-[10px] text-ink-40 mt-1">Rules, positioning, audience, things to avoid.</div>
       </div>
 
       {/* Services */}
-      <div>
+      <div className={lockedClass}>
         <label className={labelClass}>Services (one per line)</label>
-        <textarea className={textareaClass} value={services} onChange={e => { setServices(e.target.value); markDirty(); }} placeholder={"Injection Foam Insulation\nSpray Foam Insulation\nBlown-In Insulation"} rows={4} />
+        <textarea className={textareaClass} value={services} disabled={!editing} onChange={e => { setServices(e.target.value); markDirty(); }} placeholder={"Injection Foam Insulation\nSpray Foam Insulation\nBlown-In Insulation"} rows={4} />
         <div className="text-[10px] text-ink-40 mt-1">Content will only reference these services.</div>
       </div>
 
       {/* Banned words */}
-      <div>
+      <div className={lockedClass}>
         <label className={labelClass}>Banned words (comma-separated)</label>
-        <textarea className={textareaClass} value={bannedWords} onChange={e => { setBannedWords(e.target.value); markDirty(); }} placeholder="leverage, utilize, robust" rows={2} />
+        <textarea className={textareaClass} value={bannedWords} disabled={!editing} onChange={e => { setBannedWords(e.target.value); markDirty(); }} placeholder="leverage, utilize, robust" rows={2} />
         <div className="text-[10px] text-ink-40 mt-1">Added to the global banned words list for this brand.</div>
       </div>
 
-      {/* Save */}
-      <div className="flex gap-3 items-center">
-        <Button variant="ink" size="sm" onClick={handleSave} disabled={saving || saved}>
-          {saving ? "Saving..." : saved ? "Saved" : "Save settings"}
-        </Button>
-        {saved && <span className="text-[11px] text-[#1F7A3A]">Updated</span>}
-      </div>
+      {/* Save / Cancel */}
+      {editing && (
+        <div className="flex gap-3 items-center">
+          <Button variant="ink" size="sm" onClick={handleSave} disabled={saving || saved}>
+            {saving ? "Saving..." : saved ? "Saved" : "Save settings"}
+          </Button>
+          <button onClick={() => setEditing(false)} className="text-[11px] text-ink-40 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0">
+            Cancel
+          </button>
+          {saved && <span className="text-[11px] text-[#1F7A3A]">Updated</span>}
+        </div>
+      )}
     </div>
   );
 }
