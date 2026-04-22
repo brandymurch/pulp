@@ -46,6 +46,80 @@ def run_pipeline(
         loop.close()
 
 
+def resume_pipeline(job_id: str):
+    """Resume pipeline after outline approval. Runs in a background thread."""
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_resume_pipeline_async(job_id))
+    except Exception as e:
+        logger.error(f"Pipeline resume {job_id} failed: {e}")
+        _update_job(job_id, phase="error", error=str(e))
+    finally:
+        loop.close()
+
+
+async def _resume_pipeline_async(job_id: str):
+    """Load job data from Supabase and continue from phase 2."""
+    db = get_db()
+    result = db.table("pipeline_jobs").select("*").eq("id", job_id).single().execute()
+    job = result.data
+    if not job:
+        raise RuntimeError(f"Pipeline job {job_id} not found")
+
+    from app.services.content_generator import (
+        build_system_prompt, build_user_prompt, build_revision_prompts,
+    )
+
+    keyword = job["keyword"]
+    city = job["city"]
+    state = job.get("state", "")
+    brand_id = job.get("brand_id", "")
+    location_id = job.get("location_id")
+    content_type = job.get("content_type", "landing_page")
+    outline = job.get("outline")
+    brief = job.get("brief") or {}
+
+    # Reload brand, style examples, template, location data
+    brand_data = {}
+    if brand_id:
+        try:
+            r = db.table("brands").select("*").eq("id", brand_id).single().execute()
+            brand_data = r.data or {}
+        except Exception:
+            pass
+
+    style_examples = []
+    if brand_id:
+        try:
+            r = db.table("style_examples").select("*").eq("brand_id", brand_id).execute()
+            style_examples = r.data or []
+        except Exception:
+            pass
+
+    local_context = None
+    if location_id:
+        try:
+            r = db.table("locations").select("local_context").eq("id", location_id).single().execute()
+            local_context = (r.data or {}).get("local_context")
+        except Exception:
+            pass
+
+    template_content = None
+    template_id = job.get("template_id")
+    if template_id:
+        try:
+            from app.services.notion import get_template
+            template_content = get_template(template_id)
+        except Exception:
+            pass
+
+    await _run_pipeline_phase2(
+        job_id, keyword, city, state, brand_id, location_id,
+        content_type, outline, brief, brand_data, style_examples,
+        template_content, local_context,
+    )
+
+
 async def _run_pipeline_async(
     job_id: str,
     keyword: str,
@@ -60,7 +134,7 @@ async def _run_pipeline_async(
     """Async pipeline implementation."""
     import anthropic
     from app.config import ANTHROPIC_API_KEY
-    from app.services.pop import get_enriched_brief, score_content_from_brief, stub_score
+    from app.services.pop import get_enriched_brief, score_content_with_pop, stub_score
     from app.services.content_generator import (
         build_system_prompt, build_user_prompt,
         build_outline_prompt, build_revision_prompts,
@@ -137,12 +211,38 @@ async def _run_pipeline_async(
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
         outline = json.loads(raw)
-        _update_job(job_id, outline=outline)
+        _update_job(job_id, outline=outline, phase="outline_review")
+        # PAUSE: wait for user approval before continuing
+        return
     except Exception as e:
         logger.warning(f"Outline generation failed, continuing without: {e}")
         outline = None
+        # If outline fails, skip review and go to generate
+    # Fall through to generate if outline failed (no return above)
+    await _run_pipeline_phase2(
+        job_id, keyword, city, state, brand_id, location_id,
+        content_type, outline, brief, brand_data, style_examples,
+        template_content, local_context,
+    )
 
-    # -- STEP 3: Generate Content --
+
+async def _run_pipeline_phase2(
+    job_id: str, keyword: str, city: str, state: str,
+    brand_id: str, location_id: Optional[str],
+    content_type: str, outline: Optional[dict], brief: dict,
+    brand_data: dict, style_examples: list,
+    template_content: Optional[dict], local_context: Optional[dict],
+):
+    """Phase 2: generate, score, revise, save. Called after outline approval."""
+    import anthropic
+    from app.config import ANTHROPIC_API_KEY, POP_API_KEY
+    from app.services.pop import score_content_with_pop, stub_score
+    from app.services.content_generator import (
+        build_system_prompt, build_user_prompt, build_revision_prompts,
+    )
+
+    db = get_db()
+
     _update_job(job_id, phase="generating")
     try:
         system_prompt = build_system_prompt(
@@ -195,10 +295,15 @@ async def _run_pipeline_async(
         _update_job(job_id, phase="error", error=f"Content generation failed: {e}")
         return
 
-    # -- STEP 4: Score (uses cached brief data, no extra POP call) --
+    # -- STEP 4: Score via POP --
     _update_job(job_id, phase="scoring")
     try:
-        score_result = score_content_from_brief(content=full_text, brief=brief)
+        if POP_API_KEY:
+            score_result = await score_content_with_pop(
+                content=full_text, target_keyword=keyword,
+            )
+        else:
+            score_result = stub_score(content=full_text, target_keyword=keyword)
         _update_job(job_id, score=score_result)
     except Exception as e:
         logger.warning(f"Scoring failed: {e}")
@@ -232,9 +337,14 @@ async def _run_pipeline_async(
 
                 _update_job(job_id, content=full_text, word_count=word_count, revision_count=revision_count)
 
-                # Re-score (local, using cached brief)
+                # Re-score via POP
                 _update_job(job_id, phase="scoring")
-                score_result = score_content_from_brief(content=full_text, brief=brief)
+                if POP_API_KEY:
+                    score_result = await score_content_with_pop(
+                        content=full_text, target_keyword=keyword,
+                    )
+                else:
+                    score_result = stub_score(content=full_text, target_keyword=keyword)
                 _update_job(job_id, score=score_result)
 
                 if score_result.get("overall_score", 100) >= 75:

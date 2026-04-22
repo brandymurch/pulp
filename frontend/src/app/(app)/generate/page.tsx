@@ -10,12 +10,13 @@ import { ContentViewer } from "@/components/generate/ContentViewer";
 import { TermHeatmap } from "@/components/generate/TermHeatmap";
 import { POPScoreCard } from "@/components/generate/POPScoreCard";
 
-type Phase = "idle" | "pending" | "brief" | "outline" | "generating" | "scoring" | "revising" | "done" | "error";
+type Phase = "idle" | "pending" | "brief" | "outline" | "outline_review" | "generating" | "scoring" | "revising" | "done" | "error";
 
 const phaseLabels: Record<Phase, string> = {
   idle: "Generate",
   pending: "Starting",
   brief: "Analyzing SEO landscape",
+  outline_review: "Review outline",
   outline: "Building outline",
   generating: "Writing content",
   scoring: "Scoring content",
@@ -29,8 +30,9 @@ const phaseDescriptions: Record<Phase, string> = {
   pending: "Starting the content pipeline...",
   brief: "Pulling competitive SERP data and analyzing term targets. This can take up to 2 minutes.",
   outline: "Claude is building a content outline from the SEO data.",
+  outline_review: "Review the outline below. Edit if needed, then approve to start writing.",
   generating: "Writing content against the SEO brief and your voice settings.",
-  scoring: "Running SEO score analysis. This can take a minute.",
+  scoring: "Running SEO score analysis via POP. This can take a couple minutes.",
   revising: "Revising based on SEO feedback to improve the score.",
   done: "Content is ready. Review, edit, save, or export.",
   error: "Something went wrong.",
@@ -166,7 +168,7 @@ export default function GeneratePage() {
         if (data.error) setError(data.error);
 
         // Stop polling when done or errored
-        if (data.phase === "done" || data.phase === "error") {
+        if (data.phase === "done" || data.phase === "error" || data.phase === "outline_review") {
           stopPolling();
         }
       } catch {}
@@ -353,15 +355,25 @@ export default function GeneratePage() {
             )}
           </div>
 
-          {/* Keyword + slug: city landing pages auto-derive keyword from brand */}
+          {/* Keyword + target city + slug */}
           {contentType === "landing_page" ? (
-            <div>
-              <div className="text-[12px] text-ink-40 mb-2">
+            <div className="space-y-3">
+              <div className="grid grid-cols-[1fr_80px] gap-3">
+                <div>
+                  <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Target city</label>
+                  <input value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+                </div>
+                <div>
+                  <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">State</label>
+                  <input value={state} onChange={e => setState(e.target.value)} placeholder="OH" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+                </div>
+              </div>
+              <div className="text-[12px] text-ink-40">
                 Keyword: <span className="text-ink">{brands.find(b => b.id === brandId)?.primary_keyword || brandName} {city} {state}</span>
               </div>
               <div>
                 <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
-                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder={`/${city.toLowerCase().replace(/\s+/g, '-')}-${state.toLowerCase()}`} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder={`/${(city || "city").toLowerCase().replace(/\s+/g, '-')}-${(state || "st").toLowerCase()}`} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
               </div>
             </div>
           ) : (
@@ -423,8 +435,43 @@ export default function GeneratePage() {
         </div>
       )}
 
-      {/* Outline preview (while running) */}
-      {outlineData && phase !== "done" && phase !== "idle" && (
+      {/* Outline review (waiting for approval) */}
+      {phase === "outline_review" && outlineData && (
+        <div className="border-[1.5px] border-ink rounded-[18px] p-6 space-y-4">
+          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">Outline for approval</div>
+          <div className="font-display font-[800] text-xl mb-1">{outlineData.h1}</div>
+          {outlineData.estimated_word_count && (
+            <div className="text-[11px] text-ink-40">~{outlineData.estimated_word_count} words</div>
+          )}
+          <div className="space-y-2">
+            {(outlineData.sections || []).map((s: any, i: number) => (
+              <div key={i} className="border border-line rounded-lg p-3">
+                <div className="font-display font-[800] text-[14px]">{s.h2}</div>
+                {s.key_points && (
+                  <ul className="mt-1.5 space-y-0.5">
+                    {s.key_points.map((kp: string, j: number) => (
+                      <li key={j} className="text-[12px] text-ink-70 flex gap-1.5">
+                        <span className="text-ink-40">-</span> {kp}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+          <Button variant="ink" onClick={async () => {
+            try {
+              await apiFetch(`/api/pipeline/approve/${pipelineId}`, { method: "POST" });
+              startPolling(pipelineId!);
+            } catch {}
+          }}>
+            Approve and generate
+          </Button>
+        </div>
+      )}
+
+      {/* Outline preview (while actively generating/scoring) */}
+      {outlineData && phase !== "done" && phase !== "idle" && phase !== "outline_review" && (
         <div className="border border-line rounded-[14px] p-5">
           <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Outline</div>
           <div className="font-display font-[800] text-lg mb-2">{outlineData.h1}</div>

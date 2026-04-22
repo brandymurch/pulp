@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.auth import require_auth
 from app.db import get_db
-from app.services.pipeline import run_pipeline
+from app.services.pipeline import run_pipeline, resume_pipeline
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
@@ -61,6 +61,30 @@ async def start_pipeline(req: StartPipelineRequest, _=Depends(require_auth)):
     thread.start()
 
     return {"pipeline_id": job_id, "phase": "pending"}
+
+
+@router.post("/approve/{pipeline_id}")
+async def approve_outline(pipeline_id: str, _=Depends(require_auth)):
+    """Approve the outline and resume the pipeline."""
+    db = get_db()
+    try:
+        result = db.table("pipeline_jobs").select("phase").eq("id", pipeline_id).single().execute()
+        if not result.data or result.data["phase"] != "outline_review":
+            raise HTTPException(status_code=400, detail="Pipeline is not waiting for approval")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+
+    # Resume in background thread
+    thread = threading.Thread(
+        target=resume_pipeline,
+        args=(pipeline_id,),
+        daemon=True,
+    )
+    thread.start()
+
+    return {"pipeline_id": pipeline_id, "phase": "generating"}
 
 
 @router.get("/status/{pipeline_id}")
