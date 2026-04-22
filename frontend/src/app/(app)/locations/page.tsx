@@ -147,6 +147,13 @@ export default function LocationsPage() {
                             {reviewCount > 0 && (
                               <span className="text-[10px] text-ink-40">{reviewCount} review{reviewCount !== 1 ? "s" : ""}</span>
                             )}
+                            <a
+                              href={`/generate?brand=${brand.id}&location=${loc.id}`}
+                              onClick={e => e.stopPropagation()}
+                              className="text-[11px] text-ink-70 hover:text-ink transition-colors border-b border-line hover:border-ink pb-px"
+                            >
+                              Generate
+                            </a>
                             <button
                               onClick={e => { e.stopPropagation(); handleDelete(brand.id, loc.id); }}
                               className="text-[11px] text-ink-40 hover:text-[#b91c1c] transition-colors"

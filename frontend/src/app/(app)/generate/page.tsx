@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useGeneration } from "@/hooks/useGeneration";
 import { Button } from "@/components/shared/Button";
@@ -15,6 +16,10 @@ import { POPScoreCard } from "@/components/generate/POPScoreCard";
 type Phase = "idle" | "researching" | "outline" | "generating" | "review" | "scoring" | "revising" | "done";
 
 export default function GeneratePage() {
+  const searchParams = useSearchParams();
+  const urlBrandId = searchParams.get("brand") || "";
+  const urlLocationId = searchParams.get("location") || "";
+
   // Inputs
   const [keyword, setKeyword] = useState("");
   const [city, setCity] = useState("");
@@ -56,8 +61,21 @@ export default function GeneratePage() {
       try {
         const res = await apiFetch(`/api/locations?brand_id=${brandId}`);
         if (res.ok) {
-          setLocations(await res.json());
-          setSelectedLocationId("");
+          const locs = await res.json();
+          setLocations(locs);
+          // Pre-select from URL params
+          if (urlLocationId) {
+            const targetLoc = locs.find((l: any) => l.id === urlLocationId);
+            if (targetLoc) {
+              setSelectedLocationId(targetLoc.id);
+              setCity(targetLoc.city);
+              setState(targetLoc.state);
+            } else {
+              setSelectedLocationId("");
+            }
+          } else {
+            setSelectedLocationId("");
+          }
         }
       } catch {}
     }
@@ -71,9 +89,11 @@ export default function GeneratePage() {
         if (res.ok) {
           const data = await res.json();
           setBrands(data);
-          if (data.length > 0) {
-            setBrandId(data[0].id);
-            setBrandName(data[0].name);
+          // Pre-select from URL params or default to first brand
+          const targetBrand = urlBrandId ? data.find((b: any) => b.id === urlBrandId) : data[0];
+          if (targetBrand) {
+            setBrandId(targetBrand.id);
+            setBrandName(targetBrand.name);
           }
         }
       } catch {
