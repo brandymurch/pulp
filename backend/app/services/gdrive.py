@@ -121,10 +121,22 @@ def export_to_drive(
     doc_id = doc_file["id"]
 
     doc_requests = _markdown_to_docs_requests(content)
+    logger.info(f"Drive export: {len(doc_requests)} requests for {len(content)} chars of content")
     if doc_requests:
-        docs.documents().batchUpdate(
-            documentId=doc_id, body={"requests": doc_requests}
-        ).execute()
+        try:
+            docs.documents().batchUpdate(
+                documentId=doc_id, body={"requests": doc_requests}
+            ).execute()
+        except Exception as e:
+            logger.error(f"Drive batchUpdate failed: {e}")
+            # Fallback: insert as plain text
+            try:
+                docs.documents().batchUpdate(
+                    documentId=doc_id,
+                    body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]}
+                ).execute()
+            except Exception as e2:
+                logger.error(f"Drive plain text fallback also failed: {e2}")
 
     doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
     return {"doc_url": doc_url, "doc_id": doc_id}

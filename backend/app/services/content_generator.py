@@ -201,6 +201,21 @@ def build_user_prompt(
     if variations:
         parts.append(f"**Keyword Variations (use naturally):** {', '.join(variations[:10])}")
 
+    # LSA phrases (semantically related terms Google associates with this topic)
+    lsa_phrases = brief.get("lsa_phrases", [])
+    if lsa_phrases:
+        lsa_text = []
+        for lsa in lsa_phrases[:15]:
+            if isinstance(lsa, dict):
+                phrase = lsa.get("phrase", "")
+                avg = lsa.get("averageCount", 0)
+                if phrase:
+                    lsa_text.append(f"{phrase} (~{avg}x)")
+            elif isinstance(lsa, str):
+                lsa_text.append(lsa)
+        if lsa_text:
+            parts.append(f"**LSA/Semantic Terms (weave naturally throughout):** {', '.join(lsa_text)}")
+
     if recommended_headings:
         parts.append(f"**Recommended H2 count:** {recommended_headings} (based on top-ranking pages)")
 

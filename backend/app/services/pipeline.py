@@ -246,22 +246,28 @@ async def _run_pipeline_async(
     # -- Done: auto-save to generations table --
     _update_job(job_id, phase="done")
     try:
-        db.table("generations").insert({
+        gen_data = {
             "brand_id": brand_id,
-            "location_id": location_id,
             "keyword": keyword,
             "city": city,
             "content": full_text,
-            "outline": json.dumps(outline) if outline else None,
             "content_type": content_type,
-            "template_name": template_content.get("name") if template_content else None,
             "model": "sonnet",
             "word_count": word_count,
-            "input_tokens": usage.get("input_tokens", 0),
-            "output_tokens": usage.get("output_tokens", 0),
-            "pop_brief": brief,
-            "pop_score": score_result,
+            "input_tokens": usage.get("input_tokens", 0) if usage else 0,
+            "output_tokens": usage.get("output_tokens", 0) if usage else 0,
             "revision_count": revision_count,
-        }).execute()
+        }
+        if location_id:
+            gen_data["location_id"] = location_id
+        if outline:
+            gen_data["outline"] = json.dumps(outline)
+        if template_content and isinstance(template_content, dict):
+            gen_data["template_name"] = template_content.get("name", "")
+        if brief:
+            gen_data["pop_brief"] = brief
+        if score_result:
+            gen_data["pop_score"] = score_result
+        db.table("generations").insert(gen_data).execute()
     except Exception as e:
         logger.warning(f"Failed to auto-save generation: {e}")

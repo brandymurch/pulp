@@ -178,10 +178,16 @@ async def get_enriched_brief(
 
     # Extract word count range
     word_count_data = report.get("wordCount") or {}
-    target_word_count = word_count_data.get("target") or 1500
-    word_count_min = word_count_data.get("min") or 0
-    word_count_max = word_count_data.get("max") or 0
-    word_count_avg = word_count_data.get("average") or 0
+    logger.info(f"POP wordCount data: {word_count_data}")
+    target_word_count = word_count_data.get("target") or word_count_data.get("recommended") or 1500
+    word_count_min = word_count_data.get("min") or word_count_data.get("minimum") or 0
+    word_count_max = word_count_data.get("max") or word_count_data.get("maximum") or 0
+    word_count_avg = word_count_data.get("average") or word_count_data.get("avg") or word_count_data.get("mean") or 0
+    # If no min/max, estimate from target
+    if not word_count_min and target_word_count:
+        word_count_min = int(target_word_count * 0.8)
+    if not word_count_max and target_word_count:
+        word_count_max = int(target_word_count * 1.2)
 
     # Extract keyword variations
     variations = terms.get("variations", [])
