@@ -193,15 +193,12 @@ export default function LocationsPage() {
                             } ${isSelected ? "bg-[#F3F1ED]" : "hover:bg-[#F3F1ED]"}`}
                           >
                             <div>
-                              <div className="font-display font-[800] text-[14px] tracking-[-0.01em]">
-                                {loc.name || `${brand.name} ${loc.city}`}, {loc.state}
+                              <div className="text-[14px] tracking-[-0.01em]">
+                                <span className="font-display font-[800]">{loc.name || `${brand.name} ${loc.city}`}</span>
+                                <span className="text-ink-40">: {loc.city}, {loc.state}</span>
                               </div>
                               <div className="text-[11px] text-ink-40 flex gap-3">
                                 {reviewCount > 0 && <span>{reviewCount} review{reviewCount !== 1 ? "s" : ""}</span>}
-                                {loc.last_refresh_at && (
-                                  <span>Last refreshed {new Date(loc.last_refresh_at).toLocaleDateString()}</span>
-                                )}
-                                {!loc.last_refresh_at && <span>No content yet</span>}
                               </div>
                             </div>
                             <div className="flex items-center gap-4">

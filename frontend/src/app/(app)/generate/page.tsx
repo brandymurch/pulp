@@ -50,6 +50,7 @@ export default function GeneratePage() {
   const [contentType, setContentType] = useState("landing_page");
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
+  const [pageSlug, setPageSlug] = useState("");
   const [locations, setLocations] = useState<any[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
 
@@ -330,22 +331,30 @@ export default function GeneratePage() {
             </select>
           </div>
 
-          {/* Location */}
-          {locations.length > 0 && (
-            <div>
-              <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Location (optional)</label>
+          {/* Location (required) */}
+          <div>
+            <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Location</label>
+            {locations.length > 0 ? (
               <select value={selectedLocationId} onChange={e => {
                 const loc = locations.find(l => l.id === e.target.value);
                 setSelectedLocationId(e.target.value);
                 if (loc) { setCity(loc.city); setState(loc.state); }
-              }} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
-                <option value="">Manual entry (no location data)</option>
-                {locations.map(l => <option key={l.id} value={l.id}>{l.name || l.city} ({l.city}, {l.state})</option>)}
+              }} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
+                <option value="">Select a location</option>
+                {locations.map(l => <option key={l.id} value={l.id}>{l.name || `${brandName} ${l.city}`}, {l.state}</option>)}
               </select>
-            </div>
-          )}
+            ) : (
+              <div className="text-[12px] text-ink-40 py-3">No locations for this brand. <a href="/locations" className="text-ink-70 underline">Add one first.</a></div>
+            )}
+          </div>
 
-          <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
+          <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
+            <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
+            <div>
+              <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
+              <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/insulation-services-columbus-oh" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+            </div>
+          </div>
 
           <div className="grid grid-cols-3 gap-4 max-[820px]:grid-cols-1">
             <div>
@@ -361,7 +370,7 @@ export default function GeneratePage() {
             <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
           </div>
 
-          <Button variant="ink" onClick={startPipeline} disabled={!keyword.trim() || !city.trim()}>
+          <Button variant="ink" onClick={startPipeline} disabled={!keyword.trim() || !city.trim() || !selectedLocationId || !pageSlug.trim()}>
             Generate content
           </Button>
         </div>
