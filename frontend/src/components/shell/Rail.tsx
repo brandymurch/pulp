@@ -98,7 +98,7 @@ const navItems: NavItem[] = [
   { label: "History", href: "/history", icon: <HistoryIcon /> },
   { label: "Voice", href: "/voice", icon: <VoiceIcon /> },
   { label: "Overview", href: "/overview", icon: <OverviewIcon />, disabled: true },
-  { label: "Locations", href: "/locations", icon: <LocationsIcon />, disabled: true },
+  { label: "Locations", href: "/locations", icon: <LocationsIcon /> },
   { label: "Copy queue", href: "/queue", icon: <QueueIcon />, disabled: true },
   { label: "Integrations", href: "/integrations", icon: <IntegrationsIcon />, disabled: true },
   { label: "Settings", href: "/settings", icon: <SettingsIcon />, disabled: true },
