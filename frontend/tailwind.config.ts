@@ -24,6 +24,13 @@ const config: Config = {
           "Georgia",
           "serif",
         ],
+        body: [
+          "var(--font-body)",
+          "DM Sans",
+          "system-ui",
+          "-apple-system",
+          "sans-serif",
+        ],
         mono: [
           "var(--font-mono)",
           "ui-monospace",

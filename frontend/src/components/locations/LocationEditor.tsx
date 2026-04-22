@@ -18,18 +18,15 @@ interface LocationEditorProps {
   onCancel: () => void;
 }
 
-const inputClass = "w-full h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none focus:border-ink transition-colors";
-const textareaClass = "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 font-mono text-[13px] outline-none focus:border-ink transition-colors resize-y";
 const labelClass = "block text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-1.5";
+const inputClass = "w-full h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none focus:border-ink transition-colors";
+const textareaClass = "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
 
 export function LocationEditor({ location, brandId, brandName, onSave, onCancel }: LocationEditorProps) {
-  const [name, setName] = useState(""); // DBA name
-  const [city, setCity] = useState(""); // Service area city (for content)
+  const [name, setName] = useState("");
+  const [city, setCity] = useState("");
   const [state, setState] = useState("");
-  const [officeCity, setOfficeCity] = useState(""); // Actual office city (for GBP)
-  const [officeState, setOfficeState] = useState("");
   const [slug, setSlug] = useState("");
-  const [status, setStatus] = useState("draft");
   const [reviews, setReviews] = useState<Review[]>([]);
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [teamLead, setTeamLead] = useState("");
@@ -44,6 +41,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [importMessage, setImportMessage] = useState("");
 
   useEffect(() => {
     if (location) {
@@ -51,10 +49,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       setCity(location.city || "");
       setState(location.state || "");
       setSlug(location.slug || "");
-      setStatus(location.status || "draft");
       const ctx = location.local_context || {};
-      setOfficeCity(ctx.office_city || "");
-      setOfficeState(ctx.office_state || "");
       setTeamLead(ctx.team_lead || "");
       setNeighborhoods(Array.isArray(ctx.neighborhoods) ? ctx.neighborhoods.join(", ") : ctx.neighborhoods || "");
       setCommonJob(ctx.common_job || "");
@@ -65,17 +60,15 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       setClimateNotes(ctx.climate_notes || "");
       setHousingNotes(ctx.housing_notes || "");
       setReviews(ctx.reviews || []);
-      // Open additional section if any fields are filled
       if (ctx.team_lead || ctx.neighborhoods || ctx.common_job || ctx.local_challenge || ctx.fun_fact || ctx.climate_notes || ctx.housing_notes) {
         setAdditionalOpen(true);
       }
     } else {
-      setName(""); setCity(""); setState(""); setOfficeCity(""); setOfficeState("");
-      setSlug(""); setStatus("draft");
+      setName(""); setCity(""); setState(""); setSlug("");
       setReviews([]); setTeamLead(""); setNeighborhoods(""); setCommonJob("");
       setLocalChallenge(""); setFunFact(""); setCompetitorsToAvoid("");
       setCertifications(""); setClimateNotes(""); setHousingNotes("");
-      setAdditionalOpen(false);
+      setAdditionalOpen(false); setImportMessage("");
     }
   }, [location]);
 
@@ -84,15 +77,14 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
   }
 
   async function searchGoogle() {
-    const searchCity = officeCity || city;
-    const searchState = officeState || state;
-    if (!searchCity || !searchState) return;
+    if (!city || !state) return;
     setSearching(true);
     setSearchResults([]);
+    setImportMessage("");
     try {
       const res = await apiFetch("/api/locations/google-search", {
         method: "POST",
-        body: JSON.stringify({ business_name: name || brandName, city: searchCity, state: searchState }),
+        body: JSON.stringify({ business_name: name || brandName, city, state }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -103,8 +95,6 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
     }
   }
 
-  const [importMessage, setImportMessage] = useState("");
-
   function importResult(result: any) {
     const newReviews = (result.reviews || []).filter((r: any) => r.text).map((r: any) => ({
       author: r.author || "Customer",
@@ -112,12 +102,12 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       rating: r.rating || 5,
     }));
     setReviews(prev => [...prev, ...newReviews]);
-    if (!name) setName(result.title || `${city}, ${state}`);
+    if (!name && result.title) setName(result.title);
     setSearchResults([]);
     if (newReviews.length > 0) {
       setImportMessage(`Imported ${newReviews.length} review${newReviews.length !== 1 ? "s" : ""} from ${result.title}`);
     } else {
-      setImportMessage(`Found ${result.title} but no reviews available. You can add reviews manually below.`);
+      setImportMessage(`Found ${result.title} but no reviews available.`);
     }
   }
 
@@ -129,8 +119,6 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
     setSaving(true);
     try {
       const local_context: any = { reviews };
-      if (officeCity) local_context.office_city = officeCity;
-      if (officeState) local_context.office_state = officeState;
       if (teamLead) local_context.team_lead = teamLead;
       if (neighborhoods) local_context.neighborhoods = commaToArray(neighborhoods);
       if (commonJob) local_context.common_job = commonJob;
@@ -143,10 +131,9 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
 
       const payload: any = {
         name: name || `${brandName} ${city}`,
-        city, state, slug, status, local_context,
+        city, state, slug, local_context,
       };
       if (!location) payload.brand_id = brandId;
-
       onSave(payload);
     } finally {
       setSaving(false);
@@ -163,60 +150,32 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       </div>
 
       <div className="p-6 space-y-5">
-        {/* DBA Name */}
-        <div>
-          <label className={labelClass}>DBA / Display name</label>
-          <input className={inputClass} value={name} onChange={e => setName(e.target.value)} placeholder="USA Insulation of Chicago" />
-        </div>
-
-        {/* Office location (for GBP search) */}
-        <div>
-          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Office location (for Google Business lookup)</div>
-          <div className="grid grid-cols-[1fr_100px] gap-3">
-            <div>
-              <label className={labelClass}>Office city</label>
-              <input className={inputClass} value={officeCity} onChange={e => setOfficeCity(e.target.value)} placeholder="Naperville" />
-            </div>
-            <div>
-              <label className={labelClass}>State</label>
-              <input className={inputClass} value={officeState} onChange={e => setOfficeState(e.target.value)} placeholder="IL" />
-            </div>
+        {/* DBA Name + City/State */}
+        <div className="grid grid-cols-[2fr_1fr_80px_1fr] gap-3 max-[820px]:grid-cols-2">
+          <div>
+            <label className={labelClass}>DBA / Display name</label>
+            <input className={inputClass} value={name} onChange={e => setName(e.target.value)} placeholder={`${brandName} Columbus`} />
           </div>
-        </div>
-
-        {/* Service area (the city this content page targets) */}
-        <div>
-          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Service area (content page target)</div>
-          <div className="grid grid-cols-[1fr_100px_80px_1fr] gap-3 max-[820px]:grid-cols-2">
-            <div>
-              <label className={labelClass}>City</label>
-              <input className={inputClass} value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" />
-            </div>
-            <div>
-              <label className={labelClass}>State</label>
-              <input className={inputClass} value={state} onChange={e => setState(e.target.value)} placeholder="OH" />
-            </div>
-            <div>
-              <label className={labelClass}>Status</label>
-              <select className={inputClass} value={status} onChange={e => setStatus(e.target.value)}>
-                <option value="draft">Draft</option>
-                <option value="live">Live</option>
-                <option value="stale">Stale</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>URL slug</label>
-              <input className={inputClass} value={slug} onChange={e => setSlug(e.target.value)} placeholder="/columbus-oh" />
-            </div>
+          <div>
+            <label className={labelClass}>City</label>
+            <input className={inputClass} value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" />
+          </div>
+          <div>
+            <label className={labelClass}>State</label>
+            <input className={inputClass} value={state} onChange={e => setState(e.target.value)} placeholder="OH" />
+          </div>
+          <div>
+            <label className={labelClass}>URL slug</label>
+            <input className={inputClass} value={slug} onChange={e => setSlug(e.target.value)} placeholder="/columbus-oh" />
           </div>
         </div>
 
         {/* Google search */}
-        {(officeCity || city) && (officeState || state) && (
-          <div className="bg-line-soft rounded-[14px] p-4 space-y-3">
+        {city && state && (
+          <div className="bg-[#F3F1ED] rounded-[14px] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[12px] text-ink-70">
-                {importMessage || "Pull reviews and data from Google"}
+                {importMessage || "Pull reviews from Google"}
               </span>
               <Button variant="ink" size="sm" onClick={() => { setImportMessage(""); searchGoogle(); }} disabled={searching}>
                 {searching ? "Searching..." : importMessage ? "Search again" : "Search Google"}
@@ -229,11 +188,9 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
                     <div className="flex-1 min-w-0">
                       <div className="font-display font-[800] text-[13px]">{r.title}</div>
                       <div className="text-[11px] text-ink-40">{r.address}</div>
-                      {r.rating && <div className="text-[11px] text-ink-70">
-                        {"*".repeat(Math.round(r.rating))} {r.rating}/5 ({r.total_reviews} reviews)
-                      </div>}
+                      {r.rating && <div className="text-[11px] text-ink-70">{r.rating}/5 ({r.total_reviews} reviews)</div>}
                       {r.reviews?.length > 0 && (
-                        <div className="text-[11px] text-green mt-0.5">{r.reviews.length} reviews to import</div>
+                        <div className="text-[11px] text-[#1F7A3A] mt-0.5">{r.reviews.length} reviews to import</div>
                       )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => importResult(r)}>Import</Button>
@@ -248,10 +205,8 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className={labelClass}>Reviews ({reviews.length})</label>
-            <button
-              onClick={() => setReviews(prev => [...prev, { author: "", text: "", rating: 5 }])}
-              className="text-[11px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0"
-            >
+            <button onClick={() => setReviews(prev => [...prev, { author: "", text: "", rating: 5 }])}
+              className="text-[11px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0">
               + Add manually
             </button>
           </div>
@@ -264,31 +219,20 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
                   {r.text ? (
                     <div className="flex gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="text-[12px] text-ink font-mono leading-[1.5]">"{r.text}"</div>
-                        <div className="text-[11px] text-ink-40 mt-1">{r.author} {"*".repeat(r.rating)}</div>
+                        <div className="text-[12px] text-ink leading-[1.5]">"{r.text}"</div>
+                        <div className="text-[11px] text-ink-40 mt-1">{r.author}</div>
                       </div>
                       <button onClick={() => removeReview(i)} className="text-[11px] text-ink-40 hover:text-[#b91c1c] shrink-0">Remove</button>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <input className={inputClass} placeholder="Review text" value={r.text} onChange={e => {
-                        const updated = [...reviews];
-                        updated[i] = { ...r, text: e.target.value };
-                        setReviews(updated);
+                        const updated = [...reviews]; updated[i] = { ...r, text: e.target.value }; setReviews(updated);
                       }} />
                       <div className="flex gap-2">
-                        <input className={`${inputClass} max-w-[200px]`} placeholder="Author name" value={r.author} onChange={e => {
-                          const updated = [...reviews];
-                          updated[i] = { ...r, author: e.target.value };
-                          setReviews(updated);
+                        <input className={`${inputClass} max-w-[200px]`} placeholder="Author" value={r.author} onChange={e => {
+                          const updated = [...reviews]; updated[i] = { ...r, author: e.target.value }; setReviews(updated);
                         }} />
-                        <select className={`${inputClass} max-w-[80px]`} value={r.rating} onChange={e => {
-                          const updated = [...reviews];
-                          updated[i] = { ...r, rating: Number(e.target.value) };
-                          setReviews(updated);
-                        }}>
-                          {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n !== 1 ? "s" : ""}</option>)}
-                        </select>
                         <button onClick={() => removeReview(i)} className="text-[11px] text-ink-40 hover:text-[#b91c1c]">Remove</button>
                       </div>
                     </div>
@@ -300,54 +244,25 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         </div>
 
         {/* Additional info toggle */}
-        <button
-          onClick={() => setAdditionalOpen(!additionalOpen)}
-          className="flex items-center gap-2 text-[12px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0"
-        >
+        <button onClick={() => setAdditionalOpen(!additionalOpen)}
+          className="flex items-center gap-2 text-[12px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0">
           <span className="text-[14px] leading-none">{additionalOpen ? "-" : "+"}</span>
-          {additionalOpen ? "Hide additional information" : "Add additional information for this location"}
+          {additionalOpen ? "Hide additional information" : "Add additional information"}
         </button>
 
         {additionalOpen && (
           <div className="space-y-3 pl-4 border-l-[1.5px] border-line">
             <div className="grid grid-cols-2 gap-3 max-[820px]:grid-cols-1">
-              <div>
-                <label className={labelClass}>Team lead</label>
-                <input className={inputClass} value={teamLead} onChange={e => setTeamLead(e.target.value)} placeholder="Mike Johnson, 12 years experience" />
-              </div>
-              <div>
-                <label className={labelClass}>Neighborhoods served (comma-separated)</label>
-                <input className={inputClass} value={neighborhoods} onChange={e => setNeighborhoods(e.target.value)} placeholder="Clintonville, German Village, Upper Arlington" />
-              </div>
-              <div>
-                <label className={labelClass}>Most common job type</label>
-                <input className={inputClass} value={commonJob} onChange={e => setCommonJob(e.target.value)} placeholder="1950s homes with no wall insulation" />
-              </div>
-              <div>
-                <label className={labelClass}>Local challenge</label>
-                <input className={inputClass} value={localChallenge} onChange={e => setLocalChallenge(e.target.value)} placeholder="Ohio winters with extreme temperature swings" />
-              </div>
-              <div>
-                <label className={labelClass}>Local connection / fun fact</label>
-                <input className={inputClass} value={funFact} onChange={e => setFunFact(e.target.value)} placeholder="Sponsor of the Columbus Crew youth program" />
-              </div>
-              <div>
-                <label className={labelClass}>Certifications (comma-separated)</label>
-                <input className={inputClass} value={certifications} onChange={e => setCertifications(e.target.value)} placeholder="BPI Certified, Energy Star Partner" />
-              </div>
-              <div>
-                <label className={labelClass}>Competitors to avoid mentioning (comma-separated)</label>
-                <input className={inputClass} value={competitorsToAvoid} onChange={e => setCompetitorsToAvoid(e.target.value)} placeholder="RetroFoam, ABC Insulation" />
-              </div>
-              <div>
-                <label className={labelClass}>Climate notes</label>
-                <input className={inputClass} value={climateNotes} onChange={e => setClimateNotes(e.target.value)} placeholder="Hot summers, cold winters, high humidity" />
-              </div>
+              <div><label className={labelClass}>Team lead</label><input className={inputClass} value={teamLead} onChange={e => setTeamLead(e.target.value)} placeholder="Mike Johnson, 12 years experience" /></div>
+              <div><label className={labelClass}>Neighborhoods (comma-separated)</label><input className={inputClass} value={neighborhoods} onChange={e => setNeighborhoods(e.target.value)} placeholder="Clintonville, German Village" /></div>
+              <div><label className={labelClass}>Most common job type</label><input className={inputClass} value={commonJob} onChange={e => setCommonJob(e.target.value)} placeholder="1950s homes with no wall insulation" /></div>
+              <div><label className={labelClass}>Local challenge</label><input className={inputClass} value={localChallenge} onChange={e => setLocalChallenge(e.target.value)} placeholder="Extreme temperature swings" /></div>
+              <div><label className={labelClass}>Local connection</label><input className={inputClass} value={funFact} onChange={e => setFunFact(e.target.value)} placeholder="Sponsor of the Columbus Crew" /></div>
+              <div><label className={labelClass}>Certifications (comma-separated)</label><input className={inputClass} value={certifications} onChange={e => setCertifications(e.target.value)} placeholder="BPI Certified, Energy Star" /></div>
+              <div><label className={labelClass}>Competitors to avoid (comma-separated)</label><input className={inputClass} value={competitorsToAvoid} onChange={e => setCompetitorsToAvoid(e.target.value)} placeholder="RetroFoam, ABC Insulation" /></div>
+              <div><label className={labelClass}>Climate notes</label><input className={inputClass} value={climateNotes} onChange={e => setClimateNotes(e.target.value)} placeholder="Hot summers, cold winters" /></div>
             </div>
-            <div>
-              <label className={labelClass}>Housing stock notes</label>
-              <input className={inputClass} value={housingNotes} onChange={e => setHousingNotes(e.target.value)} placeholder="Mostly 1950s-60s ranch and colonial homes" />
-            </div>
+            <div><label className={labelClass}>Housing stock</label><input className={inputClass} value={housingNotes} onChange={e => setHousingNotes(e.target.value)} placeholder="Mostly 1950s ranch and colonial" /></div>
           </div>
         )}
 

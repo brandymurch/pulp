@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, JetBrains_Mono, Instrument_Serif } from "next/font/google";
+import { Fraunces, DM_Sans, JetBrains_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -7,6 +7,13 @@ const fraunces = Fraunces({
   weight: ["400", "600", "800"],
   style: ["normal", "italic"],
   variable: "--font-fraunces",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-body",
   display: "swap",
 });
 
@@ -39,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      className={`${fraunces.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
     >
       <body>{children}</body>
     </html>

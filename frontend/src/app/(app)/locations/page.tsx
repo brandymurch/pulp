@@ -114,8 +114,21 @@ export default function LocationsPage() {
                   </Button>
                 </div>
 
+                {/* Add form at the top */}
+                {addingForBrand?.id === brand.id && (
+                  <div className="mb-4">
+                    <LocationEditor
+                      location={null}
+                      brandId={brand.id}
+                      brandName={brand.name}
+                      onSave={(data) => handleSave(brand.id, data)}
+                      onCancel={() => setAddingForBrand(null)}
+                    />
+                  </div>
+                )}
+
                 {/* Locations for this brand */}
-                {locs.length === 0 ? (
+                {locs.length === 0 && !addingForBrand ? (
                   <div className="text-[13px] text-ink-40 py-4 border-t border-line">
                     No locations yet.
                   </div>
@@ -126,69 +139,53 @@ export default function LocationsPage() {
                       const reviewCount = (ctx.reviews || []).length;
                       const isSelected = selected?.id === loc.id;
                       return (
-                        <div
-                          key={loc.id}
-                          onClick={() => { setAddingForBrand(null); setSelected(isSelected ? null : loc); }}
-                          className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors ${
-                            i < locs.length - 1 ? "border-b border-line" : ""
-                          } ${isSelected ? "bg-line-soft" : "hover:bg-line-soft"}`}
-                        >
-                          <div className="flex items-center gap-4">
+                        <div key={loc.id}>
+                          <div
+                            onClick={() => { setAddingForBrand(null); setSelected(isSelected ? null : loc); }}
+                            className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors ${
+                              i < locs.length - 1 && !isSelected ? "border-b border-line" : ""
+                            } ${isSelected ? "bg-[#F3F1ED]" : "hover:bg-[#F3F1ED]"}`}
+                          >
                             <div>
                               <div className="font-display font-[800] text-[14px] tracking-[-0.01em]">
-                                {loc.city}, <span className="font-display font-normal text-pulp-deep">{loc.state}</span>
+                                {loc.name || `${loc.city}, ${loc.state}`}
                               </div>
-                              {loc.slug && (
-                                <div className="text-[11px] text-ink-40 font-mono">{loc.slug}</div>
-                              )}
+                              <div className="text-[11px] text-ink-40">
+                                {loc.city}, {loc.state}
+                                {reviewCount > 0 && ` / ${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <a
+                                href={`/generate?brand=${brand.id}&location=${loc.id}`}
+                                onClick={e => e.stopPropagation()}
+                                className="text-[11px] text-ink-70 hover:text-ink transition-colors border-b border-line hover:border-ink pb-px"
+                              >
+                                Generate
+                              </a>
+                              <button
+                                onClick={e => { e.stopPropagation(); handleDelete(brand.id, loc.id); }}
+                                className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors"
+                              >
+                                Delete
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
-                            {reviewCount > 0 && (
-                              <span className="text-[10px] text-ink-40">{reviewCount} review{reviewCount !== 1 ? "s" : ""}</span>
-                            )}
-                            <a
-                              href={`/generate?brand=${brand.id}&location=${loc.id}`}
-                              onClick={e => e.stopPropagation()}
-                              className="text-[11px] text-ink-70 hover:text-ink transition-colors border-b border-line hover:border-ink pb-px"
-                            >
-                              Generate
-                            </a>
-                            <button
-                              onClick={e => { e.stopPropagation(); handleDelete(brand.id, loc.id); }}
-                              className="text-[11px] text-ink-40 hover:text-[#b91c1c] transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                          {/* Editor inline under selected location */}
+                          {isSelected && (
+                            <div className="p-4 border-b border-line bg-[#F3F1ED]/50">
+                              <LocationEditor
+                                location={selected}
+                                brandId={brand.id}
+                                brandName={brand.name}
+                                onSave={(data) => handleSave(brand.id, data)}
+                                onCancel={() => setSelected(null)}
+                              />
+                            </div>
+                          )}
                         </div>
                       );
                     })}
-                  </div>
-                )}
-
-                {/* Editor for this brand */}
-                {selected && locs.some(l => l.id === selected.id) && (
-                  <div className="mt-4">
-                    <LocationEditor
-                      location={selected}
-                      brandId={brand.id}
-                      brandName={brand.name}
-                      onSave={(data) => handleSave(brand.id, data)}
-                      onCancel={() => setSelected(null)}
-                    />
-                  </div>
-                )}
-
-                {addingForBrand?.id === brand.id && (
-                  <div className="mt-4">
-                    <LocationEditor
-                      location={null}
-                      brandId={brand.id}
-                      brandName={brand.name}
-                      onSave={(data) => handleSave(brand.id, data)}
-                      onCancel={() => setAddingForBrand(null)}
-                    />
                   </div>
                 )}
               </div>
