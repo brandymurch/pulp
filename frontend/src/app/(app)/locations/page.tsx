@@ -120,7 +120,7 @@ export default function LocationsPage() {
                     No locations yet.
                   </div>
                 ) : (
-                  <div className="border-[1.5px] border-ink rounded-[14px] overflow-hidden">
+                  <div className="border-t border-line">
                     {locs.map((loc, i) => {
                       const ctx = loc.local_context || {};
                       const reviewCount = (ctx.reviews || []).length;
