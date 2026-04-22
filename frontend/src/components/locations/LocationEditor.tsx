@@ -96,6 +96,8 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
     }
   }
 
+  const [imported, setImported] = useState(false);
+
   function importResult(result: any) {
     const newReviews = (result.reviews || []).filter((r: any) => r.text).map((r: any) => ({
       author: r.author || "Customer",
@@ -103,8 +105,9 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       rating: r.rating || 5,
     }));
     setReviews(prev => [...prev, ...newReviews]);
-    if (result.address && !name) setName(result.title || "");
+    if (!name) setName(result.title || `${city}, ${state}`);
     setSearchResults([]);
+    setImported(true);
   }
 
   function removeReview(index: number) {
@@ -175,9 +178,13 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         {city && state && (
           <div className="bg-line-soft rounded-[14px] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] text-ink-70">Pull reviews and data from Google</span>
-              <Button variant="ink" size="sm" onClick={searchGoogle} disabled={searching}>
-                {searching ? "Searching..." : "Search Google"}
+              <span className="text-[12px] text-ink-70">
+                {imported && reviews.length > 0
+                  ? `Imported ${reviews.length} review${reviews.length !== 1 ? "s" : ""} from Google`
+                  : "Pull reviews and data from Google"}
+              </span>
+              <Button variant="ink" size="sm" onClick={() => { setImported(false); searchGoogle(); }} disabled={searching}>
+                {searching ? "Searching..." : imported ? "Search again" : "Search Google"}
               </Button>
             </div>
             {searchResults.length > 0 && (
