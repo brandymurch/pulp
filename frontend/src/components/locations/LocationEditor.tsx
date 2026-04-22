@@ -38,6 +38,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
   const [certifications, setCertifications] = useState("");
   const [climateNotes, setClimateNotes] = useState("");
   const [housingNotes, setHousingNotes] = useState("");
+  const [generalNotes, setGeneralNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -59,6 +60,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       setCertifications(Array.isArray(ctx.certifications) ? ctx.certifications.join(", ") : ctx.certifications || "");
       setClimateNotes(ctx.climate_notes || "");
       setHousingNotes(ctx.housing_notes || "");
+      setGeneralNotes(ctx.general_notes || "");
       setReviews(ctx.reviews || []);
       if (ctx.team_lead || ctx.neighborhoods || ctx.common_job || ctx.local_challenge || ctx.fun_fact || ctx.climate_notes || ctx.housing_notes) {
         setAdditionalOpen(true);
@@ -128,6 +130,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       if (certifications) local_context.certifications = commaToArray(certifications);
       if (climateNotes) local_context.climate_notes = climateNotes;
       if (housingNotes) local_context.housing_notes = housingNotes;
+      if (generalNotes) local_context.general_notes = generalNotes;
 
       const payload: any = {
         name: name || `${brandName} ${city}`,
@@ -259,6 +262,11 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
               <div><label className={labelClass}>Climate notes</label><input className={inputClass} value={climateNotes} onChange={e => setClimateNotes(e.target.value)} placeholder="Hot summers, cold winters" /></div>
             </div>
             <div><label className={labelClass}>Housing stock</label><input className={inputClass} value={housingNotes} onChange={e => setHousingNotes(e.target.value)} placeholder="Mostly 1950s ranch and colonial" /></div>
+            </div>
+            <div>
+              <label className={labelClass}>General notes</label>
+              <textarea className={textareaClass} value={generalNotes} onChange={e => setGeneralNotes(e.target.value)} placeholder="Any other details about this location that should inform content..." rows={3} />
+            </div>
           </div>
         )}
 

@@ -248,6 +248,8 @@ def build_user_prompt(
             parts.append(f"- Climate: {local_context['climate_notes']}")
         if local_context.get("housing_notes"):
             parts.append(f"- Housing stock: {local_context['housing_notes']}")
+        if local_context.get("general_notes"):
+            parts.append(f"- Additional notes: {local_context['general_notes']}")
         if local_context.get("competitors_to_avoid"):
             comps = local_context["competitors_to_avoid"]
             if isinstance(comps, list):
