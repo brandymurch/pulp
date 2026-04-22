@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/shared/Button";
-import { Input } from "@/components/shared/Input";
 import { apiFetch } from "@/lib/api";
 
 interface Review {
@@ -11,54 +10,17 @@ interface Review {
   rating: number;
 }
 
-interface LocalContext {
-  team_lead: string;
-  neighborhoods: string;
-  common_job: string;
-  local_challenge: string;
-  fun_fact: string;
-  competitors_to_avoid: string;
-  certifications: string;
-  climate_notes: string;
-  housing_notes: string;
-  reviews: Review[];
-}
-
 interface LocationEditorProps {
-  location: any; // null for new
+  location: any;
   brandId: string;
   brandName: string;
   onSave: (data: any) => void;
   onCancel: () => void;
 }
 
-function emptyContext(): LocalContext {
-  return {
-    team_lead: "",
-    neighborhoods: "",
-    common_job: "",
-    local_challenge: "",
-    fun_fact: "",
-    competitors_to_avoid: "",
-    certifications: "",
-    climate_notes: "",
-    housing_notes: "",
-    reviews: [],
-  };
-}
-
-function parseArrayToComma(val: any): string {
-  if (Array.isArray(val)) return val.join(", ");
-  if (typeof val === "string") return val;
-  return "";
-}
-
-function commaToArray(val: string): string[] {
-  return val
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+const inputClass = "w-full h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none focus:border-ink transition-colors";
+const textareaClass = "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 font-mono text-[13px] outline-none focus:border-ink transition-colors resize-y";
+const labelClass = "block text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-1.5";
 
 export function LocationEditor({ location, brandId, brandName, onSave, onCancel }: LocationEditorProps) {
   const [name, setName] = useState("");
@@ -66,7 +28,17 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
   const [state, setState] = useState("");
   const [slug, setSlug] = useState("");
   const [status, setStatus] = useState("draft");
-  const [ctx, setCtx] = useState<LocalContext>(emptyContext());
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [teamLead, setTeamLead] = useState("");
+  const [neighborhoods, setNeighborhoods] = useState("");
+  const [commonJob, setCommonJob] = useState("");
+  const [localChallenge, setLocalChallenge] = useState("");
+  const [funFact, setFunFact] = useState("");
+  const [competitorsToAvoid, setCompetitorsToAvoid] = useState("");
+  const [certifications, setCertifications] = useState("");
+  const [climateNotes, setClimateNotes] = useState("");
+  const [housingNotes, setHousingNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -78,32 +50,32 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       setState(location.state || "");
       setSlug(location.slug || "");
       setStatus(location.status || "draft");
-
-      const lc = location.local_context || {};
-      setCtx({
-        team_lead: lc.team_lead || "",
-        neighborhoods: parseArrayToComma(lc.neighborhoods),
-        common_job: lc.common_job || "",
-        local_challenge: lc.local_challenge || "",
-        fun_fact: lc.fun_fact || "",
-        competitors_to_avoid: parseArrayToComma(lc.competitors_to_avoid),
-        certifications: parseArrayToComma(lc.certifications),
-        climate_notes: lc.climate_notes || "",
-        housing_notes: lc.housing_notes || "",
-        reviews: Array.isArray(lc.reviews) ? lc.reviews : [],
-      });
+      const ctx = location.local_context || {};
+      setTeamLead(ctx.team_lead || "");
+      setNeighborhoods(Array.isArray(ctx.neighborhoods) ? ctx.neighborhoods.join(", ") : ctx.neighborhoods || "");
+      setCommonJob(ctx.common_job || "");
+      setLocalChallenge(ctx.local_challenge || "");
+      setFunFact(ctx.fun_fact || "");
+      setCompetitorsToAvoid(Array.isArray(ctx.competitors_to_avoid) ? ctx.competitors_to_avoid.join(", ") : ctx.competitors_to_avoid || "");
+      setCertifications(Array.isArray(ctx.certifications) ? ctx.certifications.join(", ") : ctx.certifications || "");
+      setClimateNotes(ctx.climate_notes || "");
+      setHousingNotes(ctx.housing_notes || "");
+      setReviews(ctx.reviews || []);
+      // Open additional section if any fields are filled
+      if (ctx.team_lead || ctx.neighborhoods || ctx.common_job || ctx.local_challenge || ctx.fun_fact || ctx.climate_notes || ctx.housing_notes) {
+        setAdditionalOpen(true);
+      }
     } else {
-      setName("");
-      setCity("");
-      setState("");
-      setSlug("");
-      setStatus("draft");
-      setCtx(emptyContext());
+      setName(""); setCity(""); setState(""); setSlug(""); setStatus("draft");
+      setReviews([]); setTeamLead(""); setNeighborhoods(""); setCommonJob("");
+      setLocalChallenge(""); setFunFact(""); setCompetitorsToAvoid("");
+      setCertifications(""); setClimateNotes(""); setHousingNotes("");
+      setAdditionalOpen(false);
     }
   }, [location]);
 
-  function updateCtx(key: keyof LocalContext, value: any) {
-    setCtx((prev) => ({ ...prev, [key]: value }));
+  function commaToArray(val: string): string[] {
+    return val.split(",").map(s => s.trim()).filter(Boolean);
   }
 
   async function searchGoogle() {
@@ -119,166 +91,110 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         const data = await res.json();
         setSearchResults(data.results || []);
       }
-    } catch {
-      // search failed
-    } finally {
+    } catch {} finally {
       setSearching(false);
     }
   }
 
   function importResult(result: any) {
-    // Import reviews
-    const reviews = (result.reviews || []).filter((r: any) => r.text).map((r: any) => ({
+    const newReviews = (result.reviews || []).filter((r: any) => r.text).map((r: any) => ({
       author: r.author || "Customer",
       text: r.text,
       rating: r.rating || 5,
     }));
-
-    setCtx(prev => ({
-      ...prev,
-      reviews: [...prev.reviews, ...reviews],
-    }));
+    setReviews(prev => [...prev, ...newReviews]);
+    if (result.address && !name) setName(result.title || "");
     setSearchResults([]);
   }
 
-  function addReview() {
-    setCtx((prev) => ({
-      ...prev,
-      reviews: [...prev.reviews, { author: "", text: "", rating: 5 }],
-    }));
-  }
-
-  function updateReview(index: number, field: keyof Review, value: any) {
-    setCtx((prev) => ({
-      ...prev,
-      reviews: prev.reviews.map((r, i) =>
-        i === index ? { ...r, [field]: value } : r
-      ),
-    }));
-  }
-
   function removeReview(index: number) {
-    setCtx((prev) => ({
-      ...prev,
-      reviews: prev.reviews.filter((_, i) => i !== index),
-    }));
+    setReviews(prev => prev.filter((_, i) => i !== index));
   }
 
   async function handleSave() {
     setSaving(true);
     try {
-      const payload = {
-        brand_id: brandId,
-        name,
-        city,
-        state,
-        slug,
-        status,
-        local_context: {
-          team_lead: ctx.team_lead,
-          neighborhoods: commaToArray(ctx.neighborhoods),
-          common_job: ctx.common_job,
-          local_challenge: ctx.local_challenge,
-          fun_fact: ctx.fun_fact,
-          competitors_to_avoid: commaToArray(ctx.competitors_to_avoid),
-          certifications: commaToArray(ctx.certifications),
-          climate_notes: ctx.climate_notes,
-          housing_notes: ctx.housing_notes,
-          reviews: ctx.reviews,
-        },
+      const local_context: any = { reviews };
+      if (teamLead) local_context.team_lead = teamLead;
+      if (neighborhoods) local_context.neighborhoods = commaToArray(neighborhoods);
+      if (commonJob) local_context.common_job = commonJob;
+      if (localChallenge) local_context.local_challenge = localChallenge;
+      if (funFact) local_context.fun_fact = funFact;
+      if (competitorsToAvoid) local_context.competitors_to_avoid = commaToArray(competitorsToAvoid);
+      if (certifications) local_context.certifications = commaToArray(certifications);
+      if (climateNotes) local_context.climate_notes = climateNotes;
+      if (housingNotes) local_context.housing_notes = housingNotes;
+
+      const payload: any = {
+        name: name || `${city}, ${state}`,
+        city, state, slug, status, local_context,
       };
+      if (!location) payload.brand_id = brandId;
+
       onSave(payload);
     } finally {
       setSaving(false);
     }
   }
 
-  const labelClass = "block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2";
-  const textareaClass =
-    "w-full border-[1.5px] border-ink rounded-[14px] bg-white text-ink px-4 py-3 font-mono text-[13px] leading-[1.6] outline-none resize-y focus:shadow-[4px_4px_0_0_var(--ink)]";
-
   return (
     <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
-      {/* Header */}
-      <div className="px-6 py-5 border-b-[1.5px] border-ink">
+      <div className="px-6 py-5 border-b-[1.5px] border-ink flex items-center justify-between">
         <h2 className="font-display font-[800] text-xl tracking-[-0.02em] m-0">
-          {location ? "Edit" : "New"}{" "}
-          <span className="font-display italic font-normal">location</span>
+          {location ? "Edit" : "Add"} <span className="font-display italic font-normal">location</span>
         </h2>
+        <Button variant="light" size="sm" onClick={onCancel}>Cancel</Button>
       </div>
 
-      <div className="p-6 space-y-6">
-        {/* Basic info row */}
-        <div>
-          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-3">
-            Basic info
+      <div className="p-6 space-y-5">
+        {/* Basic info */}
+        <div className="grid grid-cols-[1fr_1fr_80px_1fr] gap-3 max-[820px]:grid-cols-2">
+          <div>
+            <label className={labelClass}>City</label>
+            <input className={inputClass} value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" />
           </div>
-          <div className="grid grid-cols-[1fr_1fr_100px_1fr_140px] gap-4 max-[820px]:grid-cols-1">
-            <Input
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Austin South"
-            />
-            <Input
-              label="City"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Austin"
-            />
-            <Input
-              label="State"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              placeholder="TX"
-            />
-            <Input
-              label="Slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="austin-south"
-            />
-            <div>
-              <label className={labelClass}>Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
-              >
-                <option value="draft">Draft</option>
-                <option value="live">Live</option>
-                <option value="stale">Stale</option>
-              </select>
-            </div>
+          <div>
+            <label className={labelClass}>State</label>
+            <input className={inputClass} value={state} onChange={e => setState(e.target.value)} placeholder="OH" />
+          </div>
+          <div>
+            <label className={labelClass}>Status</label>
+            <select className={inputClass} value={status} onChange={e => setStatus(e.target.value)}>
+              <option value="draft">Draft</option>
+              <option value="live">Live</option>
+              <option value="stale">Stale</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>URL slug</label>
+            <input className={inputClass} value={slug} onChange={e => setSlug(e.target.value)} placeholder="/columbus-oh" />
           </div>
         </div>
 
-        {/* Google Search */}
+        {/* Google search */}
         {city && state && (
-          <div className="border-[1.5px] border-line rounded-[14px] p-5 space-y-3">
+          <div className="bg-line-soft rounded-[14px] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
-                Pull from Google
-              </div>
+              <span className="text-[12px] text-ink-70">Pull reviews and data from Google</span>
               <Button variant="ink" size="sm" onClick={searchGoogle} disabled={searching}>
-                {searching ? "Searching..." : `Search "${brandName} ${city}"`}
+                {searching ? "Searching..." : "Search Google"}
               </Button>
             </div>
             {searchResults.length > 0 && (
               <div className="space-y-2">
                 {searchResults.map((r, i) => (
-                  <div key={i} className="border border-line rounded-[10px] p-3 flex items-start justify-between gap-3">
+                  <div key={i} className="bg-white border border-line rounded-lg p-3 flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="font-display font-[800] text-[13px]">{r.title}</div>
-                      <div className="text-[11px] text-ink-40 mt-0.5">{r.address}</div>
-                      {r.rating && <div className="text-[11px] text-ink-70 mt-0.5">Rating: {r.rating}/5 ({r.total_reviews} reviews)</div>}
-                      {r.reviews && r.reviews.length > 0 && (
-                        <div className="text-[11px] text-ink-40 mt-1">{r.reviews.length} reviews available to import</div>
+                      <div className="text-[11px] text-ink-40">{r.address}</div>
+                      {r.rating && <div className="text-[11px] text-ink-70">
+                        {"*".repeat(Math.round(r.rating))} {r.rating}/5 ({r.total_reviews} reviews)
+                      </div>}
+                      {r.reviews?.length > 0 && (
+                        <div className="text-[11px] text-green mt-0.5">{r.reviews.length} reviews to import</div>
                       )}
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => importResult(r)}>
-                      Import
-                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => importResult(r)}>Import</Button>
                   </div>
                 ))}
               </div>
@@ -286,152 +202,80 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
           </div>
         )}
 
-        {/* Local context */}
-        <div>
-          <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-3">
-            Local context
-          </div>
-          <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
-            <Input
-              label="Team lead"
-              value={ctx.team_lead}
-              onChange={(e) => updateCtx("team_lead", e.target.value)}
-              placeholder="Mike R."
-            />
-            <Input
-              label="Neighborhoods (comma-separated)"
-              value={ctx.neighborhoods}
-              onChange={(e) => updateCtx("neighborhoods", e.target.value)}
-              placeholder="South Congress, Zilker, Barton Hills"
-            />
-            <Input
-              label="Common job"
-              value={ctx.common_job}
-              onChange={(e) => updateCtx("common_job", e.target.value)}
-              placeholder="Attic insulation upgrade"
-            />
-            <Input
-              label="Local challenge"
-              value={ctx.local_challenge}
-              onChange={(e) => updateCtx("local_challenge", e.target.value)}
-              placeholder="Extreme summer heat"
-            />
-            <Input
-              label="Fun fact"
-              value={ctx.fun_fact}
-              onChange={(e) => updateCtx("fun_fact", e.target.value)}
-              placeholder="Team sponsors local 5K run"
-            />
-            <Input
-              label="Competitors to avoid (comma-separated)"
-              value={ctx.competitors_to_avoid}
-              onChange={(e) => updateCtx("competitors_to_avoid", e.target.value)}
-              placeholder="AcmeCo, BigInsulate"
-            />
-            <Input
-              label="Certifications (comma-separated)"
-              value={ctx.certifications}
-              onChange={(e) => updateCtx("certifications", e.target.value)}
-              placeholder="BPI Certified, ENERGY STAR Partner"
-            />
-            <div>
-              <label className={labelClass}>Climate notes</label>
-              <textarea
-                value={ctx.climate_notes}
-                onChange={(e) => updateCtx("climate_notes", e.target.value)}
-                placeholder="Hot summers, mild winters. Cooling costs dominate."
-                rows={3}
-                className={textareaClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Housing notes</label>
-              <textarea
-                value={ctx.housing_notes}
-                onChange={(e) => updateCtx("housing_notes", e.target.value)}
-                placeholder="Mix of 1970s ranch homes and new construction."
-                rows={3}
-                className={textareaClass}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Reviews */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
-              Reviews ({ctx.reviews.length})
-            </div>
-            <Button variant="ghost" size="sm" onClick={addReview}>
-              + Add review
-            </Button>
-          </div>
-
-          {ctx.reviews.length === 0 && (
-            <div className="text-[13px] text-ink-40 py-4 text-center">
-              No reviews added. Click &quot;+ Add review&quot; to include customer testimonials.
-            </div>
-          )}
-
-          <div className="space-y-3">
-            {ctx.reviews.map((review, idx) => (
-              <div
-                key={idx}
-                className="border-[1.5px] border-line rounded-[14px] p-4 space-y-3"
-              >
-                <div className="grid grid-cols-[1fr_80px_auto] gap-3 items-end max-[820px]:grid-cols-1">
-                  <Input
-                    label="Author"
-                    value={review.author}
-                    onChange={(e) => updateReview(idx, "author", e.target.value)}
-                    placeholder="Jane D."
-                  />
-                  <div>
-                    <label className={labelClass}>Rating</label>
-                    <select
-                      value={review.rating}
-                      onChange={(e) =>
-                        updateReview(idx, "rating", Number(e.target.value))
-                      }
-                      className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
-                    >
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </select>
+        {reviews.length > 0 && (
+          <div>
+            <label className={labelClass}>Reviews ({reviews.length})</label>
+            <div className="space-y-2">
+              {reviews.map((r, i) => (
+                <div key={i} className="border border-line rounded-lg p-3 flex gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-ink font-mono leading-[1.5]">"{r.text}"</div>
+                    <div className="text-[11px] text-ink-40 mt-1">{r.author} {"*".repeat(r.rating)}</div>
                   </div>
-                  <button
-                    onClick={() => removeReview(idx)}
-                    className="h-[46px] text-[11px] text-ink-40 hover:text-[#b91c1c] transition-colors px-2"
-                  >
-                    Remove
-                  </button>
+                  <button onClick={() => removeReview(i)} className="text-[11px] text-ink-40 hover:text-[#b91c1c] shrink-0">Remove</button>
                 </div>
-                <div>
-                  <label className={labelClass}>Review text</label>
-                  <textarea
-                    value={review.text}
-                    onChange={(e) => updateReview(idx, "text", e.target.value)}
-                    placeholder="Great service, very professional..."
-                    rows={2}
-                    className={textareaClass}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Actions */}
-        <div className="flex gap-3 items-center pt-2">
-          <Button variant="ink" onClick={handleSave} disabled={saving || !name}>
-            {saving ? "Saving..." : location ? "Save changes" : "Create location"}
-          </Button>
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
+        {/* Additional info toggle */}
+        <button
+          onClick={() => setAdditionalOpen(!additionalOpen)}
+          className="flex items-center gap-2 text-[12px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0"
+        >
+          <span className="text-[14px] leading-none">{additionalOpen ? "-" : "+"}</span>
+          {additionalOpen ? "Hide additional information" : "Add additional information for this location"}
+        </button>
+
+        {additionalOpen && (
+          <div className="space-y-3 pl-4 border-l-[1.5px] border-line">
+            <div className="grid grid-cols-2 gap-3 max-[820px]:grid-cols-1">
+              <div>
+                <label className={labelClass}>Team lead</label>
+                <input className={inputClass} value={teamLead} onChange={e => setTeamLead(e.target.value)} placeholder="Mike Johnson, 12 years experience" />
+              </div>
+              <div>
+                <label className={labelClass}>Neighborhoods served (comma-separated)</label>
+                <input className={inputClass} value={neighborhoods} onChange={e => setNeighborhoods(e.target.value)} placeholder="Clintonville, German Village, Upper Arlington" />
+              </div>
+              <div>
+                <label className={labelClass}>Most common job type</label>
+                <input className={inputClass} value={commonJob} onChange={e => setCommonJob(e.target.value)} placeholder="1950s homes with no wall insulation" />
+              </div>
+              <div>
+                <label className={labelClass}>Local challenge</label>
+                <input className={inputClass} value={localChallenge} onChange={e => setLocalChallenge(e.target.value)} placeholder="Ohio winters with extreme temperature swings" />
+              </div>
+              <div>
+                <label className={labelClass}>Local connection / fun fact</label>
+                <input className={inputClass} value={funFact} onChange={e => setFunFact(e.target.value)} placeholder="Sponsor of the Columbus Crew youth program" />
+              </div>
+              <div>
+                <label className={labelClass}>Certifications (comma-separated)</label>
+                <input className={inputClass} value={certifications} onChange={e => setCertifications(e.target.value)} placeholder="BPI Certified, Energy Star Partner" />
+              </div>
+              <div>
+                <label className={labelClass}>Competitors to avoid mentioning (comma-separated)</label>
+                <input className={inputClass} value={competitorsToAvoid} onChange={e => setCompetitorsToAvoid(e.target.value)} placeholder="RetroFoam, ABC Insulation" />
+              </div>
+              <div>
+                <label className={labelClass}>Climate notes</label>
+                <input className={inputClass} value={climateNotes} onChange={e => setClimateNotes(e.target.value)} placeholder="Hot summers, cold winters, high humidity" />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Housing stock notes</label>
+              <input className={inputClass} value={housingNotes} onChange={e => setHousingNotes(e.target.value)} placeholder="Mostly 1950s-60s ranch and colonial homes" />
+            </div>
+          </div>
+        )}
+
+        {/* Save */}
+        <div className="flex gap-2 pt-2">
+          <Button variant="ink" size="sm" onClick={handleSave} disabled={saving || !city || !state}>
+            {saving ? "Saving..." : location ? "Save changes" : "Add location"}
           </Button>
         </div>
       </div>
