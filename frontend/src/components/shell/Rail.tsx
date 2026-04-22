@@ -110,12 +110,12 @@ export function Rail({ onSignOut }: RailProps) {
   return (
     <aside className="w-[240px] h-screen sticky top-0 flex flex-col border-r-[1.5px] border-line bg-white max-[900px]:w-full max-[900px]:h-auto max-[900px]:static max-[900px]:border-r-0 max-[900px]:border-b-[1.5px]">
       {/* Brand lockup */}
-      <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
+      <a href="/" className="flex items-center gap-2.5 px-5 pt-6 pb-5">
         <SliceMark className="w-7 h-7 text-pulp overflow-visible" />
         <span className="font-display font-[800] text-[22px] tracking-[-0.03em] leading-none">
-          Pulp.
+          Pulp
         </span>
-      </div>
+      </a>
 
       {/* Nav section */}
       <nav className="flex-1 px-3 flex flex-col max-[900px]:flex-row max-[900px]:flex-wrap max-[900px]:gap-1 max-[900px]:pb-3">

@@ -186,7 +186,7 @@ export default function Home() {
           <a href="#" className="flex items-center gap-3">
             <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
             <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none">
-              Pulp.
+              Pulp
             </span>
           </a>
 
@@ -619,8 +619,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* F/05 — wide */}
-            <div className="col-span-2 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+            {/* F/05 — full width */}
+            <div className="col-span-3 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
               <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70 font-mono">
                 F / 05
               </div>
@@ -855,7 +855,7 @@ export default function Home() {
               }}
             >
               <h3 className="font-display font-[800] text-[36px] tracking-[-0.02em] m-0 mb-6 leading-none">
-                <em className="font-normal">Pulp.</em>
+                <em className="font-normal">Pulp</em>
               </h3>
               <ul className="list-none p-0 m-0 flex flex-col gap-3">
                 {[
@@ -975,12 +975,12 @@ export default function Home() {
             <a href="#" className="flex items-center gap-3">
               <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
               <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none text-white">
-                Pulp.
+                Pulp
               </span>
             </a>
             <p className="text-[13px] text-white/70 max-w-[36ch] mt-[18px] leading-[1.55] font-mono">
-              Fresh-squeezed copy for every franchise territory. Cold-pressed in
-              Oakland, sold to operators everywhere.
+              Fresh-squeezed copy for every franchise territory. Built for
+              operators, loved by marketers.
             </p>
           </div>
 
@@ -1053,7 +1053,7 @@ export default function Home() {
             style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}
           >
             <span>&copy; 2026 Pulp Copy, Inc.</span>
-            <span>Cold-pressed. No pulp-free settings.</span>
+            <span>Fresh-squeezed. Never from concentrate.</span>
             <span>Privacy &middot; Terms &middot; DPA</span>
           </div>
         </div>
