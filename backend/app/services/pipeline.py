@@ -60,7 +60,7 @@ async def _run_pipeline_async(
     """Async pipeline implementation."""
     import anthropic
     from app.config import ANTHROPIC_API_KEY
-    from app.services.pop import get_enriched_brief, score_content_with_pop, stub_score
+    from app.services.pop import get_enriched_brief, score_content_from_brief, stub_score
     from app.services.content_generator import (
         build_system_prompt, build_user_prompt,
         build_outline_prompt, build_revision_prompts,
@@ -194,15 +194,10 @@ async def _run_pipeline_async(
         _update_job(job_id, phase="error", error=f"Content generation failed: {e}")
         return
 
-    # -- STEP 4: Score --
+    # -- STEP 4: Score (uses cached brief data, no extra POP call) --
     _update_job(job_id, phase="scoring")
     try:
-        if POP_API_KEY:
-            score_result = await score_content_with_pop(
-                content=full_text, target_keyword=keyword,
-            )
-        else:
-            score_result = stub_score(content=full_text, target_keyword=keyword)
+        score_result = score_content_from_brief(content=full_text, brief=brief)
         _update_job(job_id, score=score_result)
     except Exception as e:
         logger.warning(f"Scoring failed: {e}")
@@ -236,14 +231,9 @@ async def _run_pipeline_async(
 
                 _update_job(job_id, content=full_text, word_count=word_count, revision_count=revision_count)
 
-                # Re-score
+                # Re-score (local, using cached brief)
                 _update_job(job_id, phase="scoring")
-                if POP_API_KEY:
-                    score_result = await score_content_with_pop(
-                        content=full_text, target_keyword=keyword,
-                    )
-                else:
-                    score_result = stub_score(content=full_text, target_keyword=keyword)
+                score_result = score_content_from_brief(content=full_text, brief=brief)
                 _update_job(job_id, score=score_result)
 
                 if score_result.get("overall_score", 100) >= 75:

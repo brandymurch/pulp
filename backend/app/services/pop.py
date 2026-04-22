@@ -320,6 +320,82 @@ async def score_content_with_pop(
     }
 
 
+def score_content_from_brief(content: str, brief: dict) -> dict:
+    """Score content locally using an already-fetched brief. No POP API call needed."""
+    term_targets = brief.get("term_targets", [])
+    target_word_count = brief.get("target_word_count", 1500)
+
+    content_lower = content.lower()
+    words = content.strip().split()
+    word_count = len(words)
+
+    phrase_results = []
+    for t in term_targets:
+        phrase = t.get("phrase", "")
+        target = t.get("target", 0)
+        weight = t.get("weight", 0)
+        if not phrase:
+            continue
+
+        escaped = re.escape(phrase.lower())
+        matches = re.findall(rf"\b{escaped}\b", content_lower)
+        current = len(matches)
+
+        if target == 0:
+            score = 100.0 if current > 0 else 50.0
+        else:
+            score = min(100.0, round((current / target) * 100))
+
+        phrase_results.append({
+            "phrase": phrase, "current": current, "target": target,
+            "weight": weight, "score": score,
+        })
+
+    total_weight = sum(p["weight"] for p in phrase_results)
+    term_score = (
+        round(sum(p["score"] * p["weight"] for p in phrase_results) / total_weight)
+        if total_weight > 0 else 0
+    )
+
+    word_count_score = 100.0
+    if target_word_count and word_count < target_word_count:
+        word_count_score = round((word_count / target_word_count) * 100)
+
+    final_score = round(term_score * 0.7 + word_count_score * 0.3)
+
+    sorted_by_weight = sorted(phrase_results, key=lambda p: p["weight"], reverse=True)
+    well_optimized = [p for p in sorted_by_weight if p["score"] >= 80][:10]
+    missing = [p for p in sorted_by_weight if p["score"] == 0 and p["target"] > 0][:10]
+
+    recommendations = []
+    missing_terms = [p for p in sorted_by_weight if p["score"] == 0 and p["target"] > 0]
+    needs_work = [p for p in sorted_by_weight if 0 < p["score"] < 80]
+
+    if missing_terms:
+        top_missing = ", ".join(f'"{m["phrase"]}"' for m in missing_terms[:3])
+        recommendations.append(f"Missing important terms: {top_missing}")
+    if needs_work:
+        top_needs = ", ".join(f'"{n["phrase"]}"' for n in needs_work[:3])
+        recommendations.append(f"Terms needing more usage: {top_needs}")
+    if target_word_count and word_count < target_word_count:
+        recommendations.append(f"Content is {word_count} words, target is ~{target_word_count}")
+
+    return {
+        "overall_score": min(final_score, 100),
+        "term_score": term_score,
+        "word_count_score": int(word_count_score),
+        "recommendations": recommendations,
+        "well_optimized": [
+            {"phrase": t["phrase"], "current": t["current"], "target": t["target"]}
+            for t in well_optimized
+        ],
+        "missing": [
+            {"phrase": t["phrase"], "current": t["current"], "target": t["target"]}
+            for t in missing
+        ],
+    }
+
+
 def stub_score(content: str, target_keyword: str) -> dict:
     """Basic content analysis fallback when POP API key is not set."""
     words = content.split()
