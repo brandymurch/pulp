@@ -449,6 +449,9 @@ export default function GeneratePage() {
             <Button variant="ghost" size="sm" onClick={exportToDrive} disabled={!!exportUrl}>
               {exportUrl ? "Exported" : "Export to Drive"}
             </Button>
+            <Button variant="light" size="sm" onClick={startPipeline}>
+              Regenerate
+            </Button>
             {exportUrl && (
               <a href={exportUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-ink-70 underline">
                 Open in Drive
