@@ -3,16 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --pulp: #FF6A1A;
+  --pulp: #FFB020;
+  --pulp-deep: #E89000;
+  --cream: #FBF3E6;
   --ink: #141210;
   --ink-70: #4A4642;
   --ink-40: #9A958E;
-  --ink-20: #D7D3CD;
   --line: #E8E5E0;
-  --line-soft: #F3F1ED;
   --paper: #FFFFFF;
-  --green: #1F7A3A;
-  --amber: #B5730F;
 }
 
 * {
@@ -36,6 +34,10 @@ a {
   text-decoration: none;
 }
 
+em {
+  font-style: normal;
+}
+
 /* Ticker animation */
 @keyframes ticker-scroll {
   to {
@@ -43,11 +45,8 @@ a {
   }
 }
 
-/* Animated ellipsis */
-@keyframes ellipsis {
-  0%   { clip-path: inset(0 100% 0 0); }
-  25%  { clip-path: inset(0 66% 0 0); }
-  50%  { clip-path: inset(0 33% 0 0); }
-  75%  { clip-path: inset(0 0 0 0); }
-  100% { clip-path: inset(0 0 0 0); }
+/* Pulsing kicker dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

@@ -5,19 +5,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pulp: "#FF6A1A",
+        pulp: "#FFB020",
+        "pulp-deep": "#E89000",
+        cream: "#FBF3E6",
         ink: "#141210",
         "ink-70": "#4A4642",
         "ink-40": "#9A958E",
-        "ink-20": "#D7D3CD",
         line: "#E8E5E0",
-        "line-soft": "#F3F1ED",
         paper: "#FFFFFF",
-        green: "#1F7A3A",
-        amber: "#B5730F",
       },
       fontFamily: {
-        display: ["var(--font-fraunces)", "Georgia", "serif"],
+        display: [
+          "var(--font-fraunces)",
+          "var(--font-instrument)",
+          "Georgia",
+          "serif",
+        ],
         mono: [
           "var(--font-mono)",
           "ui-monospace",
