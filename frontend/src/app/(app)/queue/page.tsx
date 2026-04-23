@@ -483,20 +483,28 @@ export default function QueuePage() {
 
   // Load brands on mount
   useEffect(() => {
-    async function loadBrands() {
+    async function init() {
       try {
         const res = await apiFetch("/api/brands");
         if (!res.ok) return;
         const data: Brand[] = await res.json();
         setBrands(data);
-        // Default to all brands
-        setBrandId("");
       } catch {
         setError("Failed to load brands");
+      }
+      // Always fetch all jobs initially
+      try {
+        const url = "/api/pipeline/list?limit=20";
+        const res = await apiFetch(url);
+        if (res.ok) {
+          const data: PipelineJob[] = await res.json();
+          setJobs(data);
+        }
+      } catch {} finally {
         setLoading(false);
       }
     }
-    loadBrands();
+    init();
   }, []);
 
   // Fetch jobs for brand
@@ -610,7 +618,7 @@ export default function QueuePage() {
           <select
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
-            className="h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[12px] outline-none focus:border-ink appearance-none cursor-pointer"
+            className="h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 pr-8 text-[12px] outline-none focus:border-ink cursor-pointer"
           >
             <option value="">All brands</option>
             {brands.map((b) => (
