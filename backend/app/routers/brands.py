@@ -16,6 +16,7 @@ class UpdateBrandRequest(BaseModel):
     default_tone: Optional[str] = None
     services: Optional[list[str]] = None
     brand_guidelines: Optional[str] = None
+    competitors: Optional[list[str]] = None
 
 
 @router.get("")

@@ -253,6 +253,7 @@ async def _run_pipeline_phase2(
             voice_notes=brand_data.get("voice_notes"),
             brand_banned_words=brand_data.get("brand_banned_words"),
             brand_guidelines=brand_data.get("brand_guidelines"),
+            brand_competitors=brand_data.get("competitors") or [],
         )
         user_prompt = build_user_prompt(
             keyword=keyword, city=city, state=state,

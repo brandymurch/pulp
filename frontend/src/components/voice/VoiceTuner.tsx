@@ -57,6 +57,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
   const [bannedWords, setBannedWords] = useState("");
   const [services, setServices] = useState("");
   const [guidelines, setGuidelines] = useState("");
+  const [competitors, setCompetitors] = useState("");
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -76,6 +77,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
     setBannedWords((brand.brand_banned_words || []).join(", "));
     setServices((brand.services || []).join("\n"));
     setGuidelines(brand.brand_guidelines || "");
+    setCompetitors((brand.competitors || []).join(", "));
     setEditingSection(null);
   }, [brand]);
 
@@ -84,6 +86,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
     try {
       const words = bannedWords.split(",").map(w => w.trim()).filter(Boolean);
       const svcList = services.split("\n").map(s => s.trim()).filter(Boolean);
+      const compList = competitors.split(",").map(c => c.trim()).filter(Boolean);
       const res = await apiFetch(`/api/brands/${brand.id}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -92,6 +95,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
           brand_banned_words: words,
           services: svcList,
           brand_guidelines: guidelines,
+          competitors: compList,
         }),
       });
       if (res.ok) {
@@ -115,6 +119,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
     setBannedWords((brand.brand_banned_words || []).join(", "));
     setServices((brand.services || []).join("\n"));
     setGuidelines(brand.brand_guidelines || "");
+    setCompetitors((brand.competitors || []).join(", "));
     setEditingSection(null);
   }
 
@@ -210,6 +215,28 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
       >
         <textarea className={textareaClass} value={services} onChange={e => setServices(e.target.value)} placeholder={"Injection Foam Insulation\nSpray Foam Insulation"} rows={4} />
         <div className="text-[10px] text-ink-40 mt-1">Content will only reference these services.</div>
+      </EditableSection>
+
+      {/* Competitors (brand level, applied to all locations) */}
+      <EditableSection
+        title="Competitors (do not mention)"
+        editing={editingSection === "competitors"}
+        onEdit={() => setEditingSection("competitors")}
+        onSave={saveSection}
+        onCancel={cancelEdit}
+        saving={saving}
+        display={
+          competitors.trim() ? (
+            <div className="flex flex-wrap gap-1.5">
+              {competitors.split(",").filter(Boolean).map((c, i) => (
+                <span key={i} className="text-[11px] bg-[rgba(185,28,28,0.06)] text-[#b91c1c]/70 px-2 py-1 rounded-lg">{c.trim()}</span>
+              ))}
+            </div>
+          ) : <div className="text-[12px] text-ink-40">No brand-level competitors set.</div>
+        }
+      >
+        <input className={inputClass} value={competitors} onChange={e => setCompetitors(e.target.value)} placeholder="RetroFoam, ABC Insulation, CompetitorX" />
+        <div className="text-[10px] text-ink-40 mt-1">Applied to all locations. Location-level competitors are added on top.</div>
       </EditableSection>
 
       {/* Banned words */}
