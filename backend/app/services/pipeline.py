@@ -31,13 +31,14 @@ def run_pipeline(
     template_id: Optional[str] = None,
     content_type: str = "landing_page",
     competitor_urls: Optional[list] = None,
+    feedback: Optional[str] = None,
 ):
     """Run the full pipeline in a background thread."""
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(_run_pipeline_async(
             job_id, keyword, city, state, brand_id,
-            location_id, template_id, content_type, competitor_urls,
+            location_id, template_id, content_type, competitor_urls, feedback,
         ))
     except Exception as e:
         logger.error(f"Pipeline {job_id} failed: {e}")
@@ -130,6 +131,7 @@ async def _run_pipeline_async(
     template_id: Optional[str],
     content_type: str,
     competitor_urls: Optional[list],
+    feedback: Optional[str] = None,
 ):
     """Async pipeline implementation."""
     import anthropic
@@ -265,7 +267,7 @@ async def _run_pipeline_async(
     await _run_pipeline_phase2(
         job_id, keyword, city, state, brand_id, location_id,
         content_type, outline, brief, brand_data, style_examples,
-        template_content, local_context, competitors_scraped,
+        template_content, local_context, competitors_scraped, feedback,
     )
 
 
@@ -276,6 +278,7 @@ async def _run_pipeline_phase2(
     brand_data: dict, style_examples: list,
     template_content: Optional[dict], local_context: Optional[dict],
     competitors: Optional[list] = None,
+    feedback: Optional[str] = None,
 ):
     """Phase 2: generate, score, revise, save. Called after outline approval."""
     import anthropic
@@ -289,6 +292,11 @@ async def _run_pipeline_phase2(
 
     _update_job(job_id, phase="generating")
     try:
+        # Combine brand guidelines with user feedback
+        guidelines = brand_data.get("brand_guidelines") or ""
+        if feedback:
+            guidelines = f"{guidelines}\n\nUSER FEEDBACK (apply to this generation):\n{feedback}" if guidelines else f"USER FEEDBACK (apply to this generation):\n{feedback}"
+
         system_prompt = build_system_prompt(
             template=template_content,
             style_examples=style_examples,
@@ -296,7 +304,7 @@ async def _run_pipeline_phase2(
             voice_dimensions=brand_data.get("voice_dimensions"),
             voice_notes=brand_data.get("voice_notes"),
             brand_banned_words=brand_data.get("brand_banned_words"),
-            brand_guidelines=brand_data.get("brand_guidelines"),
+            brand_guidelines=guidelines,
             brand_competitors=brand_data.get("competitors") or [],
         )
         user_prompt = build_user_prompt(

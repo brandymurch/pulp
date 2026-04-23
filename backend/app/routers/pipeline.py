@@ -22,6 +22,7 @@ class StartPipelineRequest(BaseModel):
     template_id: Optional[str] = None
     content_type: str = "landing_page"
     competitor_urls: Optional[list] = None
+    feedback: Optional[str] = None
 
 
 @router.post("/start")
@@ -55,6 +56,7 @@ async def start_pipeline(req: StartPipelineRequest, _=Depends(require_auth)):
             "template_id": req.template_id,
             "content_type": req.content_type,
             "competitor_urls": req.competitor_urls,
+            "feedback": req.feedback,
         },
         daemon=True,
     )

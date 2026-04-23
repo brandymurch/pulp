@@ -75,6 +75,7 @@ export default function GeneratePage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState("");
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -243,6 +244,7 @@ export default function GeneratePage() {
           template_id: selectedTemplate?.id || undefined,
           content_type: contentType,
           competitor_urls: competitorUrls.length > 0 ? competitorUrls : undefined,
+          feedback: feedback.trim() || undefined,
         }),
       });
       if (!res.ok) {
@@ -543,6 +545,18 @@ export default function GeneratePage() {
             </div>
           </div>
 
+          {/* Feedback for regeneration */}
+          <div>
+            <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-1.5">Feedback for next generation (optional)</label>
+            <textarea
+              value={feedback}
+              onChange={e => setFeedback(e.target.value)}
+              placeholder="Too salesy. Needs more local detail. Mention the team lead. Shorter intro."
+              rows={2}
+              className="w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y"
+            />
+          </div>
+
           {/* Actions */}
           <div className="flex gap-2 flex-wrap">
             <Button variant="ink" size="sm" onClick={saveToHistory} disabled={saved}>
@@ -555,7 +569,7 @@ export default function GeneratePage() {
               {exportUrl ? "Exported" : "Export to Drive"}
             </Button>
             <Button variant="light" size="sm" onClick={startPipeline}>
-              Regenerate
+              {feedback.trim() ? "Regenerate with feedback" : "Regenerate"}
             </Button>
             {exportUrl && (
               <a href={exportUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-ink-70 underline">
