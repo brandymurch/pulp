@@ -109,25 +109,58 @@ def export_to_drive(
 ) -> dict:
     drive, docs = _get_services()
 
-    # Create doc directly in the shared folder so it uses the folder owner's
-    # quota, not the service account's (which is typically 0 for Docs).
-    parents = [GOOGLE_DRIVE_FOLDER_ID] if GOOGLE_DRIVE_FOLDER_ID else []
-    file_meta = {
-        "name": title,
-        "mimeType": "application/vnd.google-apps.document",
-        "parents": parents,
-    }
-    doc_file = drive.files().create(
-        body=file_meta, fields="id", supportsAllDrives=True,
-    ).execute()
-    doc_id = doc_file["id"]
+    # Try creating via Docs API (bypasses Drive file creation quota check)
+    try:
+        doc = docs.documents().create(body={"title": title}).execute()
+        doc_id = doc["documentId"]
 
-    # Insert content
-    logger.info(f"Drive export: inserting {len(content)} chars into doc {doc_id}")
-    docs.documents().batchUpdate(
-        documentId=doc_id,
-        body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]},
-    ).execute()
+        # Insert content
+        docs.documents().batchUpdate(
+            documentId=doc_id,
+            body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]},
+        ).execute()
 
-    doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
-    return {"doc_url": doc_url, "doc_id": doc_id}
+        # Move to shared folder
+        if GOOGLE_DRIVE_FOLDER_ID:
+            try:
+                file_info = drive.files().get(
+                    fileId=doc_id, fields="parents", supportsAllDrives=True,
+                ).execute()
+                previous_parents = ",".join(file_info.get("parents", []))
+                drive.files().update(
+                    fileId=doc_id,
+                    addParents=GOOGLE_DRIVE_FOLDER_ID,
+                    removeParents=previous_parents,
+                    fields="id",
+                    supportsAllDrives=True,
+                ).execute()
+            except Exception as move_err:
+                logger.warning(f"Could not move doc to folder: {move_err}")
+
+        doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+        return {"doc_url": doc_url, "doc_id": doc_id}
+
+    except Exception as e:
+        logger.warning(f"Docs API creation failed ({e}), trying HTML upload")
+
+        # Fallback: upload as HTML file (converts to Google Doc in shared folder)
+        import io
+        from googleapiclient.http import MediaIoBaseUpload
+
+        html = f"<html><body><h1>{title}</h1><pre>{content}</pre></body></html>"
+        media = MediaIoBaseUpload(
+            io.BytesIO(html.encode("utf-8")),
+            mimetype="text/html",
+        )
+        file_meta = {
+            "name": title,
+            "mimeType": "application/vnd.google-apps.document",
+            "parents": [GOOGLE_DRIVE_FOLDER_ID] if GOOGLE_DRIVE_FOLDER_ID else [],
+        }
+        doc_file = drive.files().create(
+            body=file_meta, media_body=media,
+            fields="id", supportsAllDrives=True,
+        ).execute()
+        doc_id = doc_file["id"]
+        doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+        return {"doc_url": doc_url, "doc_id": doc_id}
