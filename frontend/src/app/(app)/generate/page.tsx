@@ -44,6 +44,7 @@ export default function GeneratePage() {
   const searchParams = useSearchParams();
   const urlBrandId = searchParams.get("brand") || "";
   const urlLocationId = searchParams.get("location") || "";
+  const urlPipelineId = searchParams.get("pipeline") || "";
 
   // Inputs
   const [keyword, setKeyword] = useState("");
@@ -98,9 +99,37 @@ export default function GeneratePage() {
     loadBrands();
   }, [urlBrandId]);
 
+  // Load pipeline from URL param (e.g. from queue page)
+  useEffect(() => {
+    if (!urlPipelineId) return;
+    async function loadPipeline() {
+      try {
+        const res = await apiFetch(`/api/pipeline/status/${urlPipelineId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setPipelineId(urlPipelineId);
+        setPhase(data.phase as Phase);
+        setKeyword(data.keyword || "");
+        setCity(data.city || "");
+        setState(data.state || "");
+        if (data.brief) setBrief(data.brief);
+        if (data.outline) setOutlineData(data.outline);
+        if (data.content) setContent(data.content);
+        if (data.score) setPopScore(data.score);
+        if (data.word_count) setWordCount(data.word_count);
+        // If still active, start polling
+        const active = ["pending", "brief", "outline", "generating", "scoring", "revising"];
+        if (active.includes(data.phase)) {
+          startPolling(urlPipelineId);
+        }
+      } catch {}
+    }
+    loadPipeline();
+  }, [urlPipelineId]);
+
   // Check for running pipeline when brand loads
   useEffect(() => {
-    if (!brandId) return;
+    if (!brandId || urlPipelineId) return;
     async function checkRunning() {
       try {
         const res = await apiFetch(`/api/pipeline/list?brand_id=${brandId}&limit=1`);

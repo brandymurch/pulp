@@ -271,17 +271,12 @@ function NeedsAttentionRow({
               ))}
             </div>
           </div>
-          <Button
-            variant="ink"
-            size="sm"
-            disabled={approving}
-            onClick={async () => {
-              setApproving(true);
-              onApprove(job.id);
-            }}
+          <a
+            href={`/generate?pipeline=${job.id}`}
+            className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] bg-ink text-white border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp"
           >
-            {approving ? "Approving..." : "Approve and generate"}
-          </Button>
+            Open
+          </a>
         </div>
       )}
     </div>
