@@ -109,34 +109,24 @@ def export_to_drive(
 ) -> dict:
     drive, docs = _get_services()
 
-    brand_folder = _find_or_create_folder(drive, brand_name, GOOGLE_DRIVE_FOLDER_ID)
-    city_folder = _find_or_create_folder(drive, city, brand_folder)
-
+    # Create doc directly in the shared folder (no subfolders)
     file_meta = {
         "name": title,
         "mimeType": "application/vnd.google-apps.document",
-        "parents": [city_folder],
+        "parents": [GOOGLE_DRIVE_FOLDER_ID],
     }
     doc_file = drive.files().create(body=file_meta, fields="id").execute()
     doc_id = doc_file["id"]
 
-    doc_requests = _markdown_to_docs_requests(content)
-    logger.info(f"Drive export: {len(doc_requests)} requests for {len(content)} chars of content")
-    if doc_requests:
-        try:
-            docs.documents().batchUpdate(
-                documentId=doc_id, body={"requests": doc_requests}
-            ).execute()
-        except Exception as e:
-            logger.error(f"Drive batchUpdate failed: {e}")
-            # Fallback: insert as plain text
-            try:
-                docs.documents().batchUpdate(
-                    documentId=doc_id,
-                    body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]}
-                ).execute()
-            except Exception as e2:
-                logger.error(f"Drive plain text fallback also failed: {e2}")
+    # Insert content as plain text (most reliable)
+    logger.info(f"Drive export: inserting {len(content)} chars into doc {doc_id}")
+    try:
+        docs.documents().batchUpdate(
+            documentId=doc_id,
+            body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]}
+        ).execute()
+    except Exception as e:
+        logger.error(f"Drive content insert failed: {e}")
 
     doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
     return {"doc_url": doc_url, "doc_id": doc_id}
