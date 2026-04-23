@@ -99,7 +99,7 @@ const navItems: NavItem[] = [
   { label: "History", href: "/history", icon: <HistoryIcon /> },
   { label: "Voice", href: "/voice", icon: <VoiceIcon /> },
   { label: "Locations", href: "/locations", icon: <LocationsIcon /> },
-  { label: "Copy queue", href: "/queue", icon: <QueueIcon />, disabled: true },
+  { label: "Copy queue", href: "/queue", icon: <QueueIcon /> },
   { label: "Integrations", href: "/integrations", icon: <IntegrationsIcon />, disabled: true },
   { label: "Settings", href: "/settings", icon: <SettingsIcon />, disabled: true },
 ];
