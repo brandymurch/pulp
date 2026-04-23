@@ -11,13 +11,7 @@ export default function HistoryPage() {
 
   const load = useCallback(async () => {
     try {
-      // Get brand ID
-      const brandsRes = await apiFetch("/api/brands");
-      if (!brandsRes.ok) return;
-      const brands = await brandsRes.json();
-      if (brands.length === 0) return;
-
-      const res = await apiFetch(`/api/generations?brand_id=${brands[0].id}`);
+      const res = await apiFetch("/api/generations");
       if (res.ok) {
         const data = await res.json();
         setGenerations(data);

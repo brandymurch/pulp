@@ -490,8 +490,6 @@ export default function QueuePage() {
 
   // Fetch on brand change + start polling
   useEffect(() => {
-    if (!brandId) return;
-
     setLoading(true);
     fetchJobs(brandId);
 
