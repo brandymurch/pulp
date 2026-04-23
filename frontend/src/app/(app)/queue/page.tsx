@@ -179,18 +179,23 @@ function NeedsAttentionRow({
   const [expanded, setExpanded] = useState(false);
   const [approving, setApproving] = useState(false);
   const [fullJob, setFullJob] = useState<any>(null);
+  const [loadingOutline, setLoadingOutline] = useState(false);
 
   async function loadFullJob() {
     if (fullJob) return;
+    setLoadingOutline(true);
     try {
       const res = await apiFetch(`/api/pipeline/status/${job.id}`);
       if (res.ok) setFullJob(await res.json());
-    } catch {}
+    } catch {} finally {
+      setLoadingOutline(false);
+    }
   }
 
   function handleExpand() {
-    setExpanded(e => !e);
-    if (!expanded) loadFullJob();
+    const willExpand = !expanded;
+    setExpanded(willExpand);
+    if (willExpand) loadFullJob();
   }
 
   const outline = fullJob?.outline || job.outline;
@@ -199,7 +204,7 @@ function NeedsAttentionRow({
     <div className="border-b border-line last:border-0">
       <button
         type="button"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={handleExpand}
         className="w-full flex items-center gap-3 py-3 px-1 text-left cursor-pointer bg-transparent border-0 hover:bg-[rgba(0,0,0,0.02)] transition-colors"
       >
         <StatusDot phase={job.phase} />
@@ -226,6 +231,12 @@ function NeedsAttentionRow({
           <path d="M3 5l3 3 3-3" />
         </svg>
       </button>
+
+      {expanded && loadingOutline && (
+        <div className="px-1 pb-4">
+          <div className="text-[12px] text-ink-40 animate-pulse">Loading outline...</div>
+        </div>
+      )}
 
       {expanded && outline && (
         <div className="px-1 pb-4 space-y-3">

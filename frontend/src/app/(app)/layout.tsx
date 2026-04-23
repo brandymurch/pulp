@@ -1,20 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Rail } from "@/components/shell/Rail";
 import { Topbar } from "@/components/shell/Topbar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!isAuthenticated) router.replace("/sign-in");
-  }, [isAuthenticated, router]);
+  useEffect(() => { setMounted(true); }, []);
 
-  if (!isAuthenticated) return null;
+  useEffect(() => {
+    if (mounted && !isAuthenticated) router.replace("/sign-in");
+  }, [mounted, isAuthenticated, router]);
+
+  if (!mounted || !isAuthenticated) return null;
 
   return (
     <div className="min-h-screen grid grid-cols-[240px_1fr] max-[900px]:grid-cols-1">
