@@ -305,7 +305,7 @@ function InProgressRow({ job }: { job: PipelineJob }) {
 /*  CompletedRow                                                      */
 /* ------------------------------------------------------------------ */
 
-function CompletedRow({ job }: { job: PipelineJob }) {
+function CompletedRow({ job, onDelete }: { job: PipelineJob; onDelete?: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -405,6 +405,11 @@ function CompletedRow({ job }: { job: PipelineJob }) {
             >
               View full content
             </Button>
+            {onDelete && (
+              <button onClick={() => onDelete(job.id)} className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors">
+                Delete
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -419,9 +424,11 @@ function CompletedRow({ job }: { job: PipelineJob }) {
 function ErrorRow({
   job,
   onRetry,
+  onDelete,
 }: {
   job: PipelineJob;
   onRetry: (job: PipelineJob) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [retrying, setRetrying] = useState(false);
 
@@ -440,17 +447,24 @@ function ErrorRow({
       <span className="text-[11px] text-ink-40 flex-none">
         {formatDate(job.created_at)}
       </span>
-      <Button
-        variant="light"
-        size="sm"
-        disabled={retrying}
-        onClick={() => {
-          setRetrying(true);
-          onRetry(job);
-        }}
-      >
-        {retrying ? "Retrying..." : "Retry"}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="light"
+          size="sm"
+          disabled={retrying}
+          onClick={() => {
+            setRetrying(true);
+            onRetry(job);
+          }}
+        >
+          {retrying ? "Retrying..." : "Retry"}
+        </Button>
+        {onDelete && (
+          <button onClick={() => onDelete(job.id)} className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors">
+            Delete
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -596,7 +610,7 @@ export default function QueuePage() {
           <select
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
-            className="h-[38px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[14px] text-[12px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
+            className="h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[12px] outline-none focus:border-ink appearance-none cursor-pointer"
           >
             <option value="">All brands</option>
             {brands.map((b) => (
@@ -654,6 +668,7 @@ export default function QueuePage() {
                   key={job.id}
                   job={job}
                   onApprove={handleApprove}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -682,7 +697,7 @@ export default function QueuePage() {
           <div className="border-[1.5px] border-line rounded-pop-lg bg-white">
             <div className="px-5 py-1">
               {completed.map((job) => (
-                <CompletedRow key={job.id} job={job} />
+                <CompletedRow key={job.id} job={job} onDelete={handleDelete} />
               ))}
             </div>
           </div>
@@ -696,7 +711,7 @@ export default function QueuePage() {
           <div className="border-[1.5px] border-[#b91c1c]/30 rounded-pop-lg bg-white">
             <div className="px-5 py-1">
               {failed.map((job) => (
-                <ErrorRow key={job.id} job={job} onRetry={handleRetry} />
+                <ErrorRow key={job.id} job={job} onRetry={handleRetry} onDelete={handleDelete} />
               ))}
             </div>
           </div>
