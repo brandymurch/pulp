@@ -104,6 +104,8 @@ async def get_pipeline_status(pipeline_id: str, _=Depends(require_auth)):
 
     return {
         "pipeline_id": job["id"],
+        "brand_id": job.get("brand_id", ""),
+        "location_id": job.get("location_id"),
         "phase": job["phase"],
         "keyword": job["keyword"],
         "city": job["city"],

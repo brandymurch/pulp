@@ -113,6 +113,8 @@ export default function GeneratePage() {
         setKeyword(data.keyword || "");
         setCity(data.city || "");
         setState(data.state || "");
+        if (data.brand_id) setBrandId(data.brand_id);
+        if (data.location_id) setSelectedLocationId(data.location_id);
         if (data.brief) setBrief(data.brief);
         if (data.outline) setOutlineData(data.outline);
         if (data.content) setContent(data.content);
