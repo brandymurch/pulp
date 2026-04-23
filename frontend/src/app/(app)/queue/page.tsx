@@ -402,15 +402,12 @@ function CompletedRow({ job, onDelete }: { job: PipelineJob; onDelete?: (id: str
                 {copied ? "Copied" : "Copy"}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                window.location.href = `/generate?brand=${job.brand_id}`;
-              }}
+            <a
+              href={`/generate?pipeline=${job.id}`}
+              className="inline-flex items-center justify-center h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] border-ink text-ink bg-transparent transition-all hover:bg-ink hover:text-white"
             >
-              View full content
-            </Button>
+              Open
+            </a>
             {onDelete && (
               <button onClick={() => onDelete(job.id)} className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors">
                 Delete
