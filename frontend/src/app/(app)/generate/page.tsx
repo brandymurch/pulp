@@ -559,9 +559,6 @@ export default function GeneratePage() {
 
           {/* Actions */}
           <div className="flex gap-2 flex-wrap">
-            <Button variant="ink" size="sm" onClick={saveToHistory} disabled={saved}>
-              {saved ? "Saved" : "Save to history"}
-            </Button>
             <Button variant="light" size="sm" onClick={() => navigator.clipboard.writeText(content)}>
               Copy
             </Button>
