@@ -178,17 +178,60 @@ async def _run_pipeline_async(
         except Exception as e:
             logger.warning(f"Template load failed: {e}")
 
-    # -- STEP 1: SEO Brief --
+    # -- STEP 1: SEO Brief + Competitors + SERP (parallel) --
     _update_job(job_id, phase="brief")
-    try:
+
+    # Run brief, SERP, and competitor scraping in parallel
+    import asyncio as _aio
+    from app.services.serp import get_serp_results
+    from app.services.scraper import scrape_urls
+
+    brief = None
+    serp_data = {"paa_questions": [], "ai_fanout_queries": [], "related_searches": []}
+    competitors_scraped = []
+
+    async def fetch_brief():
+        nonlocal brief
         brief = await get_enriched_brief(
             keyword=keyword,
             location_name=f"{city}, {state}" if state else city,
         )
+
+    async def fetch_serp():
+        nonlocal serp_data
+        try:
+            serp_data = await get_serp_results(keyword, f"{city}, {state}")
+        except Exception as e:
+            logger.warning(f"SERP fetch failed (continuing): {e}")
+
+    async def fetch_competitors():
+        nonlocal competitors_scraped
+        try:
+            urls = competitor_urls or []
+            # If no manual URLs, use top organic results from SERP
+            if not urls and serp_data.get("organic_results"):
+                urls = [r["url"] for r in serp_data["organic_results"][:3] if r.get("url")]
+            if urls:
+                competitors_scraped = await scrape_urls(urls[:3])
+        except Exception as e:
+            logger.warning(f"Competitor scraping failed (continuing): {e}")
+
+    # Brief is required, SERP and competitors are optional
+    try:
+        # Run brief and SERP in parallel first
+        await _aio.gather(fetch_brief(), fetch_serp(), return_exceptions=True)
+        if brief is None:
+            _update_job(job_id, phase="error", error="SEO brief failed")
+            return
+        # Then scrape competitors (may use SERP organic URLs)
+        await fetch_competitors()
         _update_job(job_id, brief=brief)
     except Exception as e:
         _update_job(job_id, phase="error", error=f"SEO brief failed: {e}")
         return
+
+    # Combine PAA + AI fanout queries
+    paa_questions = (serp_data.get("paa_questions") or []) + (serp_data.get("ai_fanout_queries") or [])
 
     # -- STEP 2: Outline --
     _update_job(job_id, phase="outline")
@@ -196,8 +239,8 @@ async def _run_pipeline_async(
         system, user = build_outline_prompt(
             keyword=keyword, city=city, state=state,
             brief=brief, template=template_content,
-            paa=[],  # PAA fetched separately if available
-            competitors=[],
+            paa=paa_questions,
+            competitors=competitors_scraped,
         )
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
         response = await client.messages.create(
@@ -222,7 +265,7 @@ async def _run_pipeline_async(
     await _run_pipeline_phase2(
         job_id, keyword, city, state, brand_id, location_id,
         content_type, outline, brief, brand_data, style_examples,
-        template_content, local_context,
+        template_content, local_context, competitors_scraped,
     )
 
 
@@ -232,6 +275,7 @@ async def _run_pipeline_phase2(
     content_type: str, outline: Optional[dict], brief: dict,
     brand_data: dict, style_examples: list,
     template_content: Optional[dict], local_context: Optional[dict],
+    competitors: Optional[list] = None,
 ):
     """Phase 2: generate, score, revise, save. Called after outline approval."""
     import anthropic
@@ -258,7 +302,7 @@ async def _run_pipeline_phase2(
         user_prompt = build_user_prompt(
             keyword=keyword, city=city, state=state,
             brief=brief, template=template_content, outline=outline,
-            competitors=[], style_examples=style_examples,
+            competitors=competitors or [], style_examples=style_examples,
             local_context=local_context,
             content_type=content_type,
         )
