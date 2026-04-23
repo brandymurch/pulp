@@ -13,7 +13,7 @@ export function Input({ label, className = "", ...props }: InputProps) {
         </label>
       )}
       <input
-        className={`w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] ${className}`}
+        className={`w-full h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-colors focus:border-ink ${className}`}
         {...props}
       />
     </div>

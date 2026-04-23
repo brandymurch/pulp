@@ -333,7 +333,7 @@ export default function GeneratePage() {
             <select value={brandId} onChange={e => {
               const brand = brands.find(b => b.id === e.target.value);
               if (brand) { setBrandId(brand.id); setBrandName(brand.name); setSelectedTemplate(null); setSelectedLocationId(""); }
-            }} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
+            }} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
               {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
@@ -346,7 +346,7 @@ export default function GeneratePage() {
                 const loc = locations.find(l => l.id === e.target.value);
                 setSelectedLocationId(e.target.value);
                 if (loc) { setCity(loc.city); setState(loc.state); }
-              }} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
+              }} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
                 <option value="">Select a location</option>
                 {locations.map(l => <option key={l.id} value={l.id}>{l.name || `${brandName} ${l.city}`}, {l.state}</option>)}
               </select>
@@ -361,11 +361,11 @@ export default function GeneratePage() {
               <div className="grid grid-cols-[1fr_80px] gap-3">
                 <div>
                   <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Target city</label>
-                  <input value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+                  <input value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
                 </div>
                 <div>
                   <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">State</label>
-                  <input value={state} onChange={e => setState(e.target.value)} placeholder="OH" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+                  <input value={state} onChange={e => setState(e.target.value)} placeholder="OH" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
                 </div>
               </div>
               <div className="text-[12px] text-ink-40">
@@ -373,7 +373,7 @@ export default function GeneratePage() {
               </div>
               <div>
                 <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
-                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder={`/${(city || "city").toLowerCase().replace(/\s+/g, '-')}-${(state || "st").toLowerCase()}`} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder={`/${(city || "city").toLowerCase().replace(/\s+/g, '-')}-${(state || "st").toLowerCase()}`} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
               </div>
             </div>
           ) : (
@@ -381,7 +381,7 @@ export default function GeneratePage() {
               <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
               <div>
                 <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
-                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/insulation-services-columbus-oh" className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)]" />
+                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/insulation-services-columbus-oh" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
               </div>
             </div>
           )}
@@ -389,7 +389,7 @@ export default function GeneratePage() {
           <div className="grid grid-cols-3 gap-4 max-[820px]:grid-cols-1">
             <div>
               <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Content type</label>
-              <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer">
+              <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
                 <option value="landing_page">Landing Page</option>
                 <option value="service_page">Service Page</option>
                 <option value="blog_post">Blog Post</option>
