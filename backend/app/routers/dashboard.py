@@ -1,6 +1,7 @@
 """Dashboard stats endpoint."""
 from __future__ import annotations
 import logging
+from typing import Optional
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends
 from app.auth import require_auth
@@ -11,28 +12,23 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats")
-async def get_dashboard_stats(brand_id: str, _=Depends(require_auth)):
-    """Return aggregated stats for the overview dashboard."""
+async def get_dashboard_stats(brand_id: Optional[str] = None, _=Depends(require_auth)):
+    """Return aggregated stats for the overview dashboard. If no brand_id, aggregates all brands."""
     db = get_db()
 
     # Fetch locations
-    locations_result = (
-        db.table("locations")
-        .select("id,city,state,last_refresh_at,created_at")
-        .eq("brand_id", brand_id)
-        .execute()
-    )
+    loc_query = db.table("locations").select("id,city,state,brand_id,last_refresh_at,created_at")
+    if brand_id:
+        loc_query = loc_query.eq("brand_id", brand_id)
+    locations_result = loc_query.execute()
     locations = locations_result.data or []
     total_locations = len(locations)
 
-    # Fetch all generations for this brand
-    generations_result = (
-        db.table("generations")
-        .select("id,keyword,city,location_id,word_count,pop_score,created_at")
-        .eq("brand_id", brand_id)
-        .order("created_at", desc=True)
-        .execute()
-    )
+    # Fetch generations
+    gen_query = db.table("generations").select("id,keyword,city,location_id,word_count,pop_score,created_at")
+    if brand_id:
+        gen_query = gen_query.eq("brand_id", brand_id)
+    generations_result = gen_query.order("created_at", desc=True).execute()
     generations = generations_result.data or []
     total_generations = len(generations)
 

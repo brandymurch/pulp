@@ -195,9 +195,8 @@ export default function OverviewPage() {
         if (!res.ok) return;
         const data: Brand[] = await res.json();
         setBrands(data);
-        if (data.length > 0) {
-          setBrandId(data[0].id);
-        }
+        // Default to all brands
+        setBrandId("");
       } catch {
         setError("Failed to load brands");
         setLoading(false);
@@ -211,7 +210,8 @@ export default function OverviewPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch(`/api/dashboard/stats?brand_id=${id}`);
+      const url = id ? `/api/dashboard/stats?brand_id=${id}` : `/api/dashboard/stats`;
+      const res = await apiFetch(url);
       if (!res.ok) {
         setError("Failed to load dashboard stats");
         return;
@@ -226,7 +226,7 @@ export default function OverviewPage() {
   }, []);
 
   useEffect(() => {
-    if (brandId) loadStats(brandId);
+    loadStats(brandId);
   }, [brandId, loadStats]);
 
   return (
@@ -237,12 +237,13 @@ export default function OverviewPage() {
           Overview
         </h1>
 
-        {brands.length > 1 && (
+        {brands.length > 0 && (
           <select
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
             className="h-[38px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[14px] text-[12px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
           >
+            <option value="">All brands</option>
             {brands.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
