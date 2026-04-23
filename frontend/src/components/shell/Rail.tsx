@@ -93,13 +93,19 @@ function SettingsIcon() {
   );
 }
 
-const navItems: NavItem[] = [
+const mainNav: NavItem[] = [
   { label: "Overview", href: "/overview", icon: <OverviewIcon /> },
   { label: "Generate", href: "/generate", icon: <GenerateIcon /> },
-  { label: "History", href: "/history", icon: <HistoryIcon /> },
-  { label: "Voice", href: "/voice", icon: <VoiceIcon /> },
-  { label: "Locations", href: "/locations", icon: <LocationsIcon /> },
   { label: "Copy queue", href: "/queue", icon: <QueueIcon /> },
+  { label: "History", href: "/history", icon: <HistoryIcon /> },
+];
+
+const brandNav: NavItem[] = [
+  { label: "Locations", href: "/locations", icon: <LocationsIcon /> },
+  { label: "Voice", href: "/voice", icon: <VoiceIcon /> },
+];
+
+const systemNav: NavItem[] = [
   { label: "Integrations", href: "/integrations", icon: <IntegrationsIcon />, disabled: true },
   { label: "Settings", href: "/settings", icon: <SettingsIcon />, disabled: true },
 ];
@@ -119,51 +125,60 @@ export function Rail({ onSignOut }: RailProps) {
 
       {/* Nav section */}
       <nav className="flex-1 px-3 flex flex-col max-[900px]:flex-row max-[900px]:flex-wrap max-[900px]:gap-1 max-[900px]:pb-3">
-        <div className="text-[9px] tracking-[0.22em] uppercase text-ink-40 px-2 mb-2 max-[900px]:hidden">
-          Workspace
-        </div>
-
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-
-          if (item.disabled) {
-            return (
-              <div
-                key={item.label}
-                className="flex items-center gap-2.5 px-2.5 py-[7px] rounded-[10px] text-ink-40 cursor-default select-none"
-              >
-                <span className="flex-none">{item.icon}</span>
-                <span className="text-[13px]">{item.label}</span>
+        {[
+          { label: "Content", items: mainNav },
+          { label: "Brands", items: brandNav },
+          { label: "", items: systemNav },
+        ].map((section) => (
+          <div key={section.label} className="mb-3">
+            {section.label && (
+              <div className="text-[9px] tracking-[0.22em] uppercase text-ink-40 px-2 mb-1.5 max-[900px]:hidden">
+                {section.label}
               </div>
-            );
-          }
+            )}
+            {section.items.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-[10px] transition-colors duration-150 ${
-                isActive
-                  ? "bg-ink text-white border border-ink"
-                  : "text-ink hover:bg-line-soft hover:text-ink border border-transparent"
-              }`}
-            >
-              <span className="flex-none">{item.icon}</span>
-              <span className="text-[13px]">{item.label}</span>
-              {item.count !== undefined && (
-                <span
-                  className={`ml-auto text-[10px] px-1.5 py-px rounded-full border-[1.5px] ${
+              if (item.disabled) {
+                return (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-2.5 px-2.5 py-[7px] rounded-[10px] text-ink-40 cursor-default select-none"
+                  >
+                    <span className="flex-none">{item.icon}</span>
+                    <span className="text-[13px]">{item.label}</span>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-[10px] transition-colors duration-150 ${
                     isActive
-                      ? "bg-white text-ink border-white"
-                      : "bg-white text-ink border-ink"
+                      ? "bg-ink text-white border border-ink"
+                      : "text-ink hover:bg-line-soft hover:text-ink border border-transparent"
                   }`}
                 >
-                  {item.count}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+                  <span className="flex-none">{item.icon}</span>
+                  <span className="text-[13px]">{item.label}</span>
+                  {item.count !== undefined && (
+                    <span
+                      className={`ml-auto text-[10px] px-1.5 py-px rounded-full border-[1.5px] ${
+                        isActive
+                          ? "bg-white text-ink border-white"
+                          : "bg-white text-ink border-ink"
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* User chip at bottom */}

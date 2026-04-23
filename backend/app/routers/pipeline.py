@@ -129,3 +129,11 @@ async def list_pipelines(brand_id: Optional[str] = None, limit: int = 20, _=Depe
         query = query.eq("brand_id", brand_id)
     result = query.order("created_at", desc=True).limit(limit).execute()
     return result.data
+
+
+@router.delete("/{pipeline_id}")
+async def delete_pipeline(pipeline_id: str, _=Depends(require_auth)):
+    """Delete a pipeline job."""
+    db = get_db()
+    db.table("pipeline_jobs").delete().eq("id", pipeline_id).execute()
+    return {"ok": True}

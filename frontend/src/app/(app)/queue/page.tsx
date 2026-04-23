@@ -170,14 +170,30 @@ function SectionHeader({
 function NeedsAttentionRow({
   job,
   onApprove,
+  onDelete,
 }: {
   job: PipelineJob;
   onApprove: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [fullJob, setFullJob] = useState<any>(null);
 
-  const outline = job.outline;
+  async function loadFullJob() {
+    if (fullJob) return;
+    try {
+      const res = await apiFetch(`/api/pipeline/status/${job.id}`);
+      if (res.ok) setFullJob(await res.json());
+    } catch {}
+  }
+
+  function handleExpand() {
+    setExpanded(e => !e);
+    if (!expanded) loadFullJob();
+  }
+
+  const outline = fullJob?.outline || job.outline;
 
   return (
     <div className="border-b border-line last:border-0">
@@ -541,6 +557,15 @@ export default function QueuePage() {
       fetchJobs(brandId);
     } catch {
       setError("Failed to retry job");
+    }
+  }
+
+  async function handleDelete(jobId: string) {
+    try {
+      await apiFetch(`/api/pipeline/${jobId}`, { method: "DELETE" });
+      setJobs(prev => prev.filter(j => j.id !== jobId));
+    } catch {
+      setError("Failed to delete job");
     }
   }
 
