@@ -121,15 +121,11 @@ async def get_pipeline_status(pipeline_id: str, _=Depends(require_auth)):
 
 
 @router.get("/list")
-async def list_pipelines(brand_id: str, limit: int = 20, _=Depends(require_auth)):
-    """List recent pipeline jobs for a brand."""
+async def list_pipelines(brand_id: Optional[str] = None, limit: int = 20, _=Depends(require_auth)):
+    """List recent pipeline jobs. Optionally filter by brand."""
     db = get_db()
-    result = (
-        db.table("pipeline_jobs")
-        .select("id,keyword,city,state,phase,word_count,score,created_at")
-        .eq("brand_id", brand_id)
-        .order("created_at", desc=True)
-        .limit(limit)
-        .execute()
-    )
+    query = db.table("pipeline_jobs").select("id,keyword,city,state,phase,word_count,score,created_at,content_type")
+    if brand_id:
+        query = query.eq("brand_id", brand_id)
+    result = query.order("created_at", desc=True).limit(limit).execute()
     return result.data

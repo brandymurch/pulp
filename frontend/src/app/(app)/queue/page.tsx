@@ -459,9 +459,8 @@ export default function QueuePage() {
         if (!res.ok) return;
         const data: Brand[] = await res.json();
         setBrands(data);
-        if (data.length > 0) {
-          setBrandId(data[0].id);
-        }
+        // Default to all brands
+        setBrandId("");
       } catch {
         setError("Failed to load brands");
         setLoading(false);
@@ -473,7 +472,8 @@ export default function QueuePage() {
   // Fetch jobs for brand
   const fetchJobs = useCallback(async (id: string) => {
     try {
-      const res = await apiFetch(`/api/pipeline/list?brand_id=${id}&limit=20`);
+      const url = id ? `/api/pipeline/list?brand_id=${id}&limit=20` : `/api/pipeline/list?limit=20`;
+      const res = await apiFetch(url);
       if (!res.ok) {
         setError("Failed to load queue");
         return;
@@ -514,7 +514,7 @@ export default function QueuePage() {
     try {
       await apiFetch(`/api/pipeline/approve/${jobId}`, { method: "POST" });
       // Immediate refresh
-      if (brandId) fetchJobs(brandId);
+      fetchJobs(brandId);
     } catch {
       setError("Failed to approve outline");
     }
@@ -540,7 +540,7 @@ export default function QueuePage() {
         return;
       }
       // Immediate refresh
-      if (brandId) fetchJobs(brandId);
+      fetchJobs(brandId);
     } catch {
       setError("Failed to retry job");
     }
@@ -575,6 +575,7 @@ export default function QueuePage() {
             onChange={(e) => setBrandId(e.target.value)}
             className="h-[38px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[14px] text-[12px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
           >
+            <option value="">All brands</option>
             {brands.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
