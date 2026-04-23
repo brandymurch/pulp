@@ -109,16 +109,38 @@ def export_to_drive(
 ) -> dict:
     drive, docs = _get_services()
 
-    # Create doc directly in the shared folder (no subfolders)
-    file_meta = {
-        "name": title,
-        "mimeType": "application/vnd.google-apps.document",
-        "parents": [GOOGLE_DRIVE_FOLDER_ID],
-    }
-    doc_file = drive.files().create(body=file_meta, fields="id").execute()
-    doc_id = doc_file["id"]
+    # Create doc without specifying a parent folder first (avoids quota issues)
+    # Then move it to the shared folder
+    try:
+        file_meta = {"name": title, "mimeType": "application/vnd.google-apps.document"}
+        doc_file = drive.files().create(body=file_meta, fields="id,parents").execute()
+        doc_id = doc_file["id"]
 
-    # Insert content as plain text (most reliable)
+        # Move to shared folder
+        if GOOGLE_DRIVE_FOLDER_ID:
+            try:
+                previous_parents = ",".join(doc_file.get("parents", []))
+                drive.files().update(
+                    fileId=doc_id,
+                    addParents=GOOGLE_DRIVE_FOLDER_ID,
+                    removeParents=previous_parents,
+                    fields="id,parents",
+                ).execute()
+            except Exception as move_err:
+                logger.warning(f"Could not move doc to folder: {move_err}")
+    except Exception as create_err:
+        # If creating a Google Doc fails, try creating a plain text file instead
+        logger.warning(f"Google Doc creation failed ({create_err}), trying plain text upload")
+        import io
+        from googleapiclient.http import MediaIoBaseUpload
+        file_meta = {"name": f"{title}.txt", "parents": [GOOGLE_DRIVE_FOLDER_ID] if GOOGLE_DRIVE_FOLDER_ID else []}
+        media = MediaIoBaseUpload(io.BytesIO(content.encode("utf-8")), mimetype="text/plain")
+        doc_file = drive.files().create(body=file_meta, media_body=media, fields="id").execute()
+        doc_id = doc_file["id"]
+        doc_url = f"https://drive.google.com/file/d/{doc_id}/view"
+        return {"doc_url": doc_url, "doc_id": doc_id}
+
+    # Insert content
     logger.info(f"Drive export: inserting {len(content)} chars into doc {doc_id}")
     try:
         docs.documents().batchUpdate(
