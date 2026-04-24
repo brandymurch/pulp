@@ -35,15 +35,21 @@ async def export_gdrive(req: ExportGDriveRequest, _=Depends(require_auth)):
 
 @router.get("/drive-audit")
 async def drive_audit(_=Depends(require_auth)):
-    """List all files owned by the service account to diagnose quota issues."""
+    """Diagnose service account's Drive quota and files."""
     if not GOOGLE_SERVICE_ACCOUNT_KEY:
         raise HTTPException(status_code=503, detail="Google Drive not configured")
 
     try:
         drive, _ = _get_services()
+
+        # Check actual quota
+        about = drive.about().get(fields="storageQuota,user").execute()
+        quota = about.get("storageQuota", {})
+        user_info = about.get("user", {})
+
+        # List files
         all_files = []
         page_token = None
-
         while True:
             resp = drive.files().list(
                 q="'me' in owners",
@@ -56,23 +62,23 @@ async def drive_audit(_=Depends(require_auth)):
             if not page_token:
                 break
 
-        total_bytes = sum(int(f.get("size", 0)) for f in all_files)
-        trashed = [f for f in all_files if f.get("trashed")]
-        active = [f for f in all_files if not f.get("trashed")]
-
         return {
+            "service_account_email": user_info.get("emailAddress"),
+            "quota": {
+                "limit_bytes": int(quota.get("limit", 0)),
+                "limit_gb": round(int(quota.get("limit", 0)) / (1024**3), 2),
+                "usage_bytes": int(quota.get("usage", 0)),
+                "usage_gb": round(int(quota.get("usage", 0)) / (1024**3), 2),
+                "usage_in_drive_bytes": int(quota.get("usageInDrive", 0)),
+                "usage_in_drive_trash_bytes": int(quota.get("usageInDriveTrash", 0)),
+            },
             "total_files": len(all_files),
-            "active_files": len(active),
-            "trashed_files": len(trashed),
-            "total_bytes": total_bytes,
-            "total_mb": round(total_bytes / (1024 * 1024), 2),
             "files": [
                 {
                     "id": f["id"],
                     "name": f.get("name"),
                     "type": f.get("mimeType"),
                     "size_bytes": int(f.get("size", 0)),
-                    "created": f.get("createdTime"),
                     "trashed": f.get("trashed", False),
                 }
                 for f in all_files
