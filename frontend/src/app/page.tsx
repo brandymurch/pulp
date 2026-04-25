@@ -472,30 +472,10 @@ export default function Home() {
                 <em className="font-normal">held to the rind.</em>
               </h4>
               <p className="text-[13px] leading-[1.55] text-white/75 m-0 font-mono">
-                Upload past copy once. Pulp extracts a fingerprint across six
-                tone dimensions (cadence, vocabulary, forbidden words, mood) and
-                enforces it on every service page and ad that ships.
+                Drop in samples of copy you love. Pulp learns the cadence,
+                vocabulary, and guardrails, then holds the line on every page
+                that ships.
               </p>
-              <div
-                className="mt-auto h-[100px] flex items-center justify-center text-white"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 260 80" width="100%" height="100%">
-                  <path
-                    d="M10 40 Q 30 15, 55 40 T 100 40 Q 130 5, 160 40 T 210 40 Q 230 20, 250 40"
-                    stroke="#fff"
-                    strokeWidth="2.5"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                  <g fill="#fff">
-                    <circle cx="55" cy="40" r="3" />
-                    <circle cx="100" cy="40" r="3" />
-                    <circle cx="160" cy="40" r="3" />
-                    <circle cx="210" cy="40" r="3" />
-                  </g>
-                </svg>
-              </div>
             </div>
 
             {/* F/02 */}
@@ -507,24 +487,6 @@ export default function Home() {
                 Every page knows its ZIP. Climate, housing stock, permits,
                 seasonal demand.
               </p>
-              <div
-                className="mt-auto h-[100px] flex items-center justify-center text-ink"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 180 80" width="100%" height="100%">
-                  <g fill="none" stroke="currentColor" strokeWidth="1.2">
-                    <rect x="10" y="10" width="160" height="60" rx="6" />
-                    <line x1="60" y1="10" x2="60" y2="70" opacity="0.3" />
-                    <line x1="110" y1="10" x2="110" y2="70" opacity="0.3" />
-                    <line x1="10" y1="40" x2="170" y2="40" opacity="0.3" />
-                  </g>
-                  <g fill="currentColor">
-                    <circle cx="40" cy="28" r="4" />
-                    <circle cx="90" cy="52" r="4" />
-                    <circle cx="140" cy="30" r="4" />
-                  </g>
-                </svg>
-              </div>
             </div>
 
             {/* F/03 — full width */}
@@ -537,50 +499,6 @@ export default function Home() {
                 Seasonal, event-aware, inventory-aware. Google notices; so do
                 your regulars.
               </p>
-              <div
-                className="mt-auto h-[100px] flex items-center justify-center text-ink w-full"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 260 60" width="100%" height="100%">
-                  <g
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    fill="none"
-                    opacity="0.35"
-                  >
-                    <line x1="0" y1="30" x2="260" y2="30" />
-                  </g>
-                  <g>
-                    <circle cx="20" cy="30" r="5" fill="currentColor" />
-                    <circle cx="70" cy="30" r="5" fill="currentColor" />
-                    <circle cx="120" cy="30" r="5" fill="currentColor" />
-                    <circle cx="170" cy="30" r="5" fill="currentColor" />
-                    <circle cx="220" cy="30" r="5" fill="currentColor" />
-                  </g>
-                  <g
-                    fontFamily="var(--font-mono), monospace"
-                    fontSize="8"
-                    fill="currentColor"
-                    opacity="0.55"
-                  >
-                    <text x="20" y="50" textAnchor="middle">
-                      W01
-                    </text>
-                    <text x="70" y="50" textAnchor="middle">
-                      W02
-                    </text>
-                    <text x="120" y="50" textAnchor="middle">
-                      W03
-                    </text>
-                    <text x="170" y="50" textAnchor="middle">
-                      W04
-                    </text>
-                    <text x="220" y="50" textAnchor="middle">
-                      W05
-                    </text>
-                  </g>
-                </svg>
-              </div>
             </div>
           </div>
         </div>
@@ -766,7 +684,7 @@ export default function Home() {
                 {[
                   "Every page written from scratch",
                   "Neighborhood-aware openings",
-                  "Voice fingerprint locked to brand",
+                  "Your voice, every page",
                   "Weekly automatic refresh",
                   "Human-in-the-loop approval",
                   "Publishes direct to your stack",
