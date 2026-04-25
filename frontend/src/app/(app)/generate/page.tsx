@@ -76,6 +76,7 @@ export default function GeneratePage() {
   const [saved, setSaved] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -292,6 +293,7 @@ export default function GeneratePage() {
 
   // Export to Drive
   async function exportToDrive() {
+    setExporting(true);
     try {
       const res = await apiFetch("/api/export/gdrive", {
         method: "POST",
@@ -302,11 +304,19 @@ export default function GeneratePage() {
           brand_id: brandId,
         }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setExportUrl(data.doc_url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to export to Google Drive" }));
+        setError(err.detail || "Failed to export to Google Drive");
+        return;
       }
-    } catch {}
+      const data = await res.json();
+      setExportUrl(data.doc_url);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to export to Google Drive");
+    } finally {
+      setExporting(false);
+    }
   }
 
   // Reset
@@ -564,8 +574,8 @@ export default function GeneratePage() {
             <Button variant="light" size="sm" onClick={() => navigator.clipboard.writeText(content)}>
               Copy
             </Button>
-            <Button variant="ghost" size="sm" onClick={exportToDrive} disabled={!!exportUrl}>
-              {exportUrl ? "Exported" : "Export to Drive"}
+            <Button variant="ghost" size="sm" onClick={exportToDrive} disabled={exporting || !!exportUrl}>
+              {exportUrl ? "Exported" : exporting ? "Exporting..." : "Export to Drive"}
             </Button>
             <Button variant="light" size="sm" onClick={startPipeline}>
               {feedback.trim() ? "Regenerate with feedback" : "Regenerate"}
