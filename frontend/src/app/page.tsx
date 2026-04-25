@@ -467,9 +467,6 @@ export default function Home() {
           <div className="grid grid-cols-3 max-[820px]:grid-cols-1 gap-4">
             {/* F/01 — wide, dark */}
             <div className="col-span-2 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-ink text-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
-              <div className="text-[10px] tracking-[0.22em] uppercase text-white/55 font-mono">
-                F / 01
-              </div>
               <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
                 Your voice,{" "}
                 <em className="font-normal">held to the rind.</em>
@@ -503,9 +500,6 @@ export default function Home() {
 
             {/* F/02 */}
             <div className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
-              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70 font-mono">
-                F / 02
-              </div>
               <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
                 Territory <em className="font-normal">aware.</em>
               </h4>
@@ -535,9 +529,6 @@ export default function Home() {
 
             {/* F/03 — full width */}
             <div className="col-span-3 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
-              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70 font-mono">
-                F / 03
-              </div>
               <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
                 Never-stale.{" "}
                 <em className="font-normal">Refreshed weekly.</em>
