@@ -533,96 +533,10 @@ export default function Home() {
               </div>
             </div>
 
-            {/* F/03 */}
-            <div className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
-              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70 font-mono">
-                F / 03
-              </div>
-              <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
-                Ads + landings,{" "}
-                <em className="font-normal">paired.</em>
-              </h4>
-              <p className="text-[13px] leading-[1.55] text-ink-70 m-0 font-mono">
-                Google &amp; Meta ad copy that matches the page it flies to.
-              </p>
-              <div
-                className="mt-auto h-[100px] flex items-center justify-center text-ink"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 180 80" width="100%" height="100%">
-                  <g fill="none" stroke="currentColor" strokeWidth="1.4">
-                    <rect x="10" y="20" width="70" height="40" rx="4" />
-                    <rect x="100" y="20" width="70" height="40" rx="4" />
-                    <line
-                      x1="80"
-                      y1="40"
-                      x2="100"
-                      y2="40"
-                      strokeDasharray="3 3"
-                    />
-                    <line x1="20" y1="32" x2="60" y2="32" />
-                    <line x1="20" y1="42" x2="50" y2="42" opacity="0.6" />
-                    <line x1="110" y1="32" x2="160" y2="32" />
-                    <line x1="110" y1="42" x2="140" y2="42" opacity="0.6" />
-                  </g>
-                </svg>
-              </div>
-            </div>
-
-            {/* F/04 */}
-            <div className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
-              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70 font-mono">
-                F / 04
-              </div>
-              <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
-                Export,{" "}
-                <em className="font-normal">copy-paste, go.</em>
-              </h4>
-              <p className="text-[13px] leading-[1.55] text-ink-70 m-0 font-mono">
-                CSV, Markdown, or rich HTML. Paste into WordPress, Webflow, or
-                hand to your dev. Native integrations shipping next.
-              </p>
-              <div
-                className="mt-auto h-[100px] flex items-center justify-center text-ink"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 180 80" width="100%" height="100%">
-                  <g fill="none" stroke="currentColor" strokeWidth="1.4">
-                    <rect x="10" y="8" width="28" height="20" rx="3" />
-                    <rect x="46" y="8" width="28" height="20" rx="3" />
-                    <rect x="82" y="8" width="28" height="20" rx="3" />
-                    <rect x="118" y="8" width="28" height="20" rx="3" />
-                    <rect x="154" y="8" width="16" height="20" rx="3" />
-                    <path d="M90 30 L90 50" strokeDasharray="2 2" />
-                    <rect
-                      x="62"
-                      y="50"
-                      width="56"
-                      height="22"
-                      rx="11"
-                      fill="currentColor"
-                      stroke="none"
-                    />
-                  </g>
-                  <text
-                    x="90"
-                    y="66"
-                    textAnchor="middle"
-                    fontFamily="var(--font-fraunces), serif"
-                    fontWeight="800"
-                    fontSize="12"
-                    fill="#fff"
-                  >
-                    Pulp
-                  </text>
-                </svg>
-              </div>
-            </div>
-
-            {/* F/05 — full width */}
+            {/* F/03 — full width */}
             <div className="col-span-3 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-white p-7 min-h-[280px] flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
               <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70 font-mono">
-                F / 05
+                F / 03
               </div>
               <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
                 Never-stale.{" "}
