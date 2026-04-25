@@ -3,10 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import threading
-from typing import Any, Optional
 
-from app.config import POP_API_KEY, ANTHROPIC_API_KEY
 from app.db import get_db
 
 logger = logging.getLogger(__name__)
@@ -18,7 +15,7 @@ def _update_job(job_id: str, **fields):
         db = get_db()
         db.table("pipeline_jobs").update(fields).eq("id", job_id).execute()
     except Exception as e:
-        logger.error(f"Failed to update pipeline job {job_id}: {e}")
+        logger.error("Failed to update pipeline job %s: %s", job_id, e)
 
 
 def run_pipeline(
@@ -27,11 +24,11 @@ def run_pipeline(
     city: str,
     state: str,
     brand_id: str,
-    location_id: Optional[str] = None,
-    template_id: Optional[str] = None,
+    location_id: str | None = None,
+    template_id: str | None = None,
     content_type: str = "landing_page",
-    competitor_urls: Optional[list] = None,
-    feedback: Optional[str] = None,
+    competitor_urls: list | None = None,
+    feedback: str | None = None,
 ):
     """Run the full pipeline in a background thread."""
     loop = asyncio.new_event_loop()
@@ -41,7 +38,7 @@ def run_pipeline(
             location_id, template_id, content_type, competitor_urls, feedback,
         ))
     except Exception as e:
-        logger.error(f"Pipeline {job_id} failed: {e}")
+        logger.error("Pipeline %s failed: %s", job_id, e)
         _update_job(job_id, phase="error", error=str(e))
     finally:
         loop.close()
@@ -53,7 +50,7 @@ def resume_pipeline(job_id: str):
     try:
         loop.run_until_complete(_resume_pipeline_async(job_id))
     except Exception as e:
-        logger.error(f"Pipeline resume {job_id} failed: {e}")
+        logger.error("Pipeline resume %s failed: %s", job_id, e)
         _update_job(job_id, phase="error", error=str(e))
     finally:
         loop.close()
@@ -127,11 +124,11 @@ async def _run_pipeline_async(
     city: str,
     state: str,
     brand_id: str,
-    location_id: Optional[str],
-    template_id: Optional[str],
+    location_id: str | None,
+    template_id: str | None,
     content_type: str,
-    competitor_urls: Optional[list],
-    feedback: Optional[str] = None,
+    competitor_urls: list | None,
+    feedback: str | None = None,
 ):
     """Async pipeline implementation."""
     import anthropic
@@ -178,13 +175,12 @@ async def _run_pipeline_async(
             from app.services.notion import get_template
             template_content = get_template(template_id)
         except Exception as e:
-            logger.warning(f"Template load failed: {e}")
+            logger.warning("Template load failed: %s", e)
 
     # -- STEP 1: SEO Brief + Competitors + SERP (parallel) --
     _update_job(job_id, phase="brief")
 
     # Run brief, SERP, and competitor scraping in parallel
-    import asyncio as _aio
     from app.services.serp import get_serp_results
     from app.services.scraper import scrape_urls
 
@@ -204,7 +200,7 @@ async def _run_pipeline_async(
         try:
             serp_data = await get_serp_results(keyword, f"{city}, {state}")
         except Exception as e:
-            logger.warning(f"SERP fetch failed (continuing): {e}")
+            logger.warning("SERP fetch failed (continuing): %s", e)
 
     async def fetch_competitors():
         nonlocal competitors_scraped
@@ -216,12 +212,12 @@ async def _run_pipeline_async(
             if urls:
                 competitors_scraped = await scrape_urls(urls[:3])
         except Exception as e:
-            logger.warning(f"Competitor scraping failed (continuing): {e}")
+            logger.warning("Competitor scraping failed (continuing): %s", e)
 
     # Brief is required, SERP and competitors are optional
     try:
         # Run brief and SERP in parallel first
-        await _aio.gather(fetch_brief(), fetch_serp(), return_exceptions=True)
+        await asyncio.gather(fetch_brief(), fetch_serp(), return_exceptions=True)
         if brief is None:
             _update_job(job_id, phase="error", error="SEO brief failed")
             return
@@ -260,7 +256,7 @@ async def _run_pipeline_async(
         # PAUSE: wait for user approval before continuing
         return
     except Exception as e:
-        logger.warning(f"Outline generation failed, continuing without: {e}")
+        logger.warning("Outline generation failed, continuing without: %s", e)
         outline = None
         # If outline fails, skip review and go to generate
     # Fall through to generate if outline failed (no return above)
@@ -273,12 +269,12 @@ async def _run_pipeline_async(
 
 async def _run_pipeline_phase2(
     job_id: str, keyword: str, city: str, state: str,
-    brand_id: str, location_id: Optional[str],
-    content_type: str, outline: Optional[dict], brief: dict,
+    brand_id: str, location_id: str | None,
+    content_type: str, outline: dict | None, brief: dict,
     brand_data: dict, style_examples: list,
-    template_content: Optional[dict], local_context: Optional[dict],
-    competitors: Optional[list] = None,
-    feedback: Optional[str] = None,
+    template_content: dict | None, local_context: dict | None,
+    competitors: list | None = None,
+    feedback: str | None = None,
 ):
     """Phase 2: generate, score, revise, save. Called after outline approval."""
     import anthropic
@@ -359,7 +355,7 @@ async def _run_pipeline_phase2(
             score_result = stub_score(content=full_text, target_keyword=keyword)
         _update_job(job_id, score=score_result)
     except Exception as e:
-        logger.warning(f"Scoring failed: {e}")
+        logger.warning("Scoring failed: %s", e)
         score_result = None
 
     # -- STEP 5: Auto-revise if score < 75 (max 2 rounds) --
@@ -403,7 +399,7 @@ async def _run_pipeline_phase2(
                 if score_result.get("overall_score", 100) >= 75:
                     break
             except Exception as e:
-                logger.warning(f"Revision round {rev_round + 1} failed: {e}")
+                logger.warning("Revision round %d failed: %s", rev_round + 1, e)
                 break
 
     # -- Done: auto-save to generations table --
@@ -443,4 +439,4 @@ async def _run_pipeline_phase2(
             except Exception:
                 pass
     except Exception as e:
-        logger.warning(f"Failed to auto-save generation: {e}")
+        logger.warning("Failed to auto-save generation: %s", e)

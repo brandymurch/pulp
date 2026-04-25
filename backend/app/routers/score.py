@@ -39,7 +39,7 @@ def _run_score_job_sync(job_id: str, content: str, keyword: str, target_url: str
             result = stub_score(content=content, target_keyword=keyword)
         _score_jobs[job_id] = {"status": "done", "result": result}
     except Exception as e:
-        logger.error(f"Score job {job_id} failed: {e}")
+        logger.error("Score job %s failed: %s", job_id, e)
         _score_jobs[job_id] = {"status": "error", "error": str(e)}
     finally:
         loop.close()

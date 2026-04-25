@@ -37,7 +37,7 @@ def _run_brief_job_sync(job_id: str, keyword: str, target_url: str, location: st
         ))
         _jobs[job_id] = {"status": "done", "result": result}
     except Exception as e:
-        logger.error(f"Brief job {job_id} failed: {e}")
+        logger.error("Brief job %s failed: %s", job_id, e)
         _jobs[job_id] = {"status": "error", "error": str(e)}
     finally:
         loop.close()

@@ -49,7 +49,8 @@ async def get_serp_results(
     tasks = data.get("tasks", [])
     if not tasks or tasks[0].get("status_code") != 20000:
         logger.error(
-            f"DataForSEO error: {tasks[0].get('status_message') if tasks else 'no tasks'}"
+            "DataForSEO error: %s",
+            tasks[0].get("status_message") if tasks else "no tasks",
         )
         return {
             "keyword": keyword,

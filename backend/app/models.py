@@ -1,6 +1,6 @@
 """Pydantic request/response models."""
 from __future__ import annotations
-from typing import Any, Optional
+from typing import Any
 from pydantic import BaseModel
 
 
@@ -16,8 +16,8 @@ class LoginResponse(BaseModel):
 # Brief
 class BriefRequest(BaseModel):
     keyword: str
-    target_url: Optional[str] = None
-    location: Optional[str] = None
+    target_url: str | None = None
+    location: str | None = None
 
 
 class BriefResponse(BaseModel):
@@ -32,15 +32,15 @@ class GenerateRequest(BaseModel):
     city: str
     state: str = ""
     brief: dict[str, Any]
-    template: Optional[dict[str, Any]] = None
-    outline: Optional[dict[str, Any]] = None
-    style_examples: Optional[list[dict[str, Any]]] = None
-    competitor_content: Optional[list[dict[str, Any]]] = None
+    template: dict[str, Any] | None = None
+    outline: dict[str, Any] | None = None
+    style_examples: list[dict[str, Any]] | None = None
+    competitor_content: list[dict[str, Any]] | None = None
     services: list[str] = []
     content_type: str = "landing_page"
     business_name: str = ""
-    brand_id: Optional[str] = None
-    location_id: Optional[str] = None
+    brand_id: str | None = None
+    location_id: str | None = None
 
 
 class OutlineRequest(BaseModel):
@@ -48,10 +48,10 @@ class OutlineRequest(BaseModel):
     city: str
     state: str = ""
     brief: dict[str, Any]
-    template: Optional[dict[str, Any]] = None
-    paa_questions: Optional[list[str]] = None
-    competitors: Optional[list[dict[str, Any]]] = None
-    style_examples: Optional[list[dict[str, Any]]] = None
+    template: dict[str, Any] | None = None
+    paa_questions: list[str] | None = None
+    competitors: list[dict[str, Any]] | None = None
+    style_examples: list[dict[str, Any]] | None = None
 
 
 class ReviseRequest(BaseModel):
@@ -65,7 +65,7 @@ class ReviseRequest(BaseModel):
 class ScoreRequest(BaseModel):
     content: str
     keyword: str
-    target_url: Optional[str] = None
+    target_url: str | None = None
 
 
 class ScoreResponse(BaseModel):
@@ -85,7 +85,7 @@ class ScrapeRequest(BaseModel):
 # SERP
 class SerpRequest(BaseModel):
     keyword: str
-    location: Optional[str] = None
+    location: str | None = None
 
 
 # Google Drive Export
@@ -108,14 +108,14 @@ class SaveGenerationRequest(BaseModel):
     keyword: str
     city: str = ""
     content: str
-    location_id: Optional[str] = None
-    outline: Optional[str] = None
+    location_id: str | None = None
+    outline: str | None = None
     content_type: str = "landing_page"
-    template_name: Optional[str] = None
+    template_name: str | None = None
     model: str = "sonnet"
     word_count: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
-    pop_brief: Optional[dict[str, Any]] = None
-    pop_score: Optional[dict[str, Any]] = None
+    pop_brief: dict[str, Any] | None = None
+    pop_score: dict[str, Any] | None = None
     revision_count: int = 0

@@ -1,11 +1,15 @@
-import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from app.auth import require_auth
 from app.db import get_db
 from app.models import ExportGDriveRequest, ExportGDriveResponse
-from app.services.gdrive import export_to_drive, _get_services
-from app.config import GOOGLE_SERVICE_ACCOUNT_KEY
+from app.services.gdrive import (
+    GDriveExportError,
+    export_to_drive,
+    _ensure_shared_drive_folder,
+    _get_services,
+)
+from app.config import GOOGLE_DRIVE_FOLDER_ID, GOOGLE_SERVICE_ACCOUNT_KEY
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/export", tags=["export"])
@@ -28,8 +32,10 @@ async def export_gdrive(req: ExportGDriveRequest, _=Depends(require_auth)):
             city=req.city,
         )
         return ExportGDriveResponse(**result)
+    except GDriveExportError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:
-        logger.error(f"Drive export failed: {type(e).__name__}: {e}")
+        logger.error("Drive export failed: %s: %s", type(e).__name__, e)
         raise HTTPException(status_code=500, detail=f"Drive export failed: {str(e)}")
 
 
@@ -41,6 +47,14 @@ async def drive_audit(_=Depends(require_auth)):
 
     try:
         drive, _ = _get_services()
+        root_folder = None
+        shared_drive_ready = None
+        try:
+            root_folder = _ensure_shared_drive_folder(drive, GOOGLE_DRIVE_FOLDER_ID)
+            shared_drive_ready = True
+        except GDriveExportError as exc:
+            root_folder = {"id": GOOGLE_DRIVE_FOLDER_ID, "error": str(exc)}
+            shared_drive_ready = False
 
         # Check actual quota
         about = drive.about().get(fields="storageQuota,user").execute()
@@ -64,6 +78,8 @@ async def drive_audit(_=Depends(require_auth)):
 
         return {
             "service_account_email": user_info.get("emailAddress"),
+            "root_folder": root_folder,
+            "shared_drive_ready": shared_drive_ready,
             "quota": {
                 "limit_bytes": int(quota.get("limit", 0)),
                 "limit_gb": round(int(quota.get("limit", 0)) / (1024**3), 2),

@@ -18,7 +18,6 @@ interface Outline {
 interface OutlineReviewProps {
   outline: Outline;
   onApprove: (outline: Outline) => void;
-  onEdit?: (outline: Outline) => void;
 }
 
 export function OutlineReview({ outline, onApprove }: OutlineReviewProps) {

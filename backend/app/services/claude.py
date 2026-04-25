@@ -48,7 +48,7 @@ async def stream_claude(
                 usage["output_tokens"] = msg.usage.output_tokens
 
     except Exception as e:
-        logger.error(f"Claude stream error: {e}")
+        logger.error("Claude stream error: %s", e)
         if full_text:
             pass  # Return partial content below
         else:

@@ -157,12 +157,12 @@ async def get_enriched_brief(
     brief = report.get("cleanedContentBrief") or {}
 
     # Log all available POP data for debugging
-    logger.info(f"POP report top-level keys: {list(report.keys())}")
-    logger.info(f"POP brief keys: {list(brief.keys())}")
+    logger.info("POP report top-level keys: %s", list(report.keys()))
+    logger.info("POP brief keys: %s", list(brief.keys()))
     for key in ["structureAnalysis", "structure", "seoTitle", "metaDescription", "titleTag", "headerRecommendations"]:
         if report.get(key):
             val = report[key]
-            logger.info(f"POP {key}: {val if isinstance(val, str) else list(val.keys()) if isinstance(val, dict) else type(val)}")
+            logger.info("POP %s: %s", key, val if isinstance(val, str) else list(val.keys()) if isinstance(val, dict) else type(val))
 
     term_targets = [
         {
@@ -178,7 +178,7 @@ async def get_enriched_brief(
 
     # Extract word count range
     word_count_data = report.get("wordCount") or {}
-    logger.info(f"POP wordCount data: {word_count_data}")
+    logger.info("POP wordCount data: %s", word_count_data)
     target_word_count = word_count_data.get("target") or word_count_data.get("recommended") or 1500
     word_count_min = word_count_data.get("min") or word_count_data.get("minimum") or 0
     word_count_max = word_count_data.get("max") or word_count_data.get("maximum") or 0

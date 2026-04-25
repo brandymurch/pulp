@@ -2,7 +2,7 @@
 from __future__ import annotations
 import json
 import re
-from typing import Any, Optional
+from typing import Any
 
 
 def _load_banned_words() -> list:
@@ -44,14 +44,14 @@ def resolve_template_placeholders(
 
 
 def build_system_prompt(
-    template: Optional[dict] = None,
-    style_examples: Optional[list] = None,
-    services: Optional[list] = None,
-    voice_dimensions: Optional[list] = None,
-    voice_notes: Optional[str] = None,
-    brand_banned_words: Optional[list] = None,
-    brand_guidelines: Optional[str] = None,
-    brand_competitors: Optional[list] = None,
+    template: dict | None = None,
+    style_examples: list | None = None,
+    services: list | None = None,
+    voice_dimensions: list | None = None,
+    voice_notes: str | None = None,
+    brand_banned_words: list | None = None,
+    brand_guidelines: str | None = None,
+    brand_competitors: list | None = None,
 ) -> str:
     """Build system prompt for content generation."""
     banned = _load_banned_words()
@@ -171,12 +171,12 @@ def build_user_prompt(
     city: str,
     state: str,
     brief: dict,
-    template: Optional[dict] = None,
-    outline: Optional[dict] = None,
-    competitors: Optional[list] = None,
-    paa_questions: Optional[list] = None,
-    style_examples: Optional[list] = None,
-    local_context: Optional[dict] = None,
+    template: dict | None = None,
+    outline: dict | None = None,
+    competitors: list | None = None,
+    paa_questions: list | None = None,
+    style_examples: list | None = None,
+    local_context: dict | None = None,
     content_type: str = "landing_page",
 ) -> str:
     """Build user prompt with all context for full content generation."""
@@ -339,9 +339,9 @@ def build_outline_prompt(
     city: str,
     state: str,
     brief: dict,
-    template: Optional[dict] = None,
-    paa: Optional[list] = None,
-    competitors: Optional[list] = None,
+    template: dict | None = None,
+    paa: list | None = None,
+    competitors: list | None = None,
 ) -> tuple:
     """Build system + user prompts for outline generation. Returns (system, user)."""
     system = (

@@ -49,12 +49,6 @@ function scoreColor(score: number): string {
   return "text-[#b91c1c]";
 }
 
-function scoreBg(score: number): string {
-  if (score >= 80) return "bg-green/5";
-  if (score >= 60) return "bg-amber/5";
-  return "bg-[#b91c1c]/5";
-}
-
 function relativeDate(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / 86_400_000);

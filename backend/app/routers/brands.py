@@ -1,6 +1,6 @@
 """CRUD routes for brands."""
 from __future__ import annotations
-from typing import Any, Optional
+from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from app.auth import require_auth
@@ -10,13 +10,13 @@ router = APIRouter(prefix="/api/brands", tags=["brands"])
 
 
 class UpdateBrandRequest(BaseModel):
-    voice_notes: Optional[str] = None
-    voice_dimensions: Optional[list[dict[str, Any]]] = None
-    brand_banned_words: Optional[list[str]] = None
-    default_tone: Optional[str] = None
-    services: Optional[list[str]] = None
-    brand_guidelines: Optional[str] = None
-    competitors: Optional[list[str]] = None
+    voice_notes: str | None = None
+    voice_dimensions: list[dict[str, Any]] | None = None
+    brand_banned_words: list[str] | None = None
+    default_tone: str | None = None
+    services: list[str] | None = None
+    brand_guidelines: str | None = None
+    competitors: list[str] | None = None
 
 
 @router.get("")

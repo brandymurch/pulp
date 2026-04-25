@@ -170,11 +170,9 @@ function SectionHeader({
 function NeedsAttentionRow({
   job,
   onApprove,
-  onDelete,
 }: {
   job: PipelineJob;
   onApprove: (id: string) => void;
-  onDelete?: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -679,7 +677,6 @@ export default function QueuePage() {
                   key={job.id}
                   job={job}
                   onApprove={handleApprove}
-                  onDelete={handleDelete}
                 />
               ))}
             </div>

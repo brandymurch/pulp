@@ -2,7 +2,6 @@
 from __future__ import annotations
 import logging
 import threading
-from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.auth import require_auth
@@ -18,11 +17,11 @@ class StartPipelineRequest(BaseModel):
     city: str
     state: str = ""
     brand_id: str
-    location_id: Optional[str] = None
-    template_id: Optional[str] = None
+    location_id: str | None = None
+    template_id: str | None = None
     content_type: str = "landing_page"
-    competitor_urls: Optional[list] = None
-    feedback: Optional[str] = None
+    competitor_urls: list | None = None
+    feedback: str | None = None
 
 
 @router.post("/start")
@@ -125,7 +124,7 @@ async def get_pipeline_status(pipeline_id: str, _=Depends(require_auth)):
 
 
 @router.get("/list")
-async def list_pipelines(brand_id: Optional[str] = None, limit: int = 20, _=Depends(require_auth)):
+async def list_pipelines(brand_id: str | None = None, limit: int = 20, _=Depends(require_auth)):
     """List recent pipeline jobs. Optionally filter by brand."""
     db = get_db()
     query = db.table("pipeline_jobs").select("id,keyword,city,state,phase,word_count,score,created_at,content_type")

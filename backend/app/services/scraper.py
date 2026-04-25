@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from typing import Any, Optional
+from typing import Any
 import httpx
 from app.config import FIRECRAWL_API_KEY
 
@@ -23,7 +23,7 @@ def _evict_cache():
         _cache.pop(k, None)
 
 
-def _get_cached(url: str) -> Optional[dict]:
+def _get_cached(url: str) -> dict | None:
     entry = _cache.get(url)
     if not entry:
         return None
@@ -65,7 +65,7 @@ async def _firecrawl(url: str) -> dict[str, Any]:
                 },
             )
             if resp.status_code != 200:
-                logger.warning(f"Firecrawl returned {resp.status_code} for {url}")
+                logger.warning("Firecrawl returned %s for %s", resp.status_code, url)
                 return {
                     "url": url, "title": "", "content": "",
                     "word_count": 0, "headings": [],
@@ -92,7 +92,7 @@ async def _firecrawl(url: str) -> dict[str, Any]:
                 "scrape_quality": "full" if len(content) > 200 else "partial",
             }
     except Exception as e:
-        logger.error(f"Firecrawl scrape failed for {url}: {e}")
+        logger.error("Firecrawl scrape failed for %s: %s", url, e)
         return {
             "url": url, "title": "", "content": "",
             "word_count": 0, "headings": [],

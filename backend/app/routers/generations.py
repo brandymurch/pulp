@@ -1,6 +1,5 @@
 """CRUD routes for generations."""
 from __future__ import annotations
-from typing import Optional
 from fastapi import APIRouter, Depends
 from app.auth import require_auth
 from app.db import get_db
@@ -10,7 +9,7 @@ router = APIRouter(prefix="/api/generations", tags=["generations"])
 
 
 @router.get("")
-async def list_generations(brand_id: Optional[str] = None, location_id: Optional[str] = None, limit: int = 50, offset: int = 0, _=Depends(require_auth)):
+async def list_generations(brand_id: str | None = None, location_id: str | None = None, limit: int = 50, offset: int = 0, _=Depends(require_auth)):
     db = get_db()
     query = db.table("generations").select("*")
     if brand_id:

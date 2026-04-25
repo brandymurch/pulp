@@ -35,7 +35,7 @@ async def search_google_business(
         )
 
     if resp.status_code != 200:
-        logger.error(f"Places API search failed: {resp.status_code} {resp.text[:200]}")
+        logger.error("Places API search failed: %s %s", resp.status_code, resp.text[:200])
         return {"error": f"Places API error: {resp.status_code}", "results": []}
 
     data = resp.json()

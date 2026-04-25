@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from typing import Any, Optional
+from typing import Any
 import httpx
 from notion_client import Client
 from app.config import NOTION_API_KEY, NOTION_DATABASE_ID
@@ -13,7 +13,7 @@ NOTION_VERSION = "2022-06-28"
 
 logger = logging.getLogger(__name__)
 
-_client: Optional[Client] = None
+_client: Client | None = None
 
 
 def _normalize_database_id(raw_id: str) -> str:
@@ -107,7 +107,7 @@ def _blocks_to_markdown(blocks: list[dict]) -> str:
     return "\n\n".join(lines)
 
 
-def list_templates(brand: Optional[str] = None) -> list[dict]:
+def list_templates(brand: str | None = None) -> list[dict]:
     body: dict[str, Any] = {}
     if brand:
         body["filter"] = {"property": "Brand", "select": {"equals": brand}}

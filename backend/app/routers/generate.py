@@ -52,7 +52,7 @@ async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
                 brand_banned_words = brand.data.get("brand_banned_words")
                 brand_guidelines = brand.data.get("brand_guidelines")
         except Exception as e:
-            logger.warning(f"Could not load brand voice settings: {e}")
+            logger.warning("Could not load brand voice settings: %s", e)
 
     # Load location context if location_id provided
     if req.location_id:
@@ -62,7 +62,7 @@ async def generate_content(req: GenerateRequest, _=Depends(require_auth)):
             if loc.data:
                 local_context = loc.data.get("local_context")
         except Exception as e:
-            logger.warning(f"Could not load location context: {e}")
+            logger.warning("Could not load location context: %s", e)
 
     system = build_system_prompt(
         template=req.template,

@@ -1,6 +1,5 @@
 """CRUD routes for style examples."""
 from __future__ import annotations
-from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from app.auth import require_auth
@@ -13,7 +12,7 @@ class CreateStyleExampleRequest(BaseModel):
     brand_id: str
     title: str
     content: str
-    url: Optional[str] = None
+    url: str | None = None
 
 
 @router.get("")

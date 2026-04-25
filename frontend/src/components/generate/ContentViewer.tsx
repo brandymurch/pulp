@@ -1,5 +1,4 @@
 "use client";
-import { useRef } from "react";
 import { Button } from "@/components/shared/Button";
 
 interface ContentViewerProps {
@@ -9,8 +8,6 @@ interface ContentViewerProps {
 }
 
 export function ContentViewer({ content, isStreaming = false, onEdit }: ContentViewerProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   async function copyToClipboard() {
     await navigator.clipboard.writeText(content);
   }
@@ -32,7 +29,6 @@ export function ContentViewer({ content, isStreaming = false, onEdit }: ContentV
       <div className="p-6">
         {onEdit ? (
           <textarea
-            ref={textareaRef}
             value={content}
             onChange={e => onEdit(e.target.value)}
             className="w-full min-h-[400px] bg-transparent font-mono text-[13px] leading-[1.7] text-ink outline-none resize-y"

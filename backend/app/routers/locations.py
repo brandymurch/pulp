@@ -1,8 +1,8 @@
 """Locations CRUD router."""
 from __future__ import annotations
 import logging
-from typing import Any, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Any
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from app.auth import require_auth
 from app.db import get_db
@@ -16,17 +16,17 @@ class CreateLocationRequest(BaseModel):
     name: str
     city: str
     state: str
-    slug: Optional[str] = None
-    local_context: Optional[dict[str, Any]] = None
+    slug: str | None = None
+    local_context: dict[str, Any] | None = None
 
 
 class UpdateLocationRequest(BaseModel):
-    name: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    slug: Optional[str] = None
-    status: Optional[str] = None
-    local_context: Optional[dict[str, Any]] = None
+    name: str | None = None
+    city: str | None = None
+    state: str | None = None
+    slug: str | None = None
+    status: str | None = None
+    local_context: dict[str, Any] | None = None
 
 
 @router.get("")

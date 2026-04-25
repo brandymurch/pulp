@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/shared/Button";
 import { LocationEditor } from "@/components/locations/LocationEditor";

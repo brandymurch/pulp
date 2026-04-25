@@ -1,7 +1,6 @@
 """Dashboard stats endpoint."""
 from __future__ import annotations
 import logging
-from typing import Optional
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends
 from app.auth import require_auth
@@ -12,7 +11,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats")
-async def get_dashboard_stats(brand_id: Optional[str] = None, _=Depends(require_auth)):
+async def get_dashboard_stats(brand_id: str | None = None, _=Depends(require_auth)):
     """Return aggregated stats for the overview dashboard. If no brand_id, aggregates all brands."""
     db = get_db()
 
