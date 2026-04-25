@@ -102,7 +102,7 @@ const mainNav: NavItem[] = [
 
 const brandNav: NavItem[] = [
   { label: "Locations", href: "/locations", icon: <LocationsIcon /> },
-  { label: "Voice", href: "/voice", icon: <VoiceIcon /> },
+  { label: "Brand Voice", href: "/voice", icon: <VoiceIcon /> },
 ];
 
 const systemNav: NavItem[] = [

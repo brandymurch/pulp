@@ -72,7 +72,7 @@ export default function VoicePage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
-          Voice
+          Brand Voice
         </h1>
         <p className="text-[13px] text-ink-70 mt-2">
           Add samples of copy you love. Pulp uses these to match your brand voice.
