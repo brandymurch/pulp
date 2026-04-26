@@ -26,18 +26,6 @@ function Squiggle() {
   );
 }
 
-/* Ticker names */
-const tickerNames = [
-  "Brightline HVAC",
-  "Riverstone Plumbing",
-  "Halfmoon Garage Doors",
-  "Saltbox Pest",
-  "North Fork Electric",
-  "Rivet Roofing",
-  "Otter & Oak Lawn",
-  "Copper Creek Cleaning",
-];
-
 /* Hero tilt cards */
 const tiltCards = [
   {
@@ -212,27 +200,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ====== TICKER ====== */}
-      <div
-        className="overflow-hidden py-3.5 bg-ink text-white"
-        style={{
-          borderTop: "1.5px solid var(--ink)",
-          borderBottom: "1.5px solid var(--ink)",
-        }}
-      >
-        <div
-          className="flex gap-10 whitespace-nowrap font-display font-[800] text-[22px] tracking-[-0.02em]"
-          style={{ animation: "ticker-scroll 35s linear infinite" }}
-        >
-          {[...tickerNames, ...tickerNames].map((name, i) => (
-            <span key={i} className="inline-flex items-center gap-10">
-              {name}
-              <span className="font-normal text-lg">&#10033;</span>
-            </span>
-          ))}
-        </div>
-      </div>
 
       {/* ====== HOW IT WORKS ====== */}
       <section
