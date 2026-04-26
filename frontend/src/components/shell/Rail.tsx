@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { PulpMark, PulpDrop } from "@/components/shared/PulpLogo";
+import { PulpLockup } from "@/components/shared/PulpLogo";
 import { UserChip } from "@/components/shell/UserChip";
 
 interface RailProps {
@@ -116,11 +116,8 @@ export function Rail({ onSignOut }: RailProps) {
   return (
     <aside className="w-[240px] h-screen sticky top-0 flex flex-col border-r-[1.5px] border-line bg-white max-[900px]:w-full max-[900px]:h-auto max-[900px]:static max-[900px]:border-r-0 max-[900px]:border-b-[1.5px]">
       {/* Brand lockup */}
-      <a href="/" className="flex items-center gap-2.5 px-5 pt-6 pb-5">
-        <PulpMark size={28} />
-        <span className="font-display font-[800] text-[22px] tracking-[-0.03em] leading-none inline-flex items-end">
-          Pulp<span className="inline-block w-[0.22em] h-[0.32em] ml-[0.08em] mb-[0.04em]"><PulpDrop size="100%" /></span>
-        </span>
+      <a href="/" className="block px-5 pt-6 pb-5">
+        <PulpLockup size={28} />
       </a>
 
       {/* Nav section */}

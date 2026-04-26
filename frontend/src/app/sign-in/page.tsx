@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowIcon } from "@/components/shared/Icons";
-import { PulpMark, PulpDrop } from "@/components/shared/PulpLogo";
+import { PulpLockup } from "@/components/shared/PulpLogo";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -25,11 +25,8 @@ export default function SignInPage() {
       {/* ====== LEFT COLUMN ====== */}
       <div className="flex flex-col justify-between p-10 max-[720px]:p-6 bg-white min-h-screen max-[900px]:min-h-0">
         {/* Brand lockup */}
-        <a href="/" className="flex items-center gap-3">
-          <PulpMark size={36} />
-          <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none inline-flex items-end">
-            Pulp<span className="inline-block w-[0.22em] h-[0.32em] ml-[0.08em] mb-[0.04em]"><PulpDrop size="100%" /></span>
-          </span>
+        <a href="/">
+          <PulpLockup size={36} />
         </a>
 
         {/* Centered form area */}

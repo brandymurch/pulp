@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowIcon } from "@/components/shared/Icons";
-import { PulpMark, PulpDrop } from "@/components/shared/PulpLogo";
+import { PulpMark, PulpLockup } from "@/components/shared/PulpLogo";
 
 /* ------------------------------------------------------------------ */
 /*  Squiggle underline SVG                                             */
@@ -77,11 +77,8 @@ export default function Home() {
         style={{ borderBottom: "1px solid var(--line)" }}
       >
         <div className={`${WRAP} flex items-center justify-between h-[68px]`}>
-          <a href="#" className="flex items-center gap-3">
-            <PulpMark size={36} />
-            <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none inline-flex items-end">
-              Pulp<span className="inline-block w-[0.22em] h-[0.32em] ml-[0.08em] mb-[0.04em]"><PulpDrop size="100%" /></span>
-            </span>
+          <a href="#">
+            <PulpLockup size={36} />
           </a>
 
           <div className="hidden min-[821px]:flex gap-7 text-xs text-ink-70 font-mono">
@@ -543,11 +540,8 @@ export default function Home() {
         >
           {/* Brand */}
           <div>
-            <a href="#" className="flex items-center gap-3">
-              <PulpMark size={36} />
-              <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none text-white inline-flex items-end">
-                Pulp<span className="inline-block w-[0.22em] h-[0.32em] ml-[0.08em] mb-[0.04em]"><PulpDrop size="100%" /></span>
-              </span>
+            <a href="#">
+              <PulpLockup size={36} inkColor="#fff" />
             </a>
             <p className="text-[13px] text-white/70 max-w-[36ch] mt-[18px] leading-[1.55] font-mono">
               Fresh-squeezed copy for every franchise territory. Built for
