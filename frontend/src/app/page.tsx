@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { SliceMark, ArrowIcon } from "@/components/shared/Icons";
 
 /* ------------------------------------------------------------------ */
@@ -26,97 +25,6 @@ function Squiggle() {
     </svg>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Demo data — Brightline HVAC across 7 cities                        */
-/* ------------------------------------------------------------------ */
-
-interface DemoEntry {
-  loc: string;
-  locEm: string;
-  path: string;
-  h: string;
-  p1: string;
-  p2: string;
-  age: string;
-}
-
-const demos: DemoEntry[] = [
-  {
-    loc: "Brightline HVAC",
-    locEm: "Mesa",
-    path: "/az-mesa",
-    h: "Mesa summers hit 118\u00b0. Your AC shouldn\u2019t be the reason you move.",
-    p1: "Desert heat punishes tired condensers. Our Mesa team stocks R-410A and R-454B, same-day installs on two- to five-ton splits, and we pull Maricopa permits in-house so you aren\u2019t waiting on a clipboard. Mini-splits for the Arizona Room are a house specialty.",
-    p2: "Service calls answered 6am\u2013midnight, seven days. Red Tag tune-ups start at $89 before the monsoons flip the switch.",
-    age: "2 days ago",
-  },
-  {
-    loc: "Brightline HVAC",
-    locEm: "Portland",
-    path: "/or-portland",
-    h: "Heat pumps for a town that finally needs cooling too.",
-    p1: "Portland\u2019s 2021 dome changed the conversation. We size dual-fuel heat pumps for 1920s Craftsmans, retrofit ductless into bungalows with no attic, and know which PGE rebates actually clear. Our techs keep sizing charts for the east-side vs. west-side microclimates taped to the van.",
-    p2: "Energy Trust of Oregon paperwork filed same day. Weekend calls answered before Monday.",
-    age: "4 days ago",
-  },
-  {
-    loc: "Brightline HVAC",
-    locEm: "Denver",
-    path: "/co-denver",
-    h: "Altitude fools undersized systems. Ours aren\u2019t.",
-    p1: "At 5,280 feet, refrigerant charges and combustion air both behave differently. Our Denver crews derate systems to the Front Range, handle Xcel rebate paperwork, and stock parts for the 80% furnaces still heating half the bungalows in Park Hill.",
-    p2: "Spring tune-ups booked now. Hailstorm coil-fin combs kept in every truck May through September.",
-    age: "Today",
-  },
-  {
-    loc: "Brightline HVAC",
-    locEm: "Chicago NW",
-    path: "/il-chi-nw",
-    h: "Lake-effect winters. Two-stage furnaces. No drafts.",
-    p1: "Logan Square two-flats and Jefferson Park bungalows don\u2019t want the same system. We spec two-stage and modulating furnaces for real Chicago winters, handle ComEd and Nicor rebate filings, and keep a stash of hard-start kits for the radiators that refuse to retire.",
-    p2: "24-hour emergency calls when the wind chill drops below zero. Filter-swap plan $14/mo.",
-    age: "Yesterday",
-  },
-  {
-    loc: "Brightline HVAC",
-    locEm: "Atlanta",
-    path: "/ga-atl",
-    h: "Humidity is the real bill. We size the unit to beat it.",
-    p1: "Georgia summers aren\u2019t just hot; the dew point does the work. Our Atlanta techs run Manual J loads on every install so you aren\u2019t running a 5-ton on a 1,800 square-foot ranch. Whole-house dehumidifiers paired right keep the power bill civilized.",
-    p2: "Georgia Power rebates handled. Pollen-season filter upgrades included on spring tune-ups.",
-    age: "3 days ago",
-  },
-  {
-    loc: "Brightline HVAC",
-    locEm: "Austin",
-    path: "/tx-austin",
-    h: "Texas grid. Texas heat. Systems built for both.",
-    p1: "After Uri and every summer since, Austin homeowners want systems that survive brownouts. We install variable-speed compressors with soft-start kits, pair with Generac or Tesla Powerwall cutovers, and size for the upper-90s dew points that come with every August.",
-    p2: "Austin Energy rebates filed for you. ERCOT conservation-alert mode available on smart thermostats.",
-    age: "Today",
-  },
-  {
-    loc: "Brightline HVAC",
-    locEm: "Los Angeles",
-    path: "/ca-la",
-    h: "Title 24 is complicated. The bid doesn\u2019t have to be.",
-    p1: "Silver Lake Spanish revivals, Eagle Rock bungalows, Valley ranch homes. Each needs a different answer. Our LA crews know Title 24 HERS testing, SCE rebate timing, and how to sneak a condenser into a zero-setback side yard. All-electric retrofits a specialty.",
-    p2: "Permit pulls with LADBS handled. Wildfire-season MERV 13 filtration included.",
-    age: "Yesterday",
-  },
-];
-
-/* Pin positions keyed to US map layout */
-const pins: { code: string; left: string; top: string; label: string }[] = [
-  { code: "MSA", left: "22%", top: "58%", label: "View Mesa copy" },
-  { code: "PDX", left: "18%", top: "26%", label: "View Portland copy" },
-  { code: "DEN", left: "34%", top: "46%", label: "View Denver copy" },
-  { code: "CHI", left: "62%", top: "32%", label: "View Chicago NW copy" },
-  { code: "ATL", left: "74%", top: "58%", label: "View Atlanta copy" },
-  { code: "AUS", left: "48%", top: "72%", label: "View Austin copy" },
-  { code: "LA", left: "12%", top: "52%", label: "View Los Angeles copy" },
-];
 
 /* Ticker names */
 const tickerNames = [
@@ -172,9 +80,6 @@ const WRAP = "mx-auto max-w-[1240px] px-12 max-[720px]:px-6";
 /* ------------------------------------------------------------------ */
 
 export default function Home() {
-  const [activePin, setActivePin] = useState(0);
-  const demo = demos[activePin];
-
   return (
     <>
       {/* ====== NAV ====== */}
@@ -196,9 +101,6 @@ export default function Home() {
             </a>
             <a href="#features" className="hover:text-ink transition-colors">
               Features
-            </a>
-            <a href="#demo" className="hover:text-ink transition-colors">
-              Demo
             </a>
             <a href="#compare" className="hover:text-ink transition-colors">
               vs. Templates
@@ -340,13 +242,7 @@ export default function Home() {
       >
         <div className={WRAP}>
           {/* Head */}
-          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
-            <div className="text-[11px] tracking-[0.24em] uppercase text-ink font-mono">
-              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
-                01
-              </span>
-              How it works
-            </div>
+          <div className="mb-20 max-[820px]:mb-14">
             <h2
               className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
               style={{ fontSize: "clamp(40px, 5.6vw, 80px)" }}
@@ -444,13 +340,7 @@ export default function Home() {
       >
         <div className={WRAP}>
           {/* Head */}
-          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
-            <div className="text-[11px] tracking-[0.24em] uppercase text-ink font-mono">
-              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
-                02
-              </span>
-              What&apos;s inside
-            </div>
+          <div className="mb-20 max-[820px]:mb-14">
             <h2
               className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
               style={{ fontSize: "clamp(40px, 5.6vw, 80px)" }}
@@ -504,111 +394,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ====== DEMO ====== */}
-      <section
-        id="demo"
-        className="py-[140px] relative overflow-hidden"
-        style={{ borderBottom: "1.5px solid var(--ink)" }}
-      >
-        <div className={WRAP}>
-          {/* Head */}
-          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
-            <div className="text-[11px] tracking-[0.24em] uppercase text-ink font-mono">
-              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
-                03
-              </span>
-              See it live
-            </div>
-            <h2
-              className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
-              style={{ fontSize: "clamp(40px, 5.6vw, 80px)" }}
-            >
-              Click a pin.
-              <br />
-              Read the{" "}
-              <span className="font-display font-normal tracking-[-0.025em] text-pulp-deep">
-                copy.
-              </span>
-            </h2>
-          </div>
-
-          {/* Map + Output */}
-          <div className="grid grid-cols-[1fr_1.05fr] max-[900px]:grid-cols-1 gap-5">
-            {/* Map */}
-            <div
-              className="relative border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden"
-              style={{
-                aspectRatio: "4 / 3",
-                backgroundImage:
-                  "linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-              }}
-            >
-              {pins.map((pin, i) => (
-                <button
-                  key={pin.code}
-                  onClick={() => setActivePin(i)}
-                  aria-label={pin.label}
-                  className={`absolute w-8 h-8 rounded-full border-[1.5px] border-ink flex items-center justify-center font-display font-[800] text-[11px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-[180ms] ${
-                    activePin === i
-                      ? "bg-ink text-white"
-                      : "bg-white text-ink hover:bg-ink hover:text-white"
-                  }`}
-                  style={{
-                    left: pin.left,
-                    top: pin.top,
-                    boxShadow:
-                      activePin === i
-                        ? "0 0 0 6px rgba(20,18,16,0.08)"
-                        : "none",
-                  }}
-                >
-                  {pin.code}
-                </button>
-              ))}
-            </div>
-
-            {/* Output card */}
-            <div
-              className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 flex flex-col gap-[18px] min-h-full"
-              style={{ boxShadow: "6px 6px 0 0 var(--ink)" }}
-            >
-              <div
-                className="flex justify-between items-baseline pb-3.5"
-                style={{ borderBottom: "1.5px dashed var(--ink)" }}
-              >
-                <span className="font-display font-[800] text-[22px] tracking-[-0.02em]">
-                  {demo.loc} &middot;{" "}
-                  <em className="font-normal">{demo.locEm}</em>
-                </span>
-                <span className="text-[10px] tracking-[0.2em] uppercase text-ink-70 font-mono">
-                  {demo.path}
-                </span>
-              </div>
-              <h5 className="font-display font-normal text-[28px] leading-[1.15] tracking-[-0.01em] m-0">
-                {demo.h}
-              </h5>
-              <p className="text-[13px] leading-[1.65] text-ink m-0 max-w-[48ch] font-mono">
-                {demo.p1}
-              </p>
-              <p className="text-[13px] leading-[1.65] text-ink m-0 max-w-[48ch] font-mono">
-                {demo.p2}
-              </p>
-              <div
-                className="mt-auto flex justify-between pt-3.5 text-[10px] tracking-[0.22em] uppercase text-ink-70 font-mono"
-                style={{ borderTop: "1.5px dashed var(--ink)" }}
-              >
-                <span>Voice &middot; Brightline HVAC</span>
-                <span className="inline-flex items-center gap-1.5 text-ink">
-                  <span className="w-1.5 h-1.5 bg-pulp rounded-full inline-block" />
-                  Refreshed {demo.age}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ====== COMPARE ====== */}
       <section
         id="compare"
@@ -617,13 +402,7 @@ export default function Home() {
       >
         <div className={WRAP}>
           {/* Head */}
-          <div className="grid grid-cols-[180px_1fr] max-[820px]:grid-cols-1 gap-10 max-[820px]:gap-5 mb-20 max-[820px]:mb-14 items-start">
-            <div className="text-[11px] tracking-[0.24em] uppercase text-ink font-mono">
-              <span className="inline-block border-[1.5px] border-ink rounded-full px-2.5 py-1 mr-2">
-                04
-              </span>
-              Pulp vs. Templates
-            </div>
+          <div className="mb-20 max-[820px]:mb-14">
             <h2
               className="font-display font-[800] leading-[0.88] tracking-[-0.035em] m-0"
               style={{ fontSize: "clamp(40px, 5.6vw, 80px)" }}
