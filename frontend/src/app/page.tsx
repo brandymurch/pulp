@@ -708,46 +708,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ====== QUOTE ====== */}
-      <section
-        className="bg-ink text-white py-[140px] relative overflow-hidden"
-        style={{
-          borderTop: "1.5px solid var(--ink)",
-          borderBottom: "1.5px solid var(--ink)",
-        }}
-      >
-        <div
-          className="absolute right-[-40px] top-[-20px] text-[220px] font-display leading-none select-none"
-          style={{ color: "#1f1c19" }}
-          aria-hidden="true"
-        >
-          &#10033;
-        </div>
-        <div className={`${WRAP} relative z-[2]`}>
-          <blockquote
-            className="font-display font-normal leading-[1.05] tracking-[-0.025em] max-w-[24ch] m-0"
-            style={{ fontSize: "clamp(40px, 5.2vw, 76px)" }}
-          >
-            We shipped{" "}
-            <span className="font-[800]">412 territory pages</span> in a
-            weekend. Organic leads{" "}
-            <em className="text-pulp">doubled</em> in five weeks. Every page
-            reads like our local crews wrote it.
-          </blockquote>
-          <div className="mt-11 flex gap-3.5 items-center text-[11px] tracking-[0.2em] uppercase text-white/70 font-mono">
-            <div className="w-11 h-11 rounded-full bg-white text-ink flex items-center justify-center font-display font-[800] text-xl">
-              M
-            </div>
-            <div>
-              <div className="font-display font-[800] text-base tracking-[-0.01em] text-white normal-case mb-1">
-                Maya Ortiz
-              </div>
-              VP Marketing &middot; Brightline HVAC &middot; 89 franchisees
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ====== BIG CTA ====== */}
       <section
         className="pt-[180px] pb-[160px] text-left relative overflow-hidden"
