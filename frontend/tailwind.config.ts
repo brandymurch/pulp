@@ -5,9 +5,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pulp: "#FFB020",
-        "pulp-deep": "#E89000",
-        cream: "#FBF3E6",
+        pulp: "#F26430",
+        "pulp-deep": "#C84A1F",
+        cream: "#F7EDD8",
         ink: "#141210",
         "ink-70": "#4A4642",
         "ink-40": "#9A958E",

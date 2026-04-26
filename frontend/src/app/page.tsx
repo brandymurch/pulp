@@ -1,6 +1,7 @@
 "use client";
 
-import { SliceMark, ArrowIcon } from "@/components/shared/Icons";
+import { ArrowIcon } from "@/components/shared/Icons";
+import { PulpMark, PulpDrop } from "@/components/shared/PulpLogo";
 
 /* ------------------------------------------------------------------ */
 /*  Squiggle underline SVG                                             */
@@ -77,9 +78,9 @@ export default function Home() {
       >
         <div className={`${WRAP} flex items-center justify-between h-[68px]`}>
           <a href="#" className="flex items-center gap-3">
-            <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
-            <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none">
-              Pulp
+            <PulpMark size={36} />
+            <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none inline-flex items-end">
+              Pulp<span className="inline-block w-[0.22em] h-[0.32em] ml-[0.08em] mb-[0.04em]"><PulpDrop size="100%" /></span>
             </span>
           </a>
 
@@ -501,7 +502,9 @@ export default function Home() {
           borderTop: "1.5px solid var(--ink)",
         }}
       >
-        <SliceMark className="absolute right-[-80px] top-1/2 -translate-y-1/2 w-[560px] h-[560px] text-pulp overflow-visible max-[900px]:w-[300px] max-[900px]:h-[300px] max-[900px]:right-[-80px] max-[900px]:opacity-55" />
+        <div className="absolute right-[-80px] top-1/2 -translate-y-1/2 w-[560px] h-[560px] max-[900px]:w-[300px] max-[900px]:h-[300px] max-[900px]:right-[-80px] max-[900px]:opacity-55 opacity-15" aria-hidden="true">
+          <PulpMark size="100%" />
+        </div>
         <div className={`${WRAP} relative z-[2]`}>
           <h2
             className="font-display font-[800] leading-[0.88] tracking-[-0.045em] mb-11 m-0"
@@ -541,9 +544,9 @@ export default function Home() {
           {/* Brand */}
           <div>
             <a href="#" className="flex items-center gap-3">
-              <SliceMark className="w-9 h-9 text-pulp overflow-visible" />
-              <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none text-white">
-                Pulp
+              <PulpMark size={36} />
+              <span className="font-display font-[800] text-2xl tracking-[-0.03em] leading-none text-white inline-flex items-end">
+                Pulp<span className="inline-block w-[0.22em] h-[0.32em] ml-[0.08em] mb-[0.04em]"><PulpDrop size="100%" /></span>
               </span>
             </a>
             <p className="text-[13px] text-white/70 max-w-[36ch] mt-[18px] leading-[1.55] font-mono">

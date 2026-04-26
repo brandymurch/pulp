@@ -1,17 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 20 285 240" fill="none" stroke="#FFB020" stroke-linecap="round" stroke-linejoin="round">
-  <g transform="translate(10 0)">
-    <g transform="rotate(30 120 90) scale(1 -1) translate(0 -180)">
-      <path stroke-width="11" d="M20 150 L220 150 M20 150 A 100 110 0 0 1 220 150"/>
-      <g stroke-width="4.5">
-        <line x1="120" y1="150" x2="120" y2="48"/>
-        <line x1="120" y1="150" x2="74" y2="62"/>
-        <line x1="120" y1="150" x2="166" y2="62"/>
-        <line x1="120" y1="150" x2="44" y2="98"/>
-        <line x1="120" y1="150" x2="196" y2="98"/>
-      </g>
-    </g>
-    <g stroke-width="5">
-      <path d="M250 108 C 264 130, 264 148, 250 152 C 236 148, 236 130, 250 108 Z"/>
-    </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="90" fill="#F26430" />
+  <g stroke="#F7EDD8" stroke-width="8" stroke-linecap="butt" fill="none">
+    <line x1="100" y1="100" x2="190" y2="100" />
+    <line x1="100" y1="100" x2="163.6" y2="163.6" />
+    <line x1="100" y1="100" x2="100" y2="190" />
+    <line x1="100" y1="100" x2="36.4" y2="163.6" />
+    <line x1="100" y1="100" x2="10" y2="100" />
+    <line x1="100" y1="100" x2="36.4" y2="36.4" />
+    <line x1="100" y1="100" x2="100" y2="10" />
+    <line x1="100" y1="100" x2="163.6" y2="36.4" />
   </g>
+  <circle cx="100" cy="100" r="16" fill="#F7EDD8" />
+  <circle cx="100" cy="100" r="9" fill="#141210" />
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#141210" stroke-width="9" />
 </svg>
