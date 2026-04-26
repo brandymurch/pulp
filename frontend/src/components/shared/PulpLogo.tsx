@@ -102,7 +102,7 @@ export function PulpLockup({
         }}
       >
         Pulp
-        <PulpDrop size="0.3em" />
+        <PulpDrop size="0.2em" />
       </span>
     </span>
   );
