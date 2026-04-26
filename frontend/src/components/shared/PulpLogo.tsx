@@ -51,9 +51,8 @@ export function PulpMark({ size = 36, className, title = "Pulp" }: CommonProps) 
 export function PulpDrop({ size = 12, className }: { size?: number | string; className?: string }) {
   return (
     <svg
-      viewBox="0 0 40 60"
+      viewBox="2 4 36 42"
       width={size}
-      height={size}
       aria-hidden="true"
       className={className}
       style={{ display: "inline-block", flex: "none" }}
@@ -103,18 +102,7 @@ export function PulpLockup({
         }}
       >
         Pulp
-        <span
-          aria-hidden="true"
-          style={{
-            width: "0.18em",
-            height: "0.26em",
-            marginLeft: "0.02em",
-            marginBottom: "0.02em",
-            display: "inline-block",
-          }}
-        >
-          <PulpDrop size="100%" />
-        </span>
+        <PulpDrop size="0.3em" />
       </span>
     </span>
   );
