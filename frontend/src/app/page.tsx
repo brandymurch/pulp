@@ -146,7 +146,7 @@ export default function Home() {
                 .
               </span>
             </h1>
-            <p className="text-base leading-[1.55] text-ink-70 max-w-[46ch] mb-10 font-mono">
+            <p className="text-base leading-[1.55] text-ink-70 max-w-[46ch] mb-10 mt-4 font-mono">
               Pulp writes local landing pages, service pages, and ad copy for
               every franchise territory. In your voice, tuned to the
               neighborhood, refreshed weekly.
@@ -200,6 +200,45 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ====== TICKER ====== */}
+      <div
+        className="overflow-hidden py-3.5 bg-ink text-white"
+        style={{
+          borderTop: "1.5px solid var(--ink)",
+          borderBottom: "1.5px solid var(--ink)",
+        }}
+      >
+        <div
+          className="flex gap-10 whitespace-nowrap font-display font-[800] text-[22px] tracking-[-0.02em]"
+          style={{ animation: "ticker-scroll 35s linear infinite" }}
+        >
+          {[...[
+            "Voice-matched copy",
+            "SEO-scored drafts",
+            "Territory-aware pages",
+            "Weekly auto-refresh",
+            "Bulk generation",
+            "Outline approval",
+            "Competitor analysis",
+            "Local review integration",
+          ], ...[
+            "Voice-matched copy",
+            "SEO-scored drafts",
+            "Territory-aware pages",
+            "Weekly auto-refresh",
+            "Bulk generation",
+            "Outline approval",
+            "Competitor analysis",
+            "Local review integration",
+          ]].map((feature, i) => (
+            <span key={i} className="inline-flex items-center gap-10">
+              {feature}
+              <span className="font-normal text-lg">&#10033;</span>
+            </span>
+          ))}
+        </div>
+      </div>
 
       {/* ====== HOW IT WORKS ====== */}
       <section
