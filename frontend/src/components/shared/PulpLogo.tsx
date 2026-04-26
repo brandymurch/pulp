@@ -106,10 +106,10 @@ export function PulpLockup({
         <span
           aria-hidden="true"
           style={{
-            width: "0.22em",
-            height: "0.32em",
-            marginLeft: "0.08em",
-            marginBottom: "0.04em",
+            width: "0.18em",
+            height: "0.26em",
+            marginLeft: "0.02em",
+            marginBottom: "0.02em",
             display: "inline-block",
           }}
         >
