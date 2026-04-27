@@ -443,6 +443,11 @@ export default function GeneratePage() {
             <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
           </div>
 
+          {(!selectedLocationId || !city.trim() || !pageSlug.trim() || (contentType !== "landing_page" && !keyword.trim())) && (
+            <div className="text-[12px] text-[#b91c1c]">
+              {!selectedLocationId ? "Select a location" : !city.trim() ? "Enter a target city" : !pageSlug.trim() ? "Page slug is required" : "Enter a keyword"}
+            </div>
+          )}
           <Button variant="ink" onClick={startPipeline} disabled={
             (contentType !== "landing_page" && !keyword.trim()) || !city.trim() || !selectedLocationId || !pageSlug.trim()
           }>
