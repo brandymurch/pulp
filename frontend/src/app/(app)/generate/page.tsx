@@ -416,7 +416,7 @@ export default function GeneratePage() {
               </div>
               <div>
                 <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
-                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder={`/${(city || "city").toLowerCase().replace(/\s+/g, '-')}-${(state || "st").toLowerCase()}`} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
+                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
               </div>
             </div>
           ) : (
@@ -424,7 +424,7 @@ export default function GeneratePage() {
               <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
               <div>
                 <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
-                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/insulation-services-columbus-oh" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
+                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
               </div>
             </div>
           )}
