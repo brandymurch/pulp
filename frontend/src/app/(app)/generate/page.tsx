@@ -487,25 +487,58 @@ export default function GeneratePage() {
       {phase === "outline_review" && outlineData && (
         <div className="border-[1.5px] border-ink rounded-[18px] p-6 space-y-4">
           <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">Outline for approval</div>
-          <div className="font-display font-[800] text-xl mb-1">{outlineData.h1}</div>
+          <input
+            value={outlineData.h1 || ""}
+            onChange={e => setOutlineData({ ...outlineData, h1: e.target.value })}
+            className="font-display font-[800] text-xl w-full bg-transparent border-b border-dashed border-line outline-none focus:border-ink pb-1"
+          />
           {outlineData.estimated_word_count && (
             <div className="text-[11px] text-ink-40">~{outlineData.estimated_word_count} words</div>
           )}
           <div className="space-y-2">
             {(outlineData.sections || []).map((s: any, i: number) => (
-              <div key={i} className="border border-line rounded-lg p-3">
-                <div className="font-display font-[800] text-[14px]">{s.h2}</div>
+              <div key={i} className="border border-line rounded-lg p-3 space-y-1.5">
+                <input
+                  value={s.h2}
+                  onChange={e => {
+                    const updated = [...outlineData.sections];
+                    updated[i] = { ...updated[i], h2: e.target.value };
+                    setOutlineData({ ...outlineData, sections: updated });
+                  }}
+                  className="font-display font-[800] text-[14px] w-full bg-transparent border-b border-dashed border-transparent outline-none focus:border-line pb-0.5"
+                />
                 {s.key_points && (
-                  <ul className="mt-1.5 space-y-0.5">
+                  <ul className="space-y-0.5">
                     {s.key_points.map((kp: string, j: number) => (
-                      <li key={j} className="text-[12px] text-ink-70 flex gap-1.5">
-                        <span className="text-ink-40">-</span> {kp}
+                      <li key={j} className="flex gap-1.5 items-start">
+                        <span className="text-ink-40 text-[12px] mt-0.5">-</span>
+                        <input
+                          value={kp}
+                          onChange={e => {
+                            const updated = [...outlineData.sections];
+                            const pts = [...updated[i].key_points];
+                            pts[j] = e.target.value;
+                            updated[i] = { ...updated[i], key_points: pts };
+                            setOutlineData({ ...outlineData, sections: updated });
+                          }}
+                          className="text-[12px] text-ink-70 flex-1 bg-transparent border-b border-dashed border-transparent outline-none focus:border-line pb-0.5"
+                        />
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
             ))}
+          </div>
+          <div>
+            <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-1.5">Notes for the writer (optional)</label>
+            <textarea
+              value={feedback}
+              onChange={e => setFeedback(e.target.value)}
+              placeholder="Add more local detail. Emphasize emergency services. Keep intro under 2 sentences."
+              rows={2}
+              className="w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y"
+            />
           </div>
           <Button variant="ink" onClick={async () => {
             try {
