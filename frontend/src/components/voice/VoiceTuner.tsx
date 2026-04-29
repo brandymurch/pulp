@@ -260,6 +260,41 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
         <textarea className={textareaClass} value={bannedWords} onChange={e => setBannedWords(e.target.value)} placeholder="leverage, utilize, robust" rows={2} />
         <div className="text-[10px] text-ink-40 mt-1">Added to the global banned words list for this brand.</div>
       </EditableSection>
+
+      {/* Learned patterns (read-only, from past generations) */}
+      {brand?.prompt_learnings?.length > 0 && (
+        <div className="border-[1.5px] border-line rounded-[14px] p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[10px] tracking-[0.22em] uppercase text-ink-40 font-medium">
+              Learned patterns
+            </h3>
+            <span className="text-[10px] text-ink-40">{brand.prompt_learnings.length} insights</span>
+          </div>
+          <div className="space-y-1.5">
+            {brand.prompt_learnings.map((learning: string, i: number) => (
+              <div key={i} className="flex items-start gap-2 group">
+                <span className="text-[12px] text-ink-70 flex-1 leading-[1.5]">{learning}</span>
+                <button
+                  onClick={async () => {
+                    const updated = brand.prompt_learnings.filter((_: string, idx: number) => idx !== i);
+                    try {
+                      await apiFetch(`/api/brands/${brand.id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ prompt_learnings: updated }),
+                      });
+                      onSave(brand);
+                    } catch {}
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-[10px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-opacity shrink-0 mt-0.5"
+                >
+                  remove
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="text-[10px] text-ink-40 mt-3">Auto-generated from past content runs. These guide future generations for this brand.</div>
+        </div>
+      )}
     </div>
   );
 }

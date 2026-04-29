@@ -17,6 +17,7 @@ class UpdateBrandRequest(BaseModel):
     services: list[str] | None = None
     brand_guidelines: str | None = None
     competitors: list[str] | None = None
+    prompt_learnings: list[str] | None = None
 
 
 @router.get("")
