@@ -52,6 +52,7 @@ def build_system_prompt(
     brand_banned_words: list | None = None,
     brand_guidelines: str | None = None,
     brand_competitors: list | None = None,
+    prompt_learnings: list | None = None,
 ) -> str:
     """Build system prompt for content generation."""
     banned = _load_banned_words()
@@ -147,6 +148,12 @@ def build_system_prompt(
         parts.append("")
         parts.append("BRAND GUIDELINES (follow these strictly):")
         parts.append(brand_guidelines)
+
+    if prompt_learnings:
+        parts.append("")
+        parts.append("LEARNED PATTERNS (from past content generations for this brand - apply these):")
+        for learning in prompt_learnings[-10:]:
+            parts.append(f"- {learning}")
 
     return "\n".join(parts)
 
@@ -567,4 +574,59 @@ def build_revision_prompts(
     user_parts.append(f"\nTarget word count: {target_wc}")
     user_parts.append("\nRevise the content. Incorporate missing terms naturally. Do not change the overall structure or voice.")
 
+    return system, "\n".join(user_parts)
+
+
+def build_learning_prompt(
+    keyword: str,
+    city: str,
+    score: dict | None,
+    revision_count: int,
+    word_count: int,
+    brief: dict | None,
+    feedback: str | None = None,
+) -> tuple:
+    """Build prompt for Haiku to extract learnings from a completed generation."""
+    system = (
+        "You are analyzing a completed content generation to extract learnings for future generations.\n"
+        "Return ONLY a JSON array of 1-3 short, actionable learnings. Each learning should be a string.\n"
+        "Focus on patterns that would improve FUTURE content for this brand, not one-off fixes.\n"
+        "If the generation went well (score >= 80, 0 revisions), note what worked.\n"
+        "If it struggled (low score, multiple revisions, missing terms), note what to emphasize next time.\n"
+        'Example: ["Emphasize the term \\"spray foam\\" more heavily - consistently underused",\n'
+        '"Shorter intros (2-3 sentences) score better for service pages",\n'
+        '"Local neighborhood references improved engagement"]'
+    )
+
+    user_parts = [
+        f"**Keyword:** {keyword}",
+        f"**City:** {city}",
+        f"**Final word count:** {word_count}",
+        f"**Revision rounds needed:** {revision_count}",
+    ]
+
+    if score:
+        user_parts.append(f"**POP score:** {score.get('overall_score', 'N/A')}/100")
+        if score.get("missing"):
+            missing = [m.get("phrase", "") for m in score["missing"][:5] if m.get("phrase")]
+            if missing:
+                user_parts.append(f"**Still missing terms:** {', '.join(missing)}")
+        if score.get("well_optimized"):
+            well = [w.get("phrase", "") for w in score["well_optimized"][:5] if w.get("phrase")]
+            if well:
+                user_parts.append(f"**Well-optimized terms:** {', '.join(well)}")
+        if score.get("recommendations"):
+            user_parts.append("**POP recommendations:**")
+            for rec in score["recommendations"][:3]:
+                user_parts.append(f"  - {rec}")
+
+    if brief:
+        target_wc = brief.get("target_word_count", 0)
+        if target_wc:
+            user_parts.append(f"**Target word count was:** {target_wc} (actual: {word_count})")
+
+    if feedback:
+        user_parts.append(f"**User feedback given:** {feedback}")
+
+    user_parts.append("\nExtract 1-3 learnings as a JSON array of strings.")
     return system, "\n".join(user_parts)

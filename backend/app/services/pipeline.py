@@ -333,6 +333,7 @@ async def _run_pipeline_phase2(
             brand_banned_words=brand_data.get("brand_banned_words"),
             brand_guidelines=guidelines,
             brand_competitors=brand_data.get("competitors") or [],
+            prompt_learnings=brand_data.get("prompt_learnings"),
         )
         user_prompt = build_user_prompt(
             keyword=keyword, city=city, state=state,
@@ -472,3 +473,36 @@ async def _run_pipeline_phase2(
                 pass
     except Exception as e:
         logger.warning("Failed to auto-save generation: %s", e)
+
+    # -- Post-generation: extract learnings for the brand --
+    try:
+        from app.services.content_generator import build_learning_prompt
+        learn_system, learn_user = build_learning_prompt(
+            keyword=keyword, city=city,
+            score=score_result, revision_count=revision_count,
+            word_count=word_count, brief=brief, feedback=feedback,
+        )
+        learn_response = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1000, temperature=0.1,
+            system=learn_system,
+            messages=[{"role": "user", "content": learn_user}],
+        )
+        raw_learn = "".join(b.text for b in learn_response.content if hasattr(b, "text")).strip()
+        if raw_learn.startswith("```"):
+            raw_learn = raw_learn.split("\n", 1)[1].rsplit("```", 1)[0]
+        new_learnings = json.loads(raw_learn)
+        if isinstance(new_learnings, list) and new_learnings:
+            # Load existing learnings, append new ones, cap at 20
+            try:
+                brand_row = db.table("brands").select("prompt_learnings").eq("id", brand_id).single().execute()
+                existing = (brand_row.data or {}).get("prompt_learnings") or []
+            except Exception:
+                existing = []
+            combined = existing + new_learnings
+            # Keep most recent 20
+            combined = combined[-20:]
+            db.table("brands").update({"prompt_learnings": combined}).eq("id", brand_id).execute()
+            logger.info("Stored %d new learnings for brand %s", len(new_learnings), brand_id)
+    except Exception as e:
+        logger.warning("Learning extraction failed (non-critical): %s", e)
