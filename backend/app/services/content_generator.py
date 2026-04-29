@@ -178,6 +178,7 @@ def build_user_prompt(
     style_examples: list | None = None,
     local_context: dict | None = None,
     content_type: str = "landing_page",
+    research: dict | None = None,
 ) -> str:
     """Build user prompt with all context for full content generation."""
     target_word_count = brief.get("target_word_count", 1500)
@@ -330,8 +331,119 @@ def build_user_prompt(
             parts.append(f"- {q}")
         parts.append("")
 
+    if research:
+        parts.append("**RESEARCH INSIGHTS (apply these to make the content stronger):**")
+        if research.get("search_intent"):
+            parts.append(f"- Search intent: {research['search_intent']} - {research.get('intent_details', '')}")
+        if research.get("content_gaps"):
+            parts.append("- Content gaps competitors miss: " + "; ".join(research["content_gaps"][:5]))
+        if research.get("key_entities"):
+            parts.append("- Key entities to mention: " + ", ".join(research["key_entities"][:8]))
+        if research.get("differentiation_angles"):
+            parts.append("- Stand out by: " + "; ".join(research["differentiation_angles"][:3]))
+        if research.get("local_hooks"):
+            parts.append("- Local hooks to weave in: " + "; ".join(research["local_hooks"][:4]))
+        if research.get("topic_clusters"):
+            parts.append("- Related subtopics for authority: " + ", ".join(research["topic_clusters"][:5]))
+        parts.append("")
+
     parts.append("Write the complete content now. Make it comprehensive, well-structured, and locally relevant.")
     return "\n".join(parts)
+
+
+def build_research_prompt(
+    keyword: str,
+    city: str,
+    state: str,
+    brief: dict,
+    serp_data: dict | None = None,
+    competitors: list | None = None,
+    paa_questions: list | None = None,
+) -> tuple:
+    """Build system + user prompts for pre-outline research analysis. Returns (system, user)."""
+    system = (
+        "You are an SEO research analyst. Analyze the provided SERP data, competitor content, "
+        "and SEO brief to produce a structured research brief that will guide content creation.\n\n"
+        "Return ONLY valid JSON with this structure:\n"
+        '{\n'
+        '  "search_intent": "primary intent (informational | transactional | local_service | comparison)",\n'
+        '  "intent_details": "1-2 sentence description of what the searcher really wants",\n'
+        '  "content_gaps": ["things top competitors miss or do poorly"],\n'
+        '  "key_entities": ["specific people, places, services, certifications, tools to mention for E-E-A-T"],\n'
+        '  "differentiation_angles": ["unique angles to stand out from competitors"],\n'
+        '  "questions_to_answer": ["synthesized questions from PAA + competitor gaps"],\n'
+        '  "format_signals": {"recommended_format": "listicle|guide|faq|narrative", "avg_sections": 8, "uses_lists": true},\n'
+        '  "local_hooks": ["specific local details, events, landmarks, regulations to reference"],\n'
+        '  "topic_clusters": ["related subtopics that strengthen topical authority"]\n'
+        '}'
+    )
+
+    user_parts = [
+        f'Analyze the search landscape for "{keyword}" in {city}, {state}.',
+        "",
+    ]
+
+    # POP brief data
+    terms = brief.get("term_targets", [])
+    if terms:
+        top_terms = sorted(terms, key=lambda t: t.get("weight", 0), reverse=True)[:20]
+        user_parts.append("**Top SEO terms by weight:**")
+        for t in top_terms:
+            user_parts.append(f'  - "{t.get("phrase", "")}" (target: {t.get("target", 0)}x, weight: {t.get("weight", 0)})')
+
+    variations = brief.get("variations", [])
+    if variations:
+        user_parts.append(f"\n**Keyword variations:** {', '.join(variations[:10])}")
+
+    lsa = brief.get("lsa_phrases", [])
+    if lsa:
+        lsa_text = []
+        for item in lsa[:15]:
+            if isinstance(item, dict):
+                lsa_text.append(item.get("phrase", ""))
+            elif isinstance(item, str):
+                lsa_text.append(item)
+        if lsa_text:
+            user_parts.append(f"\n**LSA/semantic terms:** {', '.join(lsa_text)}")
+
+    pop_headings = brief.get("competitor_headings", [])
+    if pop_headings:
+        user_parts.append("\n**Competitor headings (from POP):**")
+        for h in pop_headings[:12]:
+            user_parts.append(f"  - {h}")
+
+    # SERP data
+    if serp_data:
+        organic = serp_data.get("organic_results", [])
+        if organic:
+            user_parts.append("\n**Top organic results:**")
+            for r in organic[:5]:
+                user_parts.append(f"  - {r.get('title', '')} ({r.get('url', '')})")
+
+        related = serp_data.get("related_searches", [])
+        if related:
+            user_parts.append(f"\n**Related searches:** {', '.join(related[:8])}")
+
+    # PAA questions
+    if paa_questions:
+        user_parts.append("\n**People Also Ask + AI fanout queries:**")
+        for q in paa_questions[:10]:
+            user_parts.append(f"  - {q}")
+
+    # Scraped competitor content
+    if competitors:
+        user_parts.append("\n**Scraped competitor content (top 3 ranking pages):**")
+        for comp in competitors[:3]:
+            user_parts.append(f"\n--- {comp.get('title', 'Competitor')} ({comp.get('url', '')}) ---")
+            headings = comp.get("headings", [])
+            if headings:
+                user_parts.append("Headings: " + " | ".join(h.get("text", "") for h in headings[:8]))
+            content_preview = (comp.get("content") or "")[:1500]
+            if content_preview:
+                user_parts.append(f"Content preview: {content_preview}")
+
+    user_parts.append("\nAnalyze this data and return the research brief as JSON.")
+    return system, "\n".join(user_parts)
 
 
 def build_outline_prompt(
@@ -342,6 +454,7 @@ def build_outline_prompt(
     template: dict | None = None,
     paa: list | None = None,
     competitors: list | None = None,
+    research: dict | None = None,
 ) -> tuple:
     """Build system + user prompts for outline generation. Returns (system, user)."""
     system = (
@@ -394,6 +507,26 @@ def build_outline_prompt(
 
     if template and template.get("content"):
         user_parts.append(f"Follow this template structure:\n{template['content'][:2000]}")
+
+    if research:
+        user_parts.append("\n**RESEARCH ANALYSIS (use these insights to shape the outline):**")
+        if research.get("search_intent"):
+            user_parts.append(f"- Search intent: {research['search_intent']}")
+        if research.get("intent_details"):
+            user_parts.append(f"- Intent details: {research['intent_details']}")
+        if research.get("content_gaps"):
+            user_parts.append("- Content gaps to fill: " + "; ".join(research["content_gaps"][:5]))
+        if research.get("differentiation_angles"):
+            user_parts.append("- Differentiation angles: " + "; ".join(research["differentiation_angles"][:3]))
+        if research.get("questions_to_answer"):
+            user_parts.append("- Questions to answer: " + "; ".join(research["questions_to_answer"][:6]))
+        if research.get("local_hooks"):
+            user_parts.append("- Local hooks: " + "; ".join(research["local_hooks"][:4]))
+        if research.get("topic_clusters"):
+            user_parts.append("- Topic clusters: " + "; ".join(research["topic_clusters"][:5]))
+        fmt = research.get("format_signals", {})
+        if fmt:
+            user_parts.append(f"- Recommended format: {fmt.get('recommended_format', 'guide')}, ~{fmt.get('avg_sections', 8)} sections")
 
     user_parts.append("\nReturn the outline as JSON.")
     return system, "\n".join(user_parts)

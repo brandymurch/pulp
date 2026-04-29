@@ -111,10 +111,12 @@ async def _resume_pipeline_async(job_id: str):
         except Exception:
             pass
 
+    research = job.get("research")
+
     await _run_pipeline_phase2(
         job_id, keyword, city, state, brand_id, location_id,
         content_type, outline, brief, brand_data, style_examples,
-        template_content, local_context,
+        template_content, local_context, research=research,
     )
 
 
@@ -136,7 +138,7 @@ async def _run_pipeline_async(
     from app.services.pop import get_enriched_brief, score_content_with_pop, stub_score
     from app.services.content_generator import (
         build_system_prompt, build_user_prompt,
-        build_outline_prompt, build_revision_prompts,
+        build_outline_prompt, build_research_prompt, build_revision_prompts,
     )
 
     db = get_db()
@@ -231,7 +233,33 @@ async def _run_pipeline_async(
     # Combine PAA + AI fanout queries
     paa_questions = (serp_data.get("paa_questions") or []) + (serp_data.get("ai_fanout_queries") or [])
 
-    # -- STEP 2: Outline --
+    # -- STEP 2: Research Analysis --
+    _update_job(job_id, phase="research")
+    research = None
+    try:
+        research_system, research_user = build_research_prompt(
+            keyword=keyword, city=city, state=state,
+            brief=brief, serp_data=serp_data,
+            competitors=competitors_scraped,
+            paa_questions=paa_questions,
+        )
+        client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+        research_response = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4000, temperature=0.2,
+            system=research_system,
+            messages=[{"role": "user", "content": research_user}],
+        )
+        raw_research = "".join(b.text for b in research_response.content if hasattr(b, "text"))
+        raw_research = raw_research.strip()
+        if raw_research.startswith("```"):
+            raw_research = raw_research.split("\n", 1)[1].rsplit("```", 1)[0]
+        research = json.loads(raw_research)
+        _update_job(job_id, research=research)
+    except Exception as e:
+        logger.warning("Research analysis failed (continuing without): %s", e)
+
+    # -- STEP 3: Outline --
     _update_job(job_id, phase="outline")
     try:
         system, user = build_outline_prompt(
@@ -239,6 +267,7 @@ async def _run_pipeline_async(
             brief=brief, template=template_content,
             paa=paa_questions,
             competitors=competitors_scraped,
+            research=research,
         )
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
         response = await client.messages.create(
@@ -264,6 +293,7 @@ async def _run_pipeline_async(
         job_id, keyword, city, state, brand_id, location_id,
         content_type, outline, brief, brand_data, style_examples,
         template_content, local_context, competitors_scraped, feedback,
+        research=research,
     )
 
 
@@ -275,6 +305,7 @@ async def _run_pipeline_phase2(
     template_content: dict | None, local_context: dict | None,
     competitors: list | None = None,
     feedback: str | None = None,
+    research: dict | None = None,
 ):
     """Phase 2: generate, score, revise, save. Called after outline approval."""
     import anthropic
@@ -309,6 +340,7 @@ async def _run_pipeline_phase2(
             competitors=competitors or [], style_examples=style_examples,
             local_context=local_context,
             content_type=content_type,
+            research=research,
         )
 
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)

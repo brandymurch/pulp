@@ -10,12 +10,13 @@ import { ContentViewer } from "@/components/generate/ContentViewer";
 import { TermHeatmap } from "@/components/generate/TermHeatmap";
 import { POPScoreCard } from "@/components/generate/POPScoreCard";
 
-type Phase = "idle" | "pending" | "brief" | "outline" | "outline_review" | "generating" | "scoring" | "revising" | "done" | "error";
+type Phase = "idle" | "pending" | "brief" | "research" | "outline" | "outline_review" | "generating" | "scoring" | "revising" | "done" | "error";
 
 const phaseLabels: Record<Phase, string> = {
   idle: "Generate",
   pending: "Starting",
   brief: "Analyzing SEO landscape",
+  research: "Researching competitors",
   outline_review: "Review outline",
   outline: "Building outline",
   generating: "Writing content",
@@ -29,16 +30,17 @@ const phaseDescriptions: Record<Phase, string> = {
   idle: "Enter a keyword and city, select a template, and let the pipeline do the rest.",
   pending: "Starting the content pipeline...",
   brief: "Pulling competitive SERP data and analyzing term targets. This can take up to 2 minutes.",
-  outline: "Claude is building a content outline from the SEO data.",
+  research: "Analyzing competitors, identifying content gaps, and finding differentiation angles.",
+  outline: "Building a content outline from SEO data and research insights.",
   outline_review: "Review the outline below. Edit if needed, then approve to start writing.",
-  generating: "Writing content against the SEO brief and your voice settings.",
+  generating: "Writing content against the SEO brief, research, and your voice settings.",
   scoring: "Running SEO score analysis via POP. This can take a couple minutes.",
   revising: "Revising based on SEO feedback to improve the score.",
   done: "Content is ready. Review, edit, save, or export.",
   error: "Something went wrong.",
 };
 
-const activePhases = new Set(["pending", "brief", "outline", "generating", "scoring", "revising"]);
+const activePhases = new Set(["pending", "brief", "research", "outline", "generating", "scoring", "revising"]);
 
 export default function GeneratePage() {
   const searchParams = useSearchParams();
@@ -465,16 +467,18 @@ export default function GeneratePage() {
           </div>
           {/* Phase dots */}
           <div className="flex gap-4 mt-4">
-            {(["brief", "outline", "generating", "scoring"] as Phase[]).map(p => {
-              const pIdx = ["brief", "outline", "generating", "scoring"].indexOf(p);
-              const currentIdx = ["brief", "outline", "generating", "scoring"].indexOf(phase === "revising" ? "scoring" : phase);
+            {(["brief", "research", "outline", "generating", "scoring"] as Phase[]).map(p => {
+              const phases = ["brief", "research", "outline", "generating", "scoring"];
+              const pIdx = phases.indexOf(p);
+              const currentIdx = phases.indexOf(phase === "revising" ? "scoring" : phase);
               const isDone = pIdx < currentIdx || phase === "done";
               const isCurrent = p === phase || (phase === "revising" && p === "scoring");
+              const labels: Record<string, string> = { brief: "SEO Brief", research: "Research", outline: "Outline", generating: "Writing", scoring: "Scoring" };
               return (
                 <div key={p} className="flex items-center gap-1.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${isDone ? "bg-[#1F7A3A]" : isCurrent ? "bg-ink animate-pulse" : "bg-ink-40"}`} />
                   <span className={`text-[10px] tracking-[0.04em] ${isDone ? "text-[#1F7A3A]" : isCurrent ? "text-ink" : "text-ink-40"}`}>
-                    {p === "brief" ? "SEO Brief" : p === "outline" ? "Outline" : p === "generating" ? "Writing" : "Scoring"}
+                    {labels[p]}
                   </span>
                 </div>
               );
