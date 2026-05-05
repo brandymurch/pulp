@@ -13,7 +13,7 @@ interface VoiceTunerProps {
   onSave: (updated: any) => void;
 }
 
-const labelClass = "block text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-1.5";
+const labelClass = "block text-[12px] tracking-[0.14em] uppercase text-ink font-semibold mb-1.5";
 const inputClass = "w-full h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none focus:border-ink transition-colors";
 const textareaClass = "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
 
@@ -180,7 +180,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
         saving={saving}
         display={
           notes ? <div className="text-[13px] text-ink-70 whitespace-pre-wrap">{notes}</div>
-            : <div className="text-[12px] text-ink-40">No voice instructions set.</div>
+            : <div className="text-[13px] text-ink-70">No voice instructions set.</div>
         }
       >
         <textarea className={textareaClass} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Never use exclamation marks. Keep sentences under 20 words." rows={3} />
@@ -196,7 +196,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
         saving={saving}
         display={
           guidelines ? <div className="text-[13px] text-ink-70 whitespace-pre-wrap">{guidelines}</div>
-            : <div className="text-[12px] text-ink-40">No brand guidelines set.</div>
+            : <div className="text-[13px] text-ink-70">No brand guidelines set.</div>
         }
       >
         <textarea className={textareaClass} value={guidelines} onChange={e => setGuidelines(e.target.value)} placeholder={"Target audience: homeowners 30-65\nDo not mention competitors by name"} rows={4} />
@@ -218,7 +218,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
                 <span key={i} className="text-[11px] bg-[#F3F1ED] text-ink-70 px-2 py-1 rounded-lg">{s.trim()}</span>
               ))}
             </div>
-          ) : <div className="text-[12px] text-ink-40">No services set.</div>
+          ) : <div className="text-[13px] text-ink-70">No services set.</div>
         }
       >
         <textarea className={textareaClass} value={services} onChange={e => setServices(e.target.value)} placeholder={"Injection Foam Insulation\nSpray Foam Insulation"} rows={4} />
@@ -240,7 +240,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
                 <span key={i} className="text-[11px] bg-[rgba(185,28,28,0.06)] text-[#b91c1c]/70 px-2 py-1 rounded-lg">{c.trim()}</span>
               ))}
             </div>
-          ) : <div className="text-[12px] text-ink-40">No brand-level competitors set.</div>
+          ) : <div className="text-[13px] text-ink-70">No brand-level competitors set.</div>
         }
       >
         <input className={inputClass} value={competitors} onChange={e => setCompetitors(e.target.value)} placeholder="RetroFoam, ABC Insulation, CompetitorX" />
@@ -258,7 +258,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
         display={
           landingPageTemplate.trim() ? (
             <pre className="text-[11px] text-ink-70 leading-[1.6] whitespace-pre-wrap max-h-[300px] overflow-y-auto font-mono">{landingPageTemplate.slice(0, 500)}{landingPageTemplate.length > 500 ? "..." : ""}</pre>
-          ) : <div className="text-[12px] text-ink-40">No landing page template set. Content will follow the outline only.</div>
+          ) : <div className="text-[13px] text-ink-70">No landing page template set. Content will follow the outline only.</div>
         }
       >
         <textarea className={textareaClass} value={landingPageTemplate} onChange={e => setLandingPageTemplate(e.target.value)} placeholder={"# [Service] in [location]\n\n## Section heading\n\nParagraph content...\n\n## Another section\n\n..."} rows={16} />
@@ -309,7 +309,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
                 <span key={i} className="text-[11px] bg-[rgba(185,28,28,0.06)] text-[#b91c1c]/70 px-2 py-1 rounded-lg">{w.trim()}</span>
               ))}
             </div>
-          ) : <div className="text-[12px] text-ink-40">No brand-specific banned words. Global list still applies.</div>
+          ) : <div className="text-[13px] text-ink-70">No brand-specific banned words. Global list still applies.</div>
         }
       >
         <textarea className={textareaClass} value={bannedWords} onChange={e => setBannedWords(e.target.value)} placeholder="leverage, utilize, robust" rows={2} />
@@ -320,7 +320,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
       {brand?.prompt_learnings?.length > 0 && (
         <div className="border-[1.5px] border-line rounded-[14px] p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] tracking-[0.22em] uppercase text-ink-40 font-medium">
+            <h3 className="text-[12px] tracking-[0.14em] uppercase text-ink font-semibold">
               Learned patterns
             </h3>
             <span className="text-[10px] text-ink-40">{brand.prompt_learnings.length} insights</span>

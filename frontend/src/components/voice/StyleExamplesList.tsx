@@ -29,8 +29,8 @@ export function StyleExamplesList({ examples, onDelete }: StyleExamplesListProps
         <div key={ex.id} className="border-[1.5px] border-line rounded-[14px] p-5 hover:border-ink transition-colors">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div>
-              <div className="font-display font-[800] text-[15px] tracking-[-0.01em]">{ex.title}</div>
-              <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mt-1">
+              <div className="font-display font-[800] text-[17px] tracking-[-0.01em]">{ex.title}</div>
+              <div className="text-[11px] tracking-[0.14em] uppercase text-ink font-semibold mt-1.5">
                 {ex.word_count} words
                 {ex.url && <> / <a href={ex.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-ink">{new URL(ex.url).hostname}</a></>}
               </div>

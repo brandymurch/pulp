@@ -31,7 +31,7 @@ export function AddStyleExample({ onAdd }: AddStyleExampleProps) {
 
   return (
     <form onSubmit={handleSubmit} className="border-[1.5px] border-ink rounded-[18px] p-6 space-y-4">
-      <h3 className="font-display font-[800] text-base tracking-[-0.02em] m-0">
+      <h3 className="font-display font-[800] text-xl tracking-[-0.01em] m-0">
         Add <span className="font-display font-normal text-pulp-deep">example</span>
       </h3>
 
@@ -42,7 +42,7 @@ export function AddStyleExample({ onAdd }: AddStyleExampleProps) {
 
       <div>
         <div className="flex justify-between items-baseline mb-2">
-          <label className="text-[10px] tracking-[0.22em] uppercase text-ink-70">Content</label>
+          <label className="text-[12px] tracking-[0.14em] uppercase text-ink font-semibold">Content</label>
           {wordCount > 0 && <span className="text-[10px] text-ink-40">{wordCount} words</span>}
         </div>
         <textarea
