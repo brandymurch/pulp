@@ -61,6 +61,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
   const [landingPageTemplate, setLandingPageTemplate] = useState("");
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [generatingTemplate, setGeneratingTemplate] = useState(false);
 
   useEffect(() => {
     if (!brand) return;
@@ -261,7 +262,36 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
         }
       >
         <textarea className={textareaClass} value={landingPageTemplate} onChange={e => setLandingPageTemplate(e.target.value)} placeholder={"# [Service] in [location]\n\n## Section heading\n\nParagraph content...\n\n## Another section\n\n..."} rows={16} />
-        <div className="text-[10px] text-ink-40 mt-1">Use [location], [city], [state] as placeholders. This structure guides every landing page generated for this brand.</div>
+        <div className="flex items-center gap-3 mt-2">
+          <div className="text-[10px] text-ink-40 flex-1">Use [location], [city], [state] as placeholders. This structure guides every landing page generated for this brand.</div>
+          <button
+            onClick={async () => {
+              setGeneratingTemplate(true);
+              try {
+                const startRes = await apiFetch(`/api/brands/${brand.id}/generate-template`, { method: "POST" });
+                if (!startRes.ok) return;
+                const { job_id } = await startRes.json();
+                // Poll for result
+                for (let i = 0; i < 120; i++) {
+                  await new Promise(r => setTimeout(r, 3000));
+                  const pollRes = await apiFetch(`/api/brands/generate-template/status/${job_id}`);
+                  if (!pollRes.ok) continue;
+                  const data = await pollRes.json();
+                  if (data.status === "done") {
+                    setLandingPageTemplate(data.template);
+                    break;
+                  }
+                }
+              } catch {} finally {
+                setGeneratingTemplate(false);
+              }
+            }}
+            disabled={generatingTemplate}
+            className="text-[11px] text-pulp-deep hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 font-medium whitespace-nowrap disabled:opacity-50"
+          >
+            {generatingTemplate ? "Analyzing SEO data..." : "Generate from POP"}
+          </button>
+        </div>
       </EditableSection>
 
       {/* Banned words */}
