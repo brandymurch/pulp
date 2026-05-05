@@ -326,6 +326,14 @@ async def _run_pipeline_phase2(
             brand_competitors=brand_data.get("competitors") or [],
             prompt_learnings=brand_data.get("prompt_learnings"),
         )
+        logger.info(
+            "generate.prompt_inputs job=%s brand=%s content_type=%s "
+            "brand_template_len=%d outline_present=%s competitors=%d "
+            "style_examples=%d brand_name=%r",
+            job_id, brand_id, content_type,
+            len(brand_template or ""), bool(outline), len(competitors or []),
+            len(style_examples or []), brand_data.get("name") or "",
+        )
         user_prompt = build_user_prompt(
             keyword=keyword, city=city, state=state,
             brief=brief, template=template_content, outline=outline,
