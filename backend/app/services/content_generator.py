@@ -301,7 +301,16 @@ def build_user_prompt(
     if brand_template:
         location = f"{city}, {state}" if state else city
         resolved = brand_template.replace("[location]", location).replace("[city]", city).replace("[state]", state)
-        parts.append("**BRAND CONTENT TEMPLATE (follow this general structure and section flow. You have creative freedom WITHIN each section to write SEO-optimized content using the POP term targets, research insights, and local context. Replace placeholder text with original content -- do not copy the template text verbatim):**")
+        parts.append("**BRAND CONTENT TEMPLATE (the structure is REQUIRED, the words are not):**\n\n"
+                     "STRUCTURE -- MUST MATCH EXACTLY:\n"
+                     "- Keep every section in the same order.\n"
+                     "- Keep every heading level (H1/H2/H3) at the same level the template uses.\n"
+                     "- Keep every structural element present in the template: lists, blockquotes, CTA buttons/links, tables, callouts, FAQ blocks. If the template has 3 bullets in a section, output 3 bullets in that section. If it has a CTA link, output a CTA link in the same spot.\n"
+                     "- Do not add new sections, remove sections, or reorder sections.\n\n"
+                     "CONTENT -- CREATIVE FREEDOM WITHIN EACH SECTION:\n"
+                     "- Rewrite body copy from scratch using the POP term targets, research insights, local context, and brand voice. Do not copy template text verbatim.\n"
+                     "- You may rephrase headings to be SEO-relevant, but keep their level and position.\n"
+                     "- Replace any [placeholder] tokens with original copy specific to this location.")
         parts.append(f"```\n{resolved}\n```")
         parts.append("")
 
