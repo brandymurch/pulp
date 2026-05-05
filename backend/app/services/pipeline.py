@@ -310,6 +310,20 @@ async def _run_pipeline_phase2(
         brand_templates = brand_data.get("content_templates") or {}
         brand_template = brand_templates.get(content_type) or ""
 
+        # City-level enrichment for the target page city. Franchise-level fields
+        # on the location (team_lead, certifications, reviews, etc.) override.
+        from app.services.location_enrich import enrich_for_city, merge_with_franchise_context
+        try:
+            city_enrichment = await enrich_for_city(
+                city=city, state=state,
+                brand_name=brand_data.get("name") or "",
+                services=brand_data.get("services") or [],
+            )
+        except Exception as e:
+            logger.warning("city enrichment failed (continuing without): %s", e)
+            city_enrichment = {}
+        local_context = merge_with_franchise_context(city_enrichment, local_context)
+
         # Combine brand guidelines with user feedback
         guidelines = brand_data.get("brand_guidelines") or ""
         if feedback:
