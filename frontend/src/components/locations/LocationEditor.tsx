@@ -43,6 +43,8 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [importMessage, setImportMessage] = useState("");
+  const [enriching, setEnriching] = useState(false);
+  const [enrichMessage, setEnrichMessage] = useState("");
 
   useEffect(() => {
     if (location) {
@@ -115,6 +117,64 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
 
   function removeReview(index: number) {
     setReviews(prev => prev.filter((_, i) => i !== index));
+  }
+
+  async function autoSuggestContext() {
+    if (!city || !state) return;
+    setEnriching(true);
+    setEnrichMessage("");
+    try {
+      const res = await apiFetch("/api/locations/enrich", {
+        method: "POST",
+        body: JSON.stringify({
+          city,
+          state,
+          brand_name: brandName,
+        }),
+      });
+      if (!res.ok) {
+        setEnrichMessage("Enrichment failed. Try again.");
+        return;
+      }
+      const data = await res.json();
+
+      const filled: string[] = [];
+      if (!neighborhoods && Array.isArray(data.neighborhoods) && data.neighborhoods.length) {
+        setNeighborhoods(data.neighborhoods.join(", "));
+        filled.push("neighborhoods");
+      }
+      if (!housingNotes && data.housing_notes) {
+        setHousingNotes(data.housing_notes);
+        filled.push("housing");
+      }
+      if (!climateNotes && data.climate_notes) {
+        setClimateNotes(data.climate_notes);
+        filled.push("climate");
+      }
+      if (!commonJob && data.common_job) {
+        setCommonJob(data.common_job);
+        filled.push("common job");
+      }
+      if (!localChallenge && data.local_challenge) {
+        setLocalChallenge(data.local_challenge);
+        filled.push("local challenge");
+      }
+      if (!funFact && data.fun_fact) {
+        setFunFact(data.fun_fact);
+        filled.push("local connection");
+      }
+
+      setAdditionalOpen(true);
+      if (filled.length === 0) {
+        setEnrichMessage("All fields already filled. Clear a field and re-run to overwrite.");
+      } else {
+        setEnrichMessage(`Filled ${filled.length} field${filled.length === 1 ? "" : "s"}: ${filled.join(", ")}. Edit before saving.`);
+      }
+    } catch {
+      setEnrichMessage("Enrichment failed. Try again.");
+    } finally {
+      setEnriching(false);
+    }
   }
 
   async function handleSave() {
@@ -242,12 +302,26 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
           )}
         </div>
 
-        {/* Additional info toggle */}
-        <button onClick={() => setAdditionalOpen(!additionalOpen)}
-          className="flex items-center gap-2 text-[12px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0">
-          <span className="text-[14px] leading-none">{additionalOpen ? "-" : "+"}</span>
-          {additionalOpen ? "Hide additional information" : "Add additional information"}
-        </button>
+        {/* Additional info toggle + auto-suggest */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <button onClick={() => setAdditionalOpen(!additionalOpen)}
+            className="flex items-center gap-2 text-[12px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0">
+            <span className="text-[14px] leading-none">{additionalOpen ? "-" : "+"}</span>
+            {additionalOpen ? "Hide additional information" : "Add additional information"}
+          </button>
+          {city && state && (
+            <button
+              onClick={autoSuggestContext}
+              disabled={enriching}
+              className="text-[12px] text-pulp-deep hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 font-medium disabled:opacity-50"
+            >
+              {enriching ? "Suggesting..." : "Auto-suggest from city"}
+            </button>
+          )}
+        </div>
+        {enrichMessage && (
+          <div className="text-[11px] text-ink-70">{enrichMessage}</div>
+        )}
 
         {additionalOpen && (
           <div className="space-y-3 pl-4 border-l-[1.5px] border-line">
