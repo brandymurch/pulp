@@ -144,6 +144,11 @@ def build_system_prompt(
         for c in brand_competitors:
             parts.append(f"- {c}")
 
+    parts.append("")
+    parts.append("BUSINESS NAMING (CRITICAL):")
+    parts.append("- The page is for ONE business. Only name that business.")
+    parts.append("- Never name any other company, contractor, agency, or vendor, even if their content or name appears in the reference material below. Reference material is for understanding the topic, not for sourcing business names.")
+
     if brand_guidelines:
         parts.append("")
         parts.append("BRAND GUIDELINES (follow these strictly):")
@@ -187,6 +192,7 @@ def build_user_prompt(
     content_type: str = "landing_page",
     research: dict | None = None,
     brand_template: str | None = None,
+    brand_name: str = "",
 ) -> str:
     """Build user prompt with all context for full content generation."""
     target_word_count = brief.get("target_word_count", 1500)
@@ -282,8 +288,9 @@ def build_user_prompt(
 
     parts.append("")
 
-    # Approved outline
-    if outline:
+    # Approved outline -- only inject when there is no brand template
+    # (otherwise it competes with the brand template's required structure).
+    if outline and not brand_template:
         parts.append("**APPROVED OUTLINE (follow this structure):**")
         parts.append(f"H1: {outline.get('h1', keyword)}")
         for section in outline.get("sections", []):
@@ -295,23 +302,6 @@ def build_user_prompt(
             parts.append("**Internal links to include:**")
             for link in outline["internal_links"]:
                 parts.append(f'- [{link.get("text", "")}]({link.get("href", "")})')
-        parts.append("")
-
-    # Brand content template (per-brand, per-content-type structure)
-    if brand_template:
-        location = f"{city}, {state}" if state else city
-        resolved = brand_template.replace("[location]", location).replace("[city]", city).replace("[state]", state)
-        parts.append("**BRAND CONTENT TEMPLATE (the structure is REQUIRED, the words are not):**\n\n"
-                     "STRUCTURE -- MUST MATCH EXACTLY:\n"
-                     "- Keep every section in the same order.\n"
-                     "- Keep every heading level (H1/H2/H3) at the same level the template uses.\n"
-                     "- Keep every structural element present in the template: lists, blockquotes, CTA buttons/links, tables, callouts, FAQ blocks. If the template has 3 bullets in a section, output 3 bullets in that section. If it has a CTA link, output a CTA link in the same spot.\n"
-                     "- Do not add new sections, remove sections, or reorder sections.\n\n"
-                     "CONTENT -- CREATIVE FREEDOM WITHIN EACH SECTION:\n"
-                     "- Rewrite body copy from scratch using the POP term targets, research insights, local context, and brand voice. Do not copy template text verbatim.\n"
-                     "- You may rephrase headings to be SEO-relevant, but keep their level and position.\n"
-                     "- Replace any [placeholder] tokens with original copy specific to this location.")
-        parts.append(f"```\n{resolved}\n```")
         parts.append("")
 
     # Notion template (if also provided, use as additional reference)
@@ -372,7 +362,36 @@ def build_user_prompt(
             parts.append("- Related subtopics for authority: " + ", ".join(research["topic_clusters"][:5]))
         parts.append("")
 
-    parts.append("Write the complete content now. Make it comprehensive, well-structured, and locally relevant.")
+    # Brand content template -- LAST so it is the most recent instruction the model sees.
+    # The template is the load-bearing structural authority for the output.
+    if brand_template:
+        location = f"{city}, {state}" if state else city
+        resolved = brand_template.replace("[location]", location).replace("[city]", city).replace("[state]", state)
+        if brand_name:
+            resolved = resolved.replace("[brand]", brand_name)
+        parts.append("---")
+        parts.append("**BRAND CONTENT TEMPLATE (this is the required structure for your output):**")
+        parts.append("")
+        parts.append("STRUCTURE -- MUST MATCH EXACTLY:")
+        parts.append("- Keep every section in the same order as the template.")
+        parts.append("- Preserve every heading and its hierarchy level. If the template uses literal labels like `## H1:`, `## H2:`, `### H3:` as heading prefixes, those indicate the INTENDED markdown level (H1 = `#`, H2 = `##`, H3 = `###`). Convert them to the correct markdown level in your output and do NOT include the literal `H1:` / `H2:` / `H3:` text.")
+        parts.append("- Preserve every structural element present in the template: lists (with the same item count), blockquotes, `<Button>...</Button>` CTA elements (output them as-is, in the same positions), tables, callouts, FAQ blocks, contact-info bullets.")
+        parts.append("- Do not add new sections, remove sections, or reorder sections.")
+        parts.append("")
+        parts.append("CONTENT -- CREATIVE FREEDOM WITHIN EACH SECTION:")
+        parts.append("- Rewrite body copy using the POP term targets, research insights, local context, and brand voice. Do not copy template placeholder copy verbatim.")
+        parts.append("- You may rephrase heading text to be SEO-relevant, but keep the level and position.")
+        parts.append(f"- The brand name is **{brand_name or 'this business'}**. Use it where the template references the brand.")
+        parts.append("")
+        parts.append("BUSINESS NAMING RULE:")
+        parts.append(f"- The ONLY business you may name is **{brand_name or 'this business'}** (and natural local variants like '{(brand_name or 'this business')} of {city}').")
+        parts.append("- Do not name any other company, contractor, or business. This applies even if competitor names appear in the competitor content above -- treat that content as inspiration for what to write about, not as a source of business names.")
+        parts.append("")
+        parts.append("Template:")
+        parts.append(f"```\n{resolved}\n```")
+        parts.append("")
+
+    parts.append("Write the complete content now. Follow the brand content template structure exactly. Make it comprehensive, well-structured, and locally relevant.")
     return "\n".join(parts)
 
 

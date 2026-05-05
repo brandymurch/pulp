@@ -334,6 +334,7 @@ async def _run_pipeline_phase2(
             content_type=content_type,
             research=research,
             brand_template=brand_template,
+            brand_name=brand_data.get("name") or "",
         )
 
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
