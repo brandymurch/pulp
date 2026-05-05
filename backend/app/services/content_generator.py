@@ -301,7 +301,7 @@ def build_user_prompt(
     if brand_template:
         location = f"{city}, {state}" if state else city
         resolved = brand_template.replace("[location]", location).replace("[city]", city).replace("[state]", state)
-        parts.append("**BRAND CONTENT TEMPLATE (follow this general structure and section flow, adapting content to the specific keyword and location. Replace placeholder text with real, SEO-optimized content):**")
+        parts.append("**BRAND CONTENT TEMPLATE (follow this general structure and section flow. You have creative freedom WITHIN each section to write SEO-optimized content using the POP term targets, research insights, and local context. Replace placeholder text with original content -- do not copy the template text verbatim):**")
         parts.append(f"```\n{resolved}\n```")
         parts.append("")
 

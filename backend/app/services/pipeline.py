@@ -103,13 +103,6 @@ async def _resume_pipeline_async(job_id: str):
             pass
 
     template_content = None
-    template_id = job.get("template_id")
-    if template_id:
-        try:
-            from app.services.notion import get_template
-            template_content = get_template(template_id)
-        except Exception:
-            pass
 
     research = job.get("research")
 
@@ -170,14 +163,8 @@ async def _run_pipeline_async(
         except Exception:
             pass
 
-    # Load template from Notion if template_id provided
+    # Brand-level templates are now used instead of Notion
     template_content = None
-    if template_id:
-        try:
-            from app.services.notion import get_template
-            template_content = get_template(template_id)
-        except Exception as e:
-            logger.warning("Template load failed: %s", e)
 
     # -- STEP 1: SEO Brief + Competitors + SERP (parallel) --
     _update_job(job_id, phase="brief")

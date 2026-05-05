@@ -4,7 +4,6 @@ import { useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/shared/Button";
 import { KeywordInput } from "@/components/generate/KeywordInput";
-import { TemplateSelector } from "@/components/generate/TemplateSelector";
 import { CompetitorInput } from "@/components/generate/CompetitorInput";
 import { ContentViewer } from "@/components/generate/ContentViewer";
 import { TermHeatmap } from "@/components/generate/TermHeatmap";
@@ -53,7 +52,6 @@ export default function GeneratePage() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [contentType, setContentType] = useState("landing_page");
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
   const [pageSlug, setPageSlug] = useState("");
   const [locations, setLocations] = useState<any[]>([]);
@@ -246,7 +244,6 @@ export default function GeneratePage() {
           state,
           brand_id: brandId,
           location_id: selectedLocationId || undefined,
-          template_id: selectedTemplate?.id || undefined,
           content_type: contentType,
           competitor_urls: competitorUrls.length > 0 ? competitorUrls : undefined,
           feedback: feedback.trim() || undefined,
@@ -279,7 +276,7 @@ export default function GeneratePage() {
           content,
           outline: outlineData ? JSON.stringify(outlineData) : null,
           content_type: contentType,
-          template_name: selectedTemplate?.name || null,
+          template_name: null,
           model: "sonnet",
           word_count: wordCount || content.split(/\s+/).filter(Boolean).length,
           input_tokens: usage?.input_tokens || 0,
@@ -377,7 +374,7 @@ export default function GeneratePage() {
             <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Brand</label>
             <select value={brandId} onChange={e => {
               const brand = brands.find(b => b.id === e.target.value);
-              if (brand) { setBrandId(brand.id); setBrandName(brand.name); setSelectedTemplate(null); setSelectedLocationId(""); }
+              if (brand) { setBrandId(brand.id); setBrandName(brand.name); setSelectedLocationId(""); }
             }} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
               {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
@@ -441,7 +438,6 @@ export default function GeneratePage() {
                 <option value="product_page">Product Page</option>
               </select>
             </div>
-            <TemplateSelector brandName={brandName} selectedId={selectedTemplate?.id || ""} onSelect={setSelectedTemplate} />
             <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
           </div>
 
