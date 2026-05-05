@@ -319,6 +319,10 @@ async def _run_pipeline_phase2(
 
     _update_job(job_id, phase="generating")
     try:
+        # Resolve brand content template for this content type
+        brand_templates = brand_data.get("content_templates") or {}
+        brand_template = brand_templates.get(content_type) or ""
+
         # Combine brand guidelines with user feedback
         guidelines = brand_data.get("brand_guidelines") or ""
         if feedback:
@@ -342,6 +346,7 @@ async def _run_pipeline_phase2(
             local_context=local_context,
             content_type=content_type,
             research=research,
+            brand_template=brand_template,
         )
 
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)

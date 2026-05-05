@@ -58,6 +58,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
   const [services, setServices] = useState("");
   const [guidelines, setGuidelines] = useState("");
   const [competitors, setCompetitors] = useState("");
+  const [landingPageTemplate, setLandingPageTemplate] = useState("");
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -78,6 +79,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
     setServices((brand.services || []).join("\n"));
     setGuidelines(brand.brand_guidelines || "");
     setCompetitors((brand.competitors || []).join(", "));
+    setLandingPageTemplate((brand.content_templates || {}).landing_page || "");
     setEditingSection(null);
   }, [brand]);
 
@@ -96,6 +98,10 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
           services: svcList,
           brand_guidelines: guidelines,
           competitors: compList,
+          content_templates: {
+            ...(brand.content_templates || {}),
+            landing_page: landingPageTemplate,
+          },
         }),
       });
       if (res.ok) {
@@ -120,6 +126,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
     setServices((brand.services || []).join("\n"));
     setGuidelines(brand.brand_guidelines || "");
     setCompetitors((brand.competitors || []).join(", "));
+    setLandingPageTemplate((brand.content_templates || {}).landing_page || "");
     setEditingSection(null);
   }
 
@@ -237,6 +244,24 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
       >
         <input className={inputClass} value={competitors} onChange={e => setCompetitors(e.target.value)} placeholder="RetroFoam, ABC Insulation, CompetitorX" />
         <div className="text-[10px] text-ink-40 mt-1">Applied to all locations. Location-level competitors are added on top.</div>
+      </EditableSection>
+
+      {/* Landing page template */}
+      <EditableSection
+        title="Landing page template"
+        editing={editingSection === "template"}
+        onEdit={() => setEditingSection("template")}
+        onSave={saveSection}
+        onCancel={cancelEdit}
+        saving={saving}
+        display={
+          landingPageTemplate.trim() ? (
+            <pre className="text-[11px] text-ink-70 leading-[1.6] whitespace-pre-wrap max-h-[300px] overflow-y-auto font-mono">{landingPageTemplate.slice(0, 500)}{landingPageTemplate.length > 500 ? "..." : ""}</pre>
+          ) : <div className="text-[12px] text-ink-40">No landing page template set. Content will follow the outline only.</div>
+        }
+      >
+        <textarea className={textareaClass} value={landingPageTemplate} onChange={e => setLandingPageTemplate(e.target.value)} placeholder={"# [Service] in [location]\n\n## Section heading\n\nParagraph content...\n\n## Another section\n\n..."} rows={16} />
+        <div className="text-[10px] text-ink-40 mt-1">Use [location], [city], [state] as placeholders. This structure guides every landing page generated for this brand.</div>
       </EditableSection>
 
       {/* Banned words */}

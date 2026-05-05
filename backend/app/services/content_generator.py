@@ -186,6 +186,7 @@ def build_user_prompt(
     local_context: dict | None = None,
     content_type: str = "landing_page",
     research: dict | None = None,
+    brand_template: str | None = None,
 ) -> str:
     """Build user prompt with all context for full content generation."""
     target_word_count = brief.get("target_word_count", 1500)
@@ -296,7 +297,15 @@ def build_user_prompt(
                 parts.append(f'- [{link.get("text", "")}]({link.get("href", "")})')
         parts.append("")
 
-    # Template
+    # Brand content template (per-brand, per-content-type structure)
+    if brand_template:
+        location = f"{city}, {state}" if state else city
+        resolved = brand_template.replace("[location]", location).replace("[city]", city).replace("[state]", state)
+        parts.append("**BRAND CONTENT TEMPLATE (follow this general structure and section flow, adapting content to the specific keyword and location. Replace placeholder text with real, SEO-optimized content):**")
+        parts.append(f"```\n{resolved}\n```")
+        parts.append("")
+
+    # Notion template (if also provided, use as additional reference)
     if template and template.get("content"):
         parts.append("**TEMPLATE (follow this structure exactly):**")
         parts.append(f"```\n{template['content']}\n```")
