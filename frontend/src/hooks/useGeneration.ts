@@ -1,15 +1,16 @@
 "use client";
 import { useState, useRef, useCallback } from "react";
 import { API_URL } from "@/lib/api";
+import type { GenerationPayload, Usage } from "@/lib/types";
 
 export function useGeneration() {
   const [output, setOutput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usage, setUsage] = useState<{ input_tokens: number; output_tokens: number } | null>(null);
+  const [usage, setUsage] = useState<Usage | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const generate = useCallback(async (path: string, payload: any) => {
+  const generate = useCallback(async (path: string, payload: GenerationPayload) => {
     const controller = new AbortController();
     abortRef.current = controller;
     setOutput("");

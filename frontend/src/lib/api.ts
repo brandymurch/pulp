@@ -18,3 +18,13 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
   return res;
 }
+
+/** Like apiFetch, but throws on any non-2xx response (with the backend's `detail` when available). */
+export async function apiFetchOk(path: string, options: RequestInit = {}) {
+  const res = await apiFetch(path, options);
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail || `Request failed (${res.status})`);
+  }
+  return res;
+}

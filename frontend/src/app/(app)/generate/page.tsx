@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchOk } from "@/lib/api";
+import { ACTIVE_PIPELINE_PHASES, type Brand, type Location, type OutlineData, type PipelinePhase, type PopBrief, type PopScore, type Usage } from "@/lib/types";
 import { Button } from "@/components/shared/Button";
 import { KeywordInput } from "@/components/generate/KeywordInput";
 import { CompetitorInput } from "@/components/generate/CompetitorInput";
@@ -9,7 +10,7 @@ import { ContentViewer } from "@/components/generate/ContentViewer";
 import { TermHeatmap } from "@/components/generate/TermHeatmap";
 import { POPScoreCard } from "@/components/generate/POPScoreCard";
 
-type Phase = "idle" | "pending" | "brief" | "research" | "outline" | "outline_review" | "generating" | "scoring" | "revising" | "done" | "error";
+type Phase = PipelinePhase | "idle";
 
 const phaseLabels: Record<Phase, string> = {
   idle: "Generate",
@@ -39,9 +40,11 @@ const phaseDescriptions: Record<Phase, string> = {
   error: "Something went wrong.",
 };
 
-const activePhases = new Set(["pending", "brief", "research", "outline", "generating", "scoring", "revising"]);
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLL_FAILURES = 5;
+const MAX_POLL_DURATION_MS = 30 * 60 * 1000; // hard cap: stop polling after 30 minutes
 
-export default function GeneratePage() {
+function GeneratePageInner() {
   const searchParams = useSearchParams();
   const urlBrandId = searchParams.get("brand") || "";
   const urlLocationId = searchParams.get("location") || "";
@@ -54,11 +57,11 @@ export default function GeneratePage() {
   const [contentType, setContentType] = useState("landing_page");
   const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
   const [pageSlug, setPageSlug] = useState("");
-  const [locations, setLocations] = useState<any[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
 
   // Brand
-  const [brands, setBrands] = useState<any[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [brandId, setBrandId] = useState("");
   const [brandName, setBrandName] = useState("");
 
@@ -66,14 +69,14 @@ export default function GeneratePage() {
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [content, setContent] = useState("");
-  const [brief, setBrief] = useState<any>(null);
-  const [outlineData, setOutlineData] = useState<any>(null);
-  const [popScore, setPopScore] = useState<any>(null);
+  const [brief, setBrief] = useState<PopBrief | null>(null);
+  const [outlineData, setOutlineData] = useState<OutlineData | null>(null);
+  const [popScore, setPopScore] = useState<PopScore | null>(null);
   const [revisionCount, setRevisionCount] = useState(0);
   const [wordCount, setWordCount] = useState(0);
-  const [usage, setUsage] = useState<any>(null);
+  const [usage, setUsage] = useState<Usage | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [pollStalled, setPollStalled] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -90,13 +93,16 @@ export default function GeneratePage() {
         if (res.ok) {
           const data = await res.json();
           setBrands(data);
-          const target = urlBrandId ? data.find((b: any) => b.id === urlBrandId) : data[0];
+          const target = urlBrandId ? data.find((b: Brand) => b.id === urlBrandId) : data[0];
           if (target) {
             setBrandId(target.id);
             setBrandName(target.name);
           }
         }
-      } catch {}
+      } catch (err) {
+        console.error("Failed to load brands:", err);
+        setError("Failed to load brands. Refresh the page to try again.");
+      }
     }
     loadBrands();
   }, [urlBrandId]);
@@ -122,11 +128,13 @@ export default function GeneratePage() {
         if (data.score) setPopScore(data.score);
         if (data.word_count) setWordCount(data.word_count);
         // If still active, start polling
-        const active = ["pending", "brief", "outline", "generating", "scoring", "revising"];
-        if (active.includes(data.phase)) {
+        if (ACTIVE_PIPELINE_PHASES.has(data.phase)) {
           startPolling(urlPipelineId);
         }
-      } catch {}
+      } catch (err) {
+        console.error("Failed to load pipeline job:", err);
+        setError("Failed to load the pipeline job. Refresh the page to try again.");
+      }
     }
     loadPipeline();
   }, [urlPipelineId]);
@@ -141,15 +149,17 @@ export default function GeneratePage() {
         const jobs = await res.json();
         if (jobs.length > 0) {
           const latest = jobs[0];
-          const activePhasesList = ["pending", "brief", "outline", "generating", "scoring", "revising"];
-          if (activePhasesList.includes(latest.phase)) {
+          if (ACTIVE_PIPELINE_PHASES.has(latest.phase)) {
             setPipelineId(latest.id);
             setPhase(latest.phase as Phase);
             setKeyword(latest.keyword || "");
             startPolling(latest.id);
           }
         }
-      } catch {}
+      } catch (err) {
+        // Background check only - log, don't block the form.
+        console.error("Failed to check for running pipeline:", err);
+      }
     }
     checkRunning();
   }, [brandId]);
@@ -164,7 +174,7 @@ export default function GeneratePage() {
           const locs = await res.json();
           setLocations(locs);
           if (urlLocationId) {
-            const target = locs.find((l: any) => l.id === urlLocationId);
+            const target = locs.find((l: Location) => l.id === urlLocationId);
             if (target) {
               setSelectedLocationId(target.id);
               setCity(target.city);
@@ -172,7 +182,10 @@ export default function GeneratePage() {
             }
           }
         }
-      } catch {}
+      } catch (err) {
+        console.error("Failed to load locations:", err);
+        setError("Failed to load locations. Refresh the page to try again.");
+      }
     }
     loadLocations();
   }, [brandId, urlLocationId]);
@@ -181,11 +194,22 @@ export default function GeneratePage() {
   function startPolling(id: string) {
     stopPolling();
     setElapsed(0);
+    setPollStalled(false);
+    let failures = 0;
+    const startedAt = Date.now();
     elapsedRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
     pollRef.current = setInterval(async () => {
+      // Hard cap: don't poll forever
+      if (Date.now() - startedAt > MAX_POLL_DURATION_MS) {
+        stopPolling();
+        setPollStalled(true);
+        setError("This job appears stuck. It has been running for over 30 minutes.");
+        return;
+      }
       try {
         const res = await apiFetch(`/api/pipeline/status/${id}`);
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`Status check failed (${res.status})`);
+        failures = 0;
         const data = await res.json();
 
         setPhase(data.phase as Phase);
@@ -204,8 +228,16 @@ export default function GeneratePage() {
         if (data.phase === "done" || data.phase === "error" || data.phase === "outline_review") {
           stopPolling();
         }
-      } catch {}
-    }, 3000);
+      } catch (err) {
+        failures += 1;
+        console.error("Pipeline status poll failed:", err);
+        if (failures >= MAX_POLL_FAILURES) {
+          stopPolling();
+          setPollStalled(true);
+          setError("Lost connection while checking pipeline status.");
+        }
+      }
+    }, POLL_INTERVAL_MS);
   }
 
   function stopPolling() {
@@ -227,7 +259,6 @@ export default function GeneratePage() {
     setRevisionCount(0);
     setWordCount(0);
     setUsage(null);
-    setSaved(false);
     setExportUrl(null);
 
     try {
@@ -264,31 +295,8 @@ export default function GeneratePage() {
     }
   }
 
-  // Save to history
-  async function saveToHistory() {
-    try {
-      await apiFetch("/api/generations", {
-        method: "POST",
-        body: JSON.stringify({
-          brand_id: brandId,
-          location_id: selectedLocationId || undefined,
-          keyword, city,
-          content,
-          outline: outlineData ? JSON.stringify(outlineData) : null,
-          content_type: contentType,
-          template_name: null,
-          model: "sonnet",
-          word_count: wordCount || content.split(/\s+/).filter(Boolean).length,
-          input_tokens: usage?.input_tokens || 0,
-          output_tokens: usage?.output_tokens || 0,
-          pop_brief: brief,
-          pop_score: popScore,
-          revision_count: revisionCount,
-        }),
-      });
-      setSaved(true);
-    } catch {}
-  }
+  // Note: no manual "save to history" here - the backend pipeline auto-saves
+  // the generation to the `generations` table when the job completes.
 
   // Export to Drive
   async function exportToDrive() {
@@ -331,11 +339,11 @@ export default function GeneratePage() {
     setWordCount(0);
     setUsage(null);
     setError(null);
-    setSaved(false);
+    setPollStalled(false);
     setExportUrl(null);
   }
 
-  const isActive = activePhases.has(phase);
+  const isActive = ACTIVE_PIPELINE_PHASES.has(phase);
   const mins = Math.floor(elapsed / 60);
   const secs = elapsed % 60;
   const timerDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}s`;
@@ -361,8 +369,16 @@ export default function GeneratePage() {
 
       {/* Error */}
       {error && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
-          {error}
+        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)] flex items-center justify-between gap-3 flex-wrap">
+          <span>{error}</span>
+          {pollStalled && pipelineId && (
+            <button
+              onClick={() => { setError(null); startPolling(pipelineId); }}
+              className="text-[12px] font-medium underline cursor-pointer bg-transparent border-0 p-0 text-[#b91c1c]"
+            >
+              Check again
+            </button>
+          )}
         </div>
       )}
 
@@ -414,7 +430,7 @@ export default function GeneratePage() {
                 Keyword: <span className="text-ink">{brands.find(b => b.id === brandId)?.primary_keyword || brandName} {city} {state}</span>
               </div>
               <div>
-                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
+                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug (optional)</label>
                 <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
               </div>
             </div>
@@ -422,7 +438,7 @@ export default function GeneratePage() {
             <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
               <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
               <div>
-                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug</label>
+                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug (optional)</label>
                 <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
               </div>
             </div>
@@ -441,13 +457,13 @@ export default function GeneratePage() {
             <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
           </div>
 
-          {(!selectedLocationId || !city.trim() || !pageSlug.trim() || (contentType !== "landing_page" && !keyword.trim())) && (
+          {(!selectedLocationId || !city.trim() || (contentType !== "landing_page" && !keyword.trim())) && (
             <div className="text-[12px] text-[#b91c1c]">
-              {!selectedLocationId ? "Select a location" : !city.trim() ? "Enter a target city" : !pageSlug.trim() ? "Page slug is required" : "Enter a keyword"}
+              {!selectedLocationId ? "Select a location" : !city.trim() ? "Enter a target city" : "Enter a keyword"}
             </div>
           )}
           <Button variant="ink" onClick={startPipeline} disabled={
-            (contentType !== "landing_page" && !keyword.trim()) || !city.trim() || !selectedLocationId || !pageSlug.trim()
+            (contentType !== "landing_page" && !keyword.trim()) || !city.trim() || !selectedLocationId
           }>
             Generate content
           </Button>
@@ -496,12 +512,12 @@ export default function GeneratePage() {
             <div className="text-[11px] text-ink-40">~{outlineData.estimated_word_count} words</div>
           )}
           <div className="space-y-2">
-            {(outlineData.sections || []).map((s: any, i: number) => (
+            {(outlineData.sections || []).map((s, i) => (
               <div key={i} className="border border-line rounded-lg p-3 space-y-1.5">
                 <input
                   value={s.h2}
                   onChange={e => {
-                    const updated = [...outlineData.sections];
+                    const updated = [...(outlineData.sections || [])];
                     updated[i] = { ...updated[i], h2: e.target.value };
                     setOutlineData({ ...outlineData, sections: updated });
                   }}
@@ -515,8 +531,8 @@ export default function GeneratePage() {
                         <input
                           value={kp}
                           onChange={e => {
-                            const updated = [...outlineData.sections];
-                            const pts = [...updated[i].key_points];
+                            const updated = [...(outlineData.sections || [])];
+                            const pts = [...(updated[i].key_points || [])];
                             pts[j] = e.target.value;
                             updated[i] = { ...updated[i], key_points: pts };
                             setOutlineData({ ...outlineData, sections: updated });
@@ -542,9 +558,16 @@ export default function GeneratePage() {
           </div>
           <Button variant="ink" onClick={async () => {
             try {
-              await apiFetch(`/api/pipeline/approve/${pipelineId}`, { method: "POST" });
+              await apiFetchOk(`/api/pipeline/approve/${pipelineId}`, {
+                method: "POST",
+                body: JSON.stringify({ feedback: feedback.trim() || undefined }),
+              });
+              setError(null);
               startPolling(pipelineId!);
-            } catch {}
+            } catch (err) {
+              console.error("Failed to approve outline:", err);
+              setError("Failed to approve the outline. Try again.");
+            }
           }}>
             Approve and generate
           </Button>
@@ -557,7 +580,7 @@ export default function GeneratePage() {
           <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-2">Outline</div>
           <div className="font-display font-[800] text-lg mb-2">{outlineData.h1}</div>
           <div className="flex flex-wrap gap-2">
-            {(outlineData.sections || []).map((s: any, i: number) => (
+            {(outlineData.sections || []).map((s, i) => (
               <span key={i} className="text-[11px] text-ink-70 bg-[#F3F1ED] px-2 py-1 rounded-lg">{s.h2}</span>
             ))}
           </div>
@@ -627,5 +650,14 @@ export default function GeneratePage() {
         </div>
       )}
     </div>
+  );
+}
+
+// useSearchParams requires a Suspense boundary to avoid a CSR bailout at build time.
+export default function GeneratePage() {
+  return (
+    <Suspense fallback={null}>
+      <GeneratePageInner />
+    </Suspense>
   );
 }

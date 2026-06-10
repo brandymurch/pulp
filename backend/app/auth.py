@@ -1,6 +1,7 @@
 """JWT authentication - password gate."""
 from __future__ import annotations
 import datetime
+import hmac
 import jwt
 from fastapi import HTTPException, Request
 from app.config import APP_PASSWORD, JWT_SECRET, JWT_EXPIRY_DAYS
@@ -16,7 +17,9 @@ def create_token() -> str:
 
 
 def verify_password(password: str) -> bool:
-    return password == APP_PASSWORD
+    if not APP_PASSWORD:
+        return False
+    return hmac.compare_digest(password.encode("utf-8"), APP_PASSWORD.encode("utf-8"))
 
 
 def require_auth(request: Request) -> dict:

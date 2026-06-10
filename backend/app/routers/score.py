@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+import time
 import uuid
 from typing import Any
 
@@ -23,6 +24,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["score"])
 
 _score_jobs: dict[str, dict[str, Any]] = {}
+_JOB_TTL_SECONDS = 30 * 60
+
+
+def _evict_stale_jobs() -> None:
+    """Purge jobs older than the TTL so the store cannot grow forever."""
+    cutoff = time.time() - _JOB_TTL_SECONDS
+    for key in [k for k, v in _score_jobs.items() if v.get("_created", 0) < cutoff]:
+        _score_jobs.pop(key, None)
 
 
 def _run_score_job_sync(job_id: str, content: str, keyword: str, target_url: str):
@@ -37,19 +46,20 @@ def _run_score_job_sync(job_id: str, content: str, keyword: str, target_url: str
             ))
         else:
             result = stub_score(content=content, target_keyword=keyword)
-        _score_jobs[job_id] = {"status": "done", "result": result}
+        _score_jobs[job_id] = {"status": "done", "result": result, "_created": time.time()}
     except Exception as e:
         logger.error("Score job %s failed: %s", job_id, e)
-        _score_jobs[job_id] = {"status": "error", "error": str(e)}
+        _score_jobs[job_id] = {"status": "error", "error": str(e), "_created": time.time()}
     finally:
         loop.close()
 
 
 @router.post("/api/score")
-async def score_content(req: ScoreRequest, _auth: dict = Depends(require_auth)):
+def score_content(req: ScoreRequest, _auth: dict = Depends(require_auth)):
     """Start a scoring job. Returns job_id to poll for results."""
+    _evict_stale_jobs()
     job_id = str(uuid.uuid4())
-    _score_jobs[job_id] = {"status": "pending"}
+    _score_jobs[job_id] = {"status": "pending", "_created": time.time()}
 
     thread = threading.Thread(
         target=_run_score_job_sync,
@@ -62,11 +72,15 @@ async def score_content(req: ScoreRequest, _auth: dict = Depends(require_auth)):
 
 
 @router.get("/api/score/status/{job_id}")
-async def get_score_status(job_id: str, _auth: dict = Depends(require_auth)):
+def get_score_status(job_id: str, _auth: dict = Depends(require_auth)):
     """Poll for score job result."""
+    _evict_stale_jobs()
     job = _score_jobs.get(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found. The server may have restarted. Please retry.",
+        )
 
     if job["status"] == "pending":
         return {"status": "pending"}
