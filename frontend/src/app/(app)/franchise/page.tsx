@@ -38,12 +38,33 @@ function joinLines(arr?: string[]): string {
 // Fact-sheet editor
 // ---------------------------------------------------------------------------
 
+const LIST_FIELDS = [
+  ["training_support", "Training & Support (one per line)"],
+  ["process_steps", "Process Steps (one per line)"],
+  ["differentiators", "Differentiators (one per line)"],
+  ["proof_points", "Proof Points (one per line)"],
+] as const;
+
+/** The list-field keys as a union type, derived from the tuple above. */
+type ListFieldKey = (typeof LIST_FIELDS)[number][0];
+
+/** Build a fresh listDrafts record from a fact sheet (seed on load / scrape-done). */
+function seedListDrafts(s: FranchiseFactSheet): Record<string, string> {
+  const drafts: Record<string, string> = {};
+  for (const [field] of LIST_FIELDS) {
+    drafts[field] = joinLines(s[field as ListFieldKey] as string[] | undefined);
+  }
+  return drafts;
+}
+
 interface FactSheetEditorProps {
   sheet: FranchiseFactSheet;
   onChange: (sheet: FranchiseFactSheet) => void;
+  listDrafts: Record<string, string>;
+  onListDraftChange: (field: string, raw: string) => void;
 }
 
-function FactSheetEditor({ sheet, onChange }: FactSheetEditorProps) {
+function FactSheetEditor({ sheet, onChange, listDrafts, onListDraftChange }: FactSheetEditorProps) {
   function set<K extends keyof FranchiseFactSheet>(key: K, value: FranchiseFactSheet[K]) {
     onChange({ ...sheet, [key]: value });
   }
@@ -142,20 +163,13 @@ function FactSheetEditor({ sheet, onChange }: FactSheetEditorProps) {
         />
       </div>
 
-      {/* List fields */}
-      {(
-        [
-          ["training_support", "Training & Support (one per line)"],
-          ["process_steps", "Process Steps (one per line)"],
-          ["differentiators", "Differentiators (one per line)"],
-          ["proof_points", "Proof Points (one per line)"],
-        ] as [keyof FranchiseFactSheet, string][]
-      ).map(([field, label]) => (
+      {/* List fields — bound to raw draft strings so Enter / trailing spaces are preserved */}
+      {LIST_FIELDS.map(([field, label]) => (
         <div key={field}>
           <label className={labelCls}>{label}</label>
           <textarea
-            value={joinLines(sheet[field] as string[] | undefined)}
-            onChange={(e) => set(field, splitLines(e.target.value))}
+            value={listDrafts[field] ?? ""}
+            onChange={(e) => onListDraftChange(field, e.target.value)}
             rows={3}
             className={textareaCls}
             placeholder="One item per line"
@@ -232,10 +246,30 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
 
       try {
         const res = await apiFetch(`/api/franchise/scrape/status/${jobId}`);
+
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({ detail: `Status check failed (${res.status})` }));
-          throw new Error(errData.detail || `Status check failed (${res.status})`);
+          // 500 = real job failure (e.g. "All scrapes failed: …")
+          // 404 = job unknown / already cleaned up (backend includes a restart hint)
+          // Surface the backend's detail message immediately for these — no retry.
+          if (res.status === 500 || res.status === 404) {
+            const errData = await res.json().catch(() => ({
+              detail: `Scrape job failed (${res.status})`,
+            }));
+            stopPolling();
+            setScraping(false);
+            setScrapeError(errData.detail || `Scrape job failed (${res.status})`);
+            return;
+          }
+          // Other unexpected statuses — count as a transient failure.
+          failures += 1;
+          if (failures >= MAX_POLL_FAILURES) {
+            stopPolling();
+            setScraping(false);
+            setScrapeError("Lost connection while checking scrape status.");
+          }
+          return;
         }
+
         failures = 0;
         const data = await res.json();
 
@@ -245,7 +279,8 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
           onDone(data.fact_sheet as FranchiseFactSheet, (data.scrape_errors as string[]) ?? []);
         }
         // status === "pending" — keep waiting
-      } catch (err: unknown) {
+      } catch {
+        // Genuine network error (fetch threw) — count as transient failure.
         failures += 1;
         if (failures >= MAX_POLL_FAILURES) {
           stopPolling();
@@ -310,6 +345,14 @@ function FranchisePageInner() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
+  // Raw textarea drafts for list fields — keeps Enter / trailing spaces alive
+  // until Save, where splitLines is applied to build the PUT payload.
+  const [listDrafts, setListDrafts] = useState<Record<string, string>>({});
+
+  function handleListDraftChange(field: string, raw: string) {
+    setListDrafts((prev) => ({ ...prev, [field]: raw }));
+  }
+
   // Scrape UI
   const [showScrapeCard, setShowScrapeCard] = useState(false);
   const [isRescrape, setIsRescrape] = useState(false);
@@ -368,7 +411,9 @@ function FranchisePageInner() {
         if (!res.ok) throw new Error(`Failed to load franchise profile (${res.status})`);
         const data = await res.json();
         if (data.franchise_profile) {
-          setSheet(data.franchise_profile as FranchiseFactSheet);
+          const loaded = data.franchise_profile as FranchiseFactSheet;
+          setSheet(loaded);
+          setListDrafts(seedListDrafts(loaded));
         } else {
           // No sheet yet — show the scrape card
           setShowScrapeCard(true);
@@ -395,6 +440,7 @@ function FranchisePageInner() {
   // ---------------------------------------------------------------------------
   function handleScrapeDone(newSheet: FranchiseFactSheet, errors: string[]) {
     setSheet(newSheet);
+    setListDrafts(seedListDrafts(newSheet));
     setShowScrapeCard(false);
     setIsRescrape(false);
     setScrapeWarnings(errors);
@@ -409,10 +455,21 @@ function FranchisePageInner() {
     if (!sheet || !brandId) return;
     setSaveStatus("saving");
     setSaveError(null);
+
+    // Flush raw list drafts → parsed arrays into the sheet before saving.
+    const flushedSheet: FranchiseFactSheet = {
+      ...sheet,
+      ...Object.fromEntries(
+        LIST_FIELDS.map(([field]) => [field, splitLines(listDrafts[field] ?? "")])
+      ),
+    };
+    // Keep sheet state in sync with what we're persisting.
+    setSheet(flushedSheet);
+
     try {
       await apiFetchOk(`/api/franchise/profile/${brandId}`, {
         method: "PUT",
-        body: JSON.stringify({ franchise_profile: sheet }),
+        body: JSON.stringify({ franchise_profile: flushedSheet }),
       });
       setSaveStatus("saved");
       // Reset to idle after a moment
@@ -569,7 +626,12 @@ function FranchisePageInner() {
             )}
           </div>
 
-          <FactSheetEditor sheet={sheet} onChange={setSheet} />
+          <FactSheetEditor
+            sheet={sheet}
+            onChange={setSheet}
+            listDrafts={listDrafts}
+            onListDraftChange={handleListDraftChange}
+          />
 
           <div className="flex items-center gap-3 flex-wrap">
             <Button
