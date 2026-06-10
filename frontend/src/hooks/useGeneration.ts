@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useCallback } from "react";
 import { API_URL } from "@/lib/api";
-import type { GenerationPayload, Usage } from "@/lib/types";
+import type { FranchiseGeneratePayload, GenerationPayload, Usage } from "@/lib/types";
 
 export function useGeneration() {
   const [output, setOutput] = useState("");
@@ -10,7 +10,7 @@ export function useGeneration() {
   const [usage, setUsage] = useState<Usage | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const generate = useCallback(async (path: string, payload: GenerationPayload) => {
+  const generate = useCallback(async (path: string, payload: GenerationPayload | FranchiseGeneratePayload) => {
     const controller = new AbortController();
     abortRef.current = controller;
     setOutput("");
