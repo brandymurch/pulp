@@ -107,6 +107,17 @@ CREATE TABLE IF NOT EXISTS pipeline_jobs (
 );
 CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_brand_created ON pipeline_jobs(brand_id, created_at DESC);
 
+-- Cached POP briefs: reports count against the POP plan allowance, so briefs
+-- are reused per (keyword, location, target_url) for ~30 days (app-enforced)
+CREATE TABLE IF NOT EXISTS pop_brief_cache (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  cache_key TEXT NOT NULL UNIQUE,
+  keyword TEXT NOT NULL,
+  location TEXT,
+  brief JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- RLS: enabled with open policies (app has own auth)
 ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
@@ -114,6 +125,7 @@ ALTER TABLE style_examples ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drafts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE generations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pipeline_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pop_brief_cache ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "allow_all" ON brands FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON locations FOR ALL USING (true) WITH CHECK (true);
@@ -121,6 +133,7 @@ CREATE POLICY "allow_all" ON style_examples FOR ALL USING (true) WITH CHECK (tru
 CREATE POLICY "allow_all" ON drafts FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON generations FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON pipeline_jobs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON pop_brief_cache FOR ALL USING (true) WITH CHECK (true);
 
 -- Updated_at trigger for brands
 CREATE OR REPLACE FUNCTION update_updated_at()

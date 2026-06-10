@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -10,6 +11,48 @@ import httpx
 from app.config import POP_API_KEY, POP_EXPOSE_URL, POP_TASK_URL
 
 logger = logging.getLogger(__name__)
+
+# POP report creation counts against the plan's monthly allowance, so briefs
+# for an already-seen (keyword, location) are served from Supabase instead.
+BRIEF_CACHE_DAYS = 30
+
+
+def _brief_cache_key(keyword: str, location_name: str | None, target_url: str | None) -> str:
+    return "|".join(
+        (part or "").strip().lower()
+        for part in (keyword, location_name, target_url)
+    )
+
+
+def _brief_cache_get(cache_key: str) -> dict | None:
+    from app.db import get_db
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=BRIEF_CACHE_DAYS)).isoformat()
+    res = (
+        get_db()
+        .table("pop_brief_cache")
+        .select("brief")
+        .eq("cache_key", cache_key)
+        .gte("created_at", cutoff)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0]["brief"] if res.data else None
+
+
+def _brief_cache_put(cache_key: str, keyword: str, location_name: str | None, brief: dict) -> None:
+    from app.db import get_db
+
+    get_db().table("pop_brief_cache").upsert(
+        {
+            "cache_key": cache_key,
+            "keyword": keyword,
+            "location": location_name or "",
+            "brief": brief,
+            "created_at": "now()",
+        },
+        on_conflict="cache_key",
+    ).execute()
 
 REGION_ABBREV = {
     # US States
@@ -240,7 +283,23 @@ async def get_enriched_brief(
     target_url: str | None = None,
     location_name: str | None = None,
 ) -> dict:
-    """Get POP terms + report in one call. Returns term targets for prompt assembly."""
+    """Get POP terms + report in one call. Returns term targets for prompt assembly.
+
+    Results are cached in Supabase for BRIEF_CACHE_DAYS per (keyword, location,
+    target_url) so repeat runs don't consume POP report allowance. Cache
+    failures are logged and ignored - the brief still comes from POP.
+    """
+    cache_key = _brief_cache_key(keyword, location_name, target_url)
+    try:
+        cached = await asyncio.to_thread(_brief_cache_get, cache_key)
+        if cached:
+            logger.info(
+                "POP brief cache hit for keyword=%r location=%r", keyword, location_name
+            )
+            return cached
+    except Exception:
+        logger.warning("POP brief cache lookup failed; fetching fresh", exc_info=True)
+
     try:
         terms = await _get_terms(
             keyword=keyword,
@@ -339,7 +398,7 @@ async def get_enriched_brief(
     # POP optimization score if available
     pop_score = report.get("score") or report.get("optimizationScore") or None
 
-    return {
+    result = {
         "target_word_count": target_word_count,
         "word_count_min": word_count_min,
         "word_count_max": word_count_max,
@@ -355,6 +414,13 @@ async def get_enriched_brief(
         "paragraph_recommendations": paragraph_recs[:10] if isinstance(paragraph_recs, list) else [],
         "pop_optimization_score": pop_score,
     }
+
+    try:
+        await asyncio.to_thread(_brief_cache_put, cache_key, keyword, location_name, result)
+    except Exception:
+        logger.warning("POP brief cache write failed", exc_info=True)
+
+    return result
 
 
 async def score_content_with_pop(
