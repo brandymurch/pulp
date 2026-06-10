@@ -28,7 +28,7 @@ export function GenerationsList({ generations, selectedId, onSelect, onDelete }:
         <thead>
           <tr>
             <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Keyword</th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">City</th>
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Page</th>
             <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Template</th>
             <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Words</th>
             <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Score</th>

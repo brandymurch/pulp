@@ -114,10 +114,8 @@ function QueueSectionHeader({ label, count }: { label: string; count: number }) 
 
 function NeedsAttentionRow({
   job,
-  onApprove,
 }: {
   job: PipelineJob;
-  onApprove: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [fullJob, setFullJob] = useState<PipelineJob | null>(null);
@@ -312,23 +310,15 @@ function ErrorRow({
 /* ------------------------------------------------------------------ */
 
 function InProgressSection({
-  brands,
-  brandId,
-  onBrandChange,
   jobs,
   loading,
   error,
-  onApprove,
   onRetry,
   onDelete,
 }: {
-  brands: Brand[];
-  brandId: string;
-  onBrandChange: (id: string) => void;
   jobs: PipelineJob[];
   loading: boolean;
   error: string | null;
-  onApprove: (id: string) => void;
   onRetry: (job: PipelineJob) => void;
   onDelete: (id: string) => void;
 }) {
@@ -349,26 +339,9 @@ function InProgressSection({
 
   return (
     <div className="space-y-6">
-      {/* Section heading row with optional brand filter */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[0.95] tracking-[-0.03em] m-0">
-          In progress
-        </h2>
-        {brands.length > 1 && (
-          <select
-            value={brandId}
-            onChange={(e) => onBrandChange(e.target.value)}
-            className="h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 pr-8 text-[12px] outline-none focus:border-ink cursor-pointer"
-          >
-            <option value="">All brands</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+      <h2 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[0.95] tracking-[-0.03em] m-0">
+        In progress
+      </h2>
 
       {error && (
         <div className="border-[1.5px] border-[#b91c1c] rounded-pop px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
@@ -385,7 +358,6 @@ function InProgressSection({
                 <NeedsAttentionRow
                   key={job.id}
                   job={job}
-                  onApprove={onApprove}
                 />
               ))}
             </div>
@@ -523,20 +495,7 @@ export default function PagesPage() {
       } catch {
         setQueueError("Failed to load brands");
       }
-      // Always fetch all jobs initially
-      try {
-        const url = "/api/pipeline/list?limit=20";
-        const res = await apiFetch(url);
-        if (res.ok) {
-          const data: PipelineJob[] = await res.json();
-          setJobs(data);
-        }
-      } catch (err) {
-        console.error("Failed to load queue:", err);
-        setQueueError("Failed to load queue");
-      } finally {
-        setQueueLoading(false);
-      }
+      // Job fetching is handled exclusively by the brand-change effect below
     }
     init();
   }, []);
@@ -589,15 +548,6 @@ export default function PagesPage() {
 
     return stopPolling;
   }, [brandId, fetchJobs]);
-
-  async function handleApprove(jobId: string) {
-    try {
-      await apiFetchOk(`/api/pipeline/approve/${jobId}`, { method: "POST" });
-      fetchJobs(brandId);
-    } catch {
-      setQueueError("Failed to approve outline");
-    }
-  }
 
   async function handleRetry(job: PipelineJob) {
     try {
@@ -687,20 +637,32 @@ export default function PagesPage() {
 
   return (
     <div className="space-y-10">
-      {/* Page heading */}
-      <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
-        Pages
-      </h1>
+      {/* Page heading row with optional brand filter */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
+          Pages
+        </h1>
+        {brands.length > 1 && (
+          <select
+            value={brandId}
+            onChange={(e) => setBrandId(e.target.value)}
+            className="h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 pr-8 text-[12px] outline-none focus:border-ink cursor-pointer"
+          >
+            <option value="">All brands</option>
+            {brands.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {/* In progress — hidden entirely when no active jobs (and during initial load) */}
       <InProgressSection
-        brands={brands}
-        brandId={brandId}
-        onBrandChange={setBrandId}
         jobs={jobs}
         loading={queueLoading}
         error={queueError}
-        onApprove={handleApprove}
         onRetry={handleRetry}
         onDelete={handleQueueDelete}
       />
