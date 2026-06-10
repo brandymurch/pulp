@@ -7,6 +7,33 @@ APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "pulp-dev-secret")
 JWT_EXPIRY_DAYS = 7
 
+_DEV_JWT_SECRET = "pulp-dev-secret"
+
+
+def _validate_auth_config() -> None:
+    """Fail fast on insecure auth config unless explicitly running in dev mode.
+
+    Set PULP_DEV=1 to bypass (local development only). On Render the real
+    APP_PASSWORD and JWT_SECRET env vars are set, so this never fires there.
+    """
+    if os.environ.get("PULP_DEV") == "1":
+        return
+    problems = []
+    if not APP_PASSWORD:
+        problems.append("APP_PASSWORD is empty")
+    if JWT_SECRET == _DEV_JWT_SECRET:
+        problems.append("JWT_SECRET is the insecure dev default")
+    if problems:
+        raise RuntimeError(
+            "Refusing to start with insecure auth config: "
+            + "; ".join(problems)
+            + ". Set APP_PASSWORD and JWT_SECRET environment variables, "
+            "or set PULP_DEV=1 for local development."
+        )
+
+
+_validate_auth_config()
+
 # Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")

@@ -1,4 +1,4 @@
-"""Prompt assembly for content generation, outlines, and revisions."""
+"""Prompt assembly for content generation, outlines, critiques, and revisions."""
 from __future__ import annotations
 import json
 import re
@@ -43,6 +43,24 @@ def resolve_template_placeholders(
     return result
 
 
+def _voice_dimension_line(key: str, value: int) -> str:
+    """Convert a numeric voice slider into a concrete behavioral instruction."""
+    if value <= 30:
+        return (
+            f"- {key}: low. Keep {key} out of the writing almost entirely; "
+            f"default to plain, neutral phrasing on this dimension."
+        )
+    if value <= 70:
+        return (
+            f"- {key}: moderate. Let {key} come through where it fits naturally, "
+            f"but do not make it a defining feature of the writing."
+        )
+    return (
+        f"- {key}: high. Make {key} a consistent, defining quality of the writing; "
+        f"the reader should notice it in most paragraphs."
+    )
+
+
 def build_system_prompt(
     template: dict | None = None,
     style_examples: list | None = None,
@@ -53,8 +71,27 @@ def build_system_prompt(
     brand_guidelines: str | None = None,
     brand_competitors: list | None = None,
     prompt_learnings: list | None = None,
-) -> str:
-    """Build system prompt for content generation."""
+) -> list:
+    """Build the system prompt for content generation.
+
+    Returns a list of system content blocks. All content here is per-brand
+    stable (rules, voice, guidelines, banned words, learnings, style
+    examples), so the last block carries cache_control for prompt caching;
+    per-city volatile content (keyword, location, enrichment, terms,
+    research, brand template with resolved placeholders) goes in the user
+    message instead.
+
+    Cache note: the base rules alone run ~900-1200 tokens, and brands with
+    style examples add up to 3 x 4000 chars (~3000 tokens), so for typical
+    brands this prefix comfortably exceeds the ~2048-token minimum cacheable
+    prefix for claude-sonnet-4-6. Brands with no style examples and no
+    guidelines may fall below the minimum and silently skip caching, which
+    is harmless.
+
+    NOTE: the brand content template is intentionally NOT in this prefix.
+    Its placeholders ([city], [service], ...) resolve per page, which would
+    make the prefix volatile and defeat caching across a batch of cities.
+    """
     banned = _load_banned_words()
     if brand_banned_words:
         banned = banned + brand_banned_words
@@ -84,6 +121,7 @@ def build_system_prompt(
         "CONTENT STRUCTURE:",
         "- Write in Markdown format.",
         "- Start with an H1 title (# Title) that includes the primary keyword naturally.",
+        "  (If a brand template is provided and its H1 conflicts with keyword placement, the template wins; see the template rules in the task.)",
         "- Use H2 (##) for main sections and H3 (###) for subsections.",
         "- Opening paragraph: address the searcher's intent directly. Use the primary keyword in the first 100 words.",
         "- Body: each section adds unique value. No filler paragraphs. No restating the same point in different words.",
@@ -94,6 +132,13 @@ def build_system_prompt(
         "- Co-reference related entities that Google associates with the topic.",
         "- Use location entities naturally: city, neighborhoods, landmarks, regional details.",
         "- Incorporate required terms at their target counts, but never at the expense of readability.",
+        "",
+        "PROSE QUALITY (do these, always):",
+        "- Vary sentence length and paragraph length; mix short punchy sentences with longer ones.",
+        "- Never open a section with a rhetorical question.",
+        "- Never use 'Whether you're X or Y' constructions.",
+        "- Prefer concrete nouns and specific details over abstractions.",
+        "- Do not default to three-beat parallel lists ('fast, reliable, and affordable'); break the rhythm.",
         "",
         "CRITICAL FORMATTING RULES:",
         "- Never use em dashes. Use commas, periods, or semicolons instead.",
@@ -108,12 +153,15 @@ def build_system_prompt(
             parts.append(f'- "{word}"')
 
     if voice_dimensions:
-        dims_with_values = [d for d in voice_dimensions if d.get("value", 0) > 0]
-        if dims_with_values:
+        lines = [
+            _voice_dimension_line(d.get("key", ""), int(d.get("value", 0) or 0))
+            for d in voice_dimensions
+            if d.get("key")
+        ]
+        if lines:
             parts.append("")
-            parts.append("VOICE TONE DIMENSIONS (calibrate your writing to match these levels, 0=none, 100=maximum):")
-            for d in dims_with_values:
-                parts.append(f"- {d['key']}: {d['value']}/100")
+            parts.append("VOICE TONE DIMENSIONS (calibrate your writing to these):")
+            parts.extend(lines)
 
     if voice_notes:
         parts.append("")
@@ -128,7 +176,7 @@ def build_system_prompt(
 
     if style_examples:
         parts.append("")
-        parts.append("CRITICAL - VOICE AND STYLE: Match the voice from the provided style examples.")
+        parts.append("CRITICAL - VOICE AND STYLE: Match the voice from the style examples below.")
         parts.append("Match: sentence structure, vocabulary, paragraph length, tone, heading style, reader engagement.")
 
     if services:
@@ -149,6 +197,12 @@ def build_system_prompt(
     parts.append("- The page is for ONE business. Only name that business.")
     parts.append("- Never name any other company, contractor, agency, or vendor, even if their content or name appears in the reference material below. Reference material is for understanding the topic, not for sourcing business names.")
 
+    parts.append("")
+    parts.append("MULTI-CITY ANTI-DUPLICATION (CRITICAL):")
+    parts.append("- This brand publishes many city pages. Vary section angles, openings, examples, and sentence rhythm for THIS city.")
+    parts.append("- Content that could be published unchanged for another city is a failure.")
+    parts.append("- Openings must not be reusable across cities: anchor them in this city's specifics.")
+
     if brand_guidelines:
         parts.append("")
         parts.append("BRAND GUIDELINES (follow these strictly):")
@@ -160,7 +214,30 @@ def build_system_prompt(
         for learning in prompt_learnings[-10:]:
             parts.append(f"- {learning}")
 
-    return "\n".join(parts)
+    blocks = [{"type": "text", "text": "\n".join(parts)}]
+
+    if style_examples:
+        style_parts = ["STYLE REFERENCE EXAMPLES - MATCH THIS VOICE:"]
+        for i, ex in enumerate(style_examples[:3]):
+            content = ex.get("content", "")[:4000]
+            style_parts.append(f"=== STYLE EXAMPLE: {ex.get('title', f'Example {i+1}')} ===")
+            style_parts.append(content)
+            style_parts.append("=== END EXAMPLE ===")
+        blocks.append({"type": "text", "text": "\n".join(style_parts)})
+
+    # Cache breakpoint on the last stable block: everything above is
+    # per-brand stable, everything in the user message is per-city volatile.
+    blocks[-1]["cache_control"] = {"type": "ephemeral"}
+    return blocks
+
+
+def with_role_block(system_blocks: list, role_text: str) -> list:
+    """Append a task-specific role block AFTER the cached brand prefix.
+
+    Keeps the cached prefix byte-identical across the generation, critique,
+    and revision calls so they all hit the same cache entry.
+    """
+    return list(system_blocks) + [{"type": "text", "text": role_text}]
 
 
 CONTENT_TYPE_LABELS = {
@@ -187,14 +264,14 @@ def build_user_prompt(
     outline: dict | None = None,
     competitors: list | None = None,
     paa_questions: list | None = None,
-    style_examples: list | None = None,
+    style_examples: list | None = None,  # kept for compat; style examples now live in the system prompt
     local_context: dict | None = None,
     content_type: str = "landing_page",
     research: dict | None = None,
     brand_template: str | None = None,
     brand_name: str = "",
 ) -> str:
-    """Build user prompt with all context for full content generation."""
+    """Build user prompt with all per-city context for full content generation."""
     target_word_count = brief.get("target_word_count", 1500)
     word_count_min = brief.get("word_count_min", 0)
     word_count_max = brief.get("word_count_max", 0)
@@ -249,13 +326,21 @@ def build_user_prompt(
     # Local context (location-specific details)
     if local_context:
         parts.append("")
-        parts.append("**LOCAL CONTEXT (weave these details naturally into the content):**")
+        parts.append(f"**LOCAL CONTEXT (load-bearing, not optional):**")
+        parts.append(f"- REQUIREMENT: every H2 section must include at least one {city}-specific detail drawn from this local context or from the research local hooks.")
+        parts.append(f"- The opening paragraph must be anchored in {city} specifics; it must not be reusable for another city.")
         if local_context.get("team_lead"):
             parts.append(f"- Team lead: {local_context['team_lead']}")
         if local_context.get("neighborhoods"):
             neighborhoods = local_context["neighborhoods"]
             if isinstance(neighborhoods, list):
                 parts.append(f"- Key neighborhoods served: {', '.join(neighborhoods)}")
+        if local_context.get("local_landmarks"):
+            landmarks = local_context["local_landmarks"]
+            if isinstance(landmarks, list):
+                parts.append(f"- Local landmarks: {', '.join(landmarks)}")
+            elif isinstance(landmarks, str) and landmarks:
+                parts.append(f"- Local landmarks: {landmarks}")
         if local_context.get("common_job"):
             parts.append(f"- Most common job type: {local_context['common_job']}")
         if local_context.get("local_challenge"):
@@ -268,6 +353,8 @@ def build_user_prompt(
                 parts.append(f"- Certifications: {', '.join(certs)}")
         if local_context.get("climate_notes"):
             parts.append(f"- Climate: {local_context['climate_notes']}")
+        if local_context.get("seasonal_notes"):
+            parts.append(f"- Seasonal patterns: {local_context['seasonal_notes']}")
         if local_context.get("housing_notes"):
             parts.append(f"- Housing stock: {local_context['housing_notes']}")
         if local_context.get("general_notes"):
@@ -288,8 +375,8 @@ def build_user_prompt(
 
     parts.append("")
 
-    # Approved outline -- only inject when there is no brand template
-    # (otherwise it competes with the brand template's required structure).
+    # Approved outline. When a brand template also exists, the template is
+    # the structural skeleton and the outline contributes content guidance.
     if outline and not brand_template:
         parts.append("**APPROVED OUTLINE (follow this structure):**")
         parts.append(f"H1: {outline.get('h1', keyword)}")
@@ -303,6 +390,18 @@ def build_user_prompt(
             for link in outline["internal_links"]:
                 parts.append(f'- [{link.get("text", "")}]({link.get("href", "")})')
         parts.append("")
+    elif outline and brand_template:
+        outline_points = []
+        for section in outline.get("sections", []):
+            for point in section.get("key_points", []):
+                if point:
+                    outline_points.append(point)
+        if outline_points:
+            parts.append("**APPROVED OUTLINE KEY POINTS (content guidance):**")
+            parts.append("The brand template below is the structural skeleton. Within the template structure, cover these approved points:")
+            for point in outline_points[:20]:
+                parts.append(f"- {point}")
+            parts.append("")
 
     # Notion template (if also provided, use as additional reference)
     if template and template.get("content"):
@@ -313,22 +412,15 @@ def build_user_prompt(
     # POP brief terms
     if term_targets:
         sorted_terms = sorted(term_targets, key=lambda t: t.get("weight", 0), reverse=True)[:30]
-        parts.append("**POP Content Brief - Required Term Usage:**")
+        parts.append("**POP Content Brief - Term Usage Targets:**")
         for t in sorted_terms:
             phrase = t.get("phrase", "")
             target = t.get("target", 0)
             if target > 0:
-                parts.append(f'- "{phrase}" - use {target}x')
-        parts.append("")
-
-    # Style examples
-    if style_examples:
-        parts.append("**STYLE REFERENCE EXAMPLES - MATCH THIS VOICE:**")
-        for i, ex in enumerate(style_examples[:3]):
-            content = ex.get("content", "")[:4000]
-            parts.append(f"=== STYLE EXAMPLE: {ex.get('title', f'Example {i+1}')} ===")
-            parts.append(content)
-            parts.append("=== END EXAMPLE ===")
+                low = max(1, target - 1)
+                high = target + 1
+                parts.append(f'- "{phrase}" - aim for {low}-{high} uses')
+        parts.append("Readability beats exact counts. If hitting a target would force awkward phrasing, use fewer. Never stuff.")
         parts.append("")
 
     # Competitor content
@@ -364,11 +456,13 @@ def build_user_prompt(
 
     # Brand content template -- LAST so it is the most recent instruction the model sees.
     # The template is the load-bearing structural authority for the output.
+    # It stays in the (volatile) user prompt rather than the cached system
+    # prefix because its placeholders resolve per page.
     if brand_template:
-        location = f"{city}, {state}" if state else city
-        resolved = brand_template.replace("[location]", location).replace("[city]", city).replace("[state]", state)
-        if brand_name:
-            resolved = resolved.replace("[brand]", brand_name)
+        resolved = resolve_template_placeholders(
+            brand_template, keyword=keyword, brand_name=brand_name,
+            city=city, state=state,
+        )
         parts.append("---")
         parts.append("**BRAND CONTENT TEMPLATE (this is the required structure for your output):**")
         parts.append("")
@@ -377,6 +471,7 @@ def build_user_prompt(
         parts.append("- Preserve every heading and its hierarchy level. If the template uses literal labels like `## H1:`, `## H2:`, `### H3:` as heading prefixes, those indicate the INTENDED markdown level (H1 = `#`, H2 = `##`, H3 = `###`). Convert them to the correct markdown level in your output and do NOT include the literal `H1:` / `H2:` / `H3:` text.")
         parts.append("- Preserve every structural element present in the template: lists (with the same item count), blockquotes, `<Button>...</Button>` CTA elements (output them as-is, in the same positions), tables, callouts, FAQ blocks, contact-info bullets.")
         parts.append("- Do not add new sections, remove sections, or reorder sections.")
+        parts.append("- If the template's H1 conflicts with keyword placement, follow the template and work the keyword into the opening paragraph instead.")
         parts.append("")
         parts.append("CONTENT -- CREATIVE FREEDOM WITHIN EACH SECTION:")
         parts.append("- Rewrite body copy using the POP term targets, research insights, local context, and brand voice. Do not copy template placeholder copy verbatim.")
@@ -391,8 +486,76 @@ def build_user_prompt(
         parts.append(f"```\n{resolved}\n```")
         parts.append("")
 
-    parts.append("Write the complete content now. Follow the brand content template structure exactly. Make it comprehensive, well-structured, and locally relevant.")
+    if brand_template:
+        parts.append("Write the complete content now. Follow the brand content template structure exactly. Make it comprehensive, well-structured, and locally specific to this city.")
+    else:
+        parts.append("Write the complete content now. Make it comprehensive, well-structured, and locally specific to this city.")
     return "\n".join(parts)
+
+
+# -- Structured output schemas (output_config json_schema format) --
+
+RESEARCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "search_intent": {"type": "string"},
+        "intent_details": {"type": "string"},
+        "content_gaps": {"type": "array", "items": {"type": "string"}},
+        "key_entities": {"type": "array", "items": {"type": "string"}},
+        "differentiation_angles": {"type": "array", "items": {"type": "string"}},
+        "questions_to_answer": {"type": "array", "items": {"type": "string"}},
+        "format_signals": {
+            "type": "object",
+            "properties": {
+                "recommended_format": {"type": "string"},
+                "avg_sections": {"type": "integer"},
+                "uses_lists": {"type": "boolean"},
+            },
+            "required": ["recommended_format", "avg_sections", "uses_lists"],
+            "additionalProperties": False,
+        },
+        "local_hooks": {"type": "array", "items": {"type": "string"}},
+        "topic_clusters": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": [
+        "search_intent", "intent_details", "content_gaps", "key_entities",
+        "differentiation_angles", "questions_to_answer", "format_signals",
+        "local_hooks", "topic_clusters",
+    ],
+    "additionalProperties": False,
+}
+
+OUTLINE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "h1": {"type": "string"},
+        "sections": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "h2": {"type": "string"},
+                    "key_points": {"type": "array", "items": {"type": "string"}},
+                    "suggested_terms": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["h2", "key_points", "suggested_terms"],
+                "additionalProperties": False,
+            },
+        },
+        "estimated_word_count": {"type": "integer"},
+    },
+    "required": ["h1", "sections", "estimated_word_count"],
+    "additionalProperties": False,
+}
+
+LEARNINGS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "learnings": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["learnings"],
+    "additionalProperties": False,
+}
 
 
 def build_research_prompt(
@@ -576,17 +739,100 @@ def build_outline_prompt(
     return system, "\n".join(user_parts)
 
 
+CRITIQUE_ROLE = (
+    "TASK ROLE OVERRIDE: For this request you are acting as a senior content editor, "
+    "not the writer. Critique the draft against the brand rules above. Do NOT rewrite "
+    "the draft. Return a numbered list of at most 8 concrete, specific edits, covering "
+    "(only where genuinely weak):\n"
+    "1. Brand voice adherence (tone dimensions, voice notes, style examples).\n"
+    "2. Locality: every H2 section should be grounded in a city-specific detail; "
+    "flag sections that could be published unchanged for another city.\n"
+    "3. Slop patterns: banned words, formulaic rhythm, rhetorical-question openers, "
+    "'Whether you're X or Y' constructions, three-beat parallel lists, generic filler.\n"
+    "4. Redundancy: points restated across sections.\n"
+    "5. Template/outline compliance: missing, reordered, or extra sections.\n"
+    "Each edit must quote or pinpoint the text to change and say exactly what to do "
+    "instead. If an area is already strong, do not invent edits for it. If the draft "
+    "needs no edits, return exactly: NO EDITS NEEDED. Output only the list (or that phrase)."
+)
+
+EDITORIAL_REVISION_ROLE = (
+    "TASK ROLE OVERRIDE: For this request you are revising an existing draft. Apply the "
+    "editor's requested edits faithfully. Preserve the overall structure, headings, "
+    "term usage, and word count. Do not introduce banned words. Never use em dashes. "
+    "Output the complete revised content in Markdown, nothing else."
+)
+
+
+def build_critique_user_prompt(
+    content: str,
+    keyword: str,
+    city: str,
+    state: str,
+    outline: dict | None = None,
+    brand_template: str | None = None,
+    local_context: dict | None = None,
+) -> str:
+    """User prompt for the editorial critique pass."""
+    parts = [
+        f"**Primary keyword:** {keyword}",
+        f"**Target city:** {city}, {state}",
+    ]
+    if outline and outline.get("sections"):
+        parts.append("**Approved outline sections:** " + " | ".join(
+            s.get("h2", "") for s in outline.get("sections", []) if s.get("h2")
+        ))
+    if brand_template:
+        parts.append("**Brand template (required structure, truncated):**")
+        parts.append(f"```\n{brand_template[:3000]}\n```")
+    if local_context:
+        hooks = []
+        for k in ("neighborhoods", "local_landmarks", "local_challenge", "common_job",
+                  "climate_notes", "seasonal_notes", "housing_notes", "fun_fact"):
+            v = local_context.get(k)
+            if isinstance(v, list):
+                v = ", ".join(str(x) for x in v)
+            if v:
+                hooks.append(f"{k}: {v}")
+        if hooks:
+            parts.append("**Available local details the draft should be using:**")
+            for h in hooks:
+                parts.append(f"- {h}")
+    parts.append("")
+    parts.append("**DRAFT TO CRITIQUE:**")
+    parts.append(f"```\n{content}\n```")
+    parts.append("")
+    parts.append("Return the numbered edit list now.")
+    return "\n".join(parts)
+
+
+def build_editorial_revision_user_prompt(content: str, edits: str) -> str:
+    """User prompt for applying the critique edits."""
+    return "\n".join([
+        "**CURRENT DRAFT:**",
+        f"```\n{content}\n```",
+        "",
+        "**EDITOR'S REQUESTED EDITS (apply all of these):**",
+        edits,
+        "",
+        "Output the complete revised draft now.",
+    ])
+
+
 def build_revision_prompts(
     content: str,
     keyword: str,
     brief: dict,
     pop_feedback: dict,
 ) -> tuple:
-    """Build system + user prompts for content revision. Returns (system, user)."""
+    """Build system + user prompts for term-count revision. Returns (system, user)."""
     system = (
         "You are an SEO content editor. Revise content based on POP optimization feedback.\n"
         "Never use em dashes. Use commas, periods, or semicolons instead.\n"
-        "Maintain the existing structure and voice. Output the complete revised content in Markdown."
+        "Maintain the existing structure and voice. Output the complete revised content in Markdown.\n"
+        "This draft has already been through an editorial quality pass: do NOT undo its "
+        "improvements (varied rhythm, city-specific details, voice). Only weave in the "
+        "missing terms and apply the recommendations, with the lightest possible touch."
     )
 
     user_parts = [
@@ -609,7 +855,7 @@ def build_revision_prompts(
 
     target_wc = brief.get("target_word_count", 1500)
     user_parts.append(f"\nTarget word count: {target_wc}")
-    user_parts.append("\nRevise the content. Incorporate missing terms naturally. Do not change the overall structure or voice.")
+    user_parts.append("\nRevise the content. Incorporate missing terms naturally. Do not change the overall structure or voice, and keep the editorial improvements intact.")
 
     return system, "\n".join(user_parts)
 
@@ -626,13 +872,13 @@ def build_learning_prompt(
     """Build prompt for Haiku to extract learnings from a completed generation."""
     system = (
         "You are analyzing a completed content generation to extract learnings for future generations.\n"
-        "Return ONLY a JSON array of 1-3 short, actionable learnings. Each learning should be a string.\n"
+        'Return ONLY JSON of the form {"learnings": ["..."]} with 1-3 short, actionable learnings.\n'
         "Focus on patterns that would improve FUTURE content for this brand, not one-off fixes.\n"
         "If the generation went well (score >= 80, 0 revisions), note what worked.\n"
         "If it struggled (low score, multiple revisions, missing terms), note what to emphasize next time.\n"
-        'Example: ["Emphasize the term \\"spray foam\\" more heavily - consistently underused",\n'
+        'Example: {"learnings": ["Emphasize the term \\"spray foam\\" more heavily - consistently underused",\n'
         '"Shorter intros (2-3 sentences) score better for service pages",\n'
-        '"Local neighborhood references improved engagement"]'
+        '"Local neighborhood references improved engagement"]}'
     )
 
     user_parts = [
@@ -665,5 +911,5 @@ def build_learning_prompt(
     if feedback:
         user_parts.append(f"**User feedback given:** {feedback}")
 
-    user_parts.append("\nExtract 1-3 learnings as a JSON array of strings.")
+    user_parts.append('\nExtract 1-3 learnings and return them as {"learnings": [...]}.')
     return system, "\n".join(user_parts)

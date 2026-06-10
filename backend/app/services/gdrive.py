@@ -65,13 +65,61 @@ def _extract_google_error(exc: HttpError) -> str:
 def _get_services():
     global _drive, _docs
     if _drive is None:
-        creds_dict = json.loads(GOOGLE_SERVICE_ACCOUNT_KEY)
-        creds = service_account.Credentials.from_service_account_info(
-            creds_dict, scopes=SCOPES
-        )
-        _drive = build("drive", "v3", credentials=creds)
-        _docs = build("docs", "v1", credentials=creds)
+        try:
+            creds_dict = json.loads(GOOGLE_SERVICE_ACCOUNT_KEY)
+        except (ValueError, TypeError) as exc:
+            raise GDriveExportError(
+                "GOOGLE_SERVICE_ACCOUNT_KEY is not valid JSON. "
+                "Paste the full service account key file contents.",
+                status_code=503,
+            ) from exc
+        try:
+            creds = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=SCOPES
+            )
+            _drive = build("drive", "v3", credentials=creds)
+            _docs = build("docs", "v1", credentials=creds)
+        except Exception as exc:
+            raise GDriveExportError(
+                f"Could not initialize Google Drive client: {exc}",
+                status_code=502,
+            ) from exc
     return _drive, _docs
+
+
+def list_owned_files(drive, fields: str = "id,name") -> list:
+    """List every file owned by the service account. Raises GDriveExportError on API errors."""
+    all_files = []
+    page_token = None
+    try:
+        while True:
+            resp = drive.files().list(
+                q="'me' in owners",
+                fields=f"nextPageToken,files({fields})",
+                pageSize=1000,
+                pageToken=page_token,
+            ).execute()
+            all_files.extend(resp.get("files", []))
+            page_token = resp.get("nextPageToken")
+            if not page_token:
+                break
+    except HttpError as exc:
+        raise GDriveExportError(
+            f"Google Drive file listing failed: {_extract_google_error(exc)}",
+            status_code=502,
+        ) from exc
+    return all_files
+
+
+def get_account_info(drive) -> dict:
+    """Fetch service account quota and user info. Raises GDriveExportError on API errors."""
+    try:
+        return drive.about().get(fields="storageQuota,user").execute()
+    except HttpError as exc:
+        raise GDriveExportError(
+            f"Google Drive account lookup failed: {_extract_google_error(exc)}",
+            status_code=502,
+        ) from exc
 
 
 def _escape_drive_query(value: str) -> str:
@@ -365,7 +413,7 @@ def export_to_drive(
     except HttpError as exc:
         message = _extract_google_error(exc)
         logger.error("Drive export Google API error: %s", message)
-        raise GDriveExportError(message) from exc
+        raise GDriveExportError(message, status_code=502) from exc
     except Exception as exc:
         logger.error("Drive export unexpected error: %s", exc)
-        raise
+        raise GDriveExportError(f"Drive export failed: {exc}", status_code=502) from exc

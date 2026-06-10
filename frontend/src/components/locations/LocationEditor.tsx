@@ -91,8 +91,13 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
       if (res.ok) {
         const data = await res.json();
         setSearchResults(data.results || []);
+      } else {
+        setImportMessage("Google search failed. Try again.");
       }
-    } catch {} finally {
+    } catch (err) {
+      console.error("Google search failed:", err);
+      setImportMessage("Google search failed. Try again.");
+    } finally {
       setSearching(false);
     }
   }

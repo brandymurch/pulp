@@ -79,6 +79,33 @@ CREATE TABLE generations (
 );
 CREATE INDEX idx_generations_brand_id ON generations(brand_id);
 CREATE INDEX idx_generations_created_at ON generations(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_generations_location_id ON generations(location_id);
+
+-- Pipeline jobs (server-side content generation pipeline state)
+CREATE TABLE IF NOT EXISTS pipeline_jobs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  brand_id UUID REFERENCES brands(id) ON DELETE SET NULL,
+  location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
+  keyword TEXT NOT NULL,
+  city TEXT,
+  state TEXT,
+  template_id TEXT,
+  content_type TEXT DEFAULT 'landing_page',
+  phase TEXT NOT NULL DEFAULT 'pending',
+  brief JSONB,
+  research JSONB,
+  outline JSONB,
+  content TEXT,
+  score JSONB,
+  error TEXT,
+  revision_count INTEGER DEFAULT 0,
+  word_count INTEGER DEFAULT 0,
+  input_tokens INTEGER DEFAULT 0,
+  output_tokens INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_brand_created ON pipeline_jobs(brand_id, created_at DESC);
 
 -- RLS: enabled with open policies (app has own auth)
 ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
@@ -86,12 +113,14 @@ ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE style_examples ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drafts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE generations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pipeline_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "allow_all" ON brands FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON locations FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON style_examples FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON drafts FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON generations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON pipeline_jobs FOR ALL USING (true) WITH CHECK (true);
 
 -- Updated_at trigger for brands
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -104,6 +133,12 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER brands_updated_at
   BEFORE UPDATE ON brands
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Updated_at trigger for pipeline_jobs
+DROP TRIGGER IF EXISTS pipeline_jobs_updated_at ON pipeline_jobs;
+CREATE TRIGGER pipeline_jobs_updated_at
+  BEFORE UPDATE ON pipeline_jobs
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- Seed: USA Insulation brand

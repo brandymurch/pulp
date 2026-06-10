@@ -282,7 +282,9 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
                     break;
                   }
                 }
-              } catch {} finally {
+              } catch (err) {
+                console.error("Template generation failed:", err);
+              } finally {
                 setGeneratingTemplate(false);
               }
             }}
@@ -338,7 +340,9 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
                         body: JSON.stringify({ prompt_learnings: updated }),
                       });
                       onSave(brand);
-                    } catch {}
+                    } catch (err) {
+                      console.error("Failed to remove learned pattern:", err);
+                    }
                   }}
                   className="opacity-0 group-hover:opacity-100 text-[10px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-opacity shrink-0 mt-0.5"
                 >

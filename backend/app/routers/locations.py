@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.auth import require_auth
 from app.db import get_db
 
@@ -14,69 +14,91 @@ router = APIRouter(prefix="/api/locations", tags=["locations"])
 
 class CreateLocationRequest(BaseModel):
     brand_id: str
-    name: str
-    city: str
-    state: str
-    slug: str | None = None
+    name: str = Field(max_length=500)
+    city: str = Field(max_length=200)
+    state: str = Field(max_length=100)
+    slug: str | None = Field(default=None, max_length=500)
     local_context: dict[str, Any] | None = None
 
 
 class UpdateLocationRequest(BaseModel):
-    name: str | None = None
-    city: str | None = None
-    state: str | None = None
-    slug: str | None = None
-    status: str | None = None
+    name: str | None = Field(default=None, max_length=500)
+    city: str | None = Field(default=None, max_length=200)
+    state: str | None = Field(default=None, max_length=100)
+    slug: str | None = Field(default=None, max_length=500)
+    status: str | None = Field(default=None, max_length=100)
     local_context: dict[str, Any] | None = None
 
 
 @router.get("")
-async def list_locations(brand_id: str, _=Depends(require_auth)):
+def list_locations(brand_id: str, _=Depends(require_auth)):
     db = get_db()
-    result = db.table("locations").select("*").eq("brand_id", brand_id).order("city").execute()
+    try:
+        result = db.table("locations").select("*").eq("brand_id", brand_id).order("city").execute()
+    except Exception as e:
+        logger.error("Location list failed: %s: %s", type(e).__name__, e)
+        raise HTTPException(status_code=503, detail="Database error")
     return result.data
 
 
 @router.get("/{location_id}")
-async def get_location(location_id: str, _=Depends(require_auth)):
+def get_location(location_id: str, _=Depends(require_auth)):
     db = get_db()
-    result = db.table("locations").select("*").eq("id", location_id).single().execute()
-    return result.data
+    try:
+        result = db.table("locations").select("*").eq("id", location_id).limit(1).execute()
+    except Exception as e:
+        logger.error("Location lookup failed: %s: %s", type(e).__name__, e)
+        raise HTTPException(status_code=503, detail="Database error")
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Location not found")
+    return result.data[0]
 
 
 @router.post("")
-async def create_location(req: CreateLocationRequest, _=Depends(require_auth)):
+def create_location(req: CreateLocationRequest, _=Depends(require_auth)):
     db = get_db()
     data = req.model_dump(exclude_none=True)
     if "local_context" not in data:
         data["local_context"] = {}
     if "slug" not in data or not data["slug"]:
         data["slug"] = f"/{data['city'].lower().replace(' ', '-')}-{data['state'].lower()}"
-    result = db.table("locations").insert(data).execute()
+    try:
+        result = db.table("locations").insert(data).execute()
+    except Exception as e:
+        logger.error("Location create failed: %s: %s", type(e).__name__, e)
+        raise HTTPException(status_code=503, detail="Database error")
     return result.data[0]
 
 
 @router.patch("/{location_id}")
-async def update_location(location_id: str, req: UpdateLocationRequest, _=Depends(require_auth)):
+def update_location(location_id: str, req: UpdateLocationRequest, _=Depends(require_auth)):
     db = get_db()
     data = req.model_dump(exclude_none=True)
     if not data:
         return {"ok": True}
-    result = db.table("locations").update(data).eq("id", location_id).execute()
+    try:
+        result = db.table("locations").update(data).eq("id", location_id).execute()
+    except Exception as e:
+        logger.error("Location update failed: %s: %s", type(e).__name__, e)
+        raise HTTPException(status_code=503, detail="Database error")
     return result.data[0] if result.data else {"ok": True}
 
 
 @router.delete("/{location_id}")
-async def delete_location(location_id: str, _=Depends(require_auth)):
+def delete_location(location_id: str, _=Depends(require_auth)):
     db = get_db()
-    db.table("locations").delete().eq("id", location_id).execute()
+    try:
+        db.table("locations").delete().eq("id", location_id).execute()
+    except Exception as e:
+        logger.error("Location delete failed: %s: %s", type(e).__name__, e)
+        raise HTTPException(status_code=503, detail="Database error")
     return {"ok": True}
 
 
 class GoogleSearchRequest(BaseModel):
-    business_name: str
-    city: str
-    state: str
+    business_name: str = Field(max_length=500)
+    city: str = Field(max_length=200)
+    state: str = Field(max_length=100)
 
 
 @router.post("/google-search")
@@ -92,11 +114,11 @@ async def google_search(req: GoogleSearchRequest, _=Depends(require_auth)):
 
 
 class EnrichRequest(BaseModel):
-    city: str
-    state: str
-    brand_name: str | None = None
+    city: str = Field(max_length=200)
+    state: str = Field(max_length=100)
+    brand_name: str | None = Field(default=None, max_length=500)
     services: list[str] | None = None
-    industry_hint: str | None = None
+    industry_hint: str | None = Field(default=None, max_length=500)
 
 
 @router.post("/enrich")

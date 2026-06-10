@@ -69,21 +69,112 @@ def _normalize_location(location: str) -> str:
     return location
 
 
+class PopApiError(RuntimeError):
+    """POP API returned an error or an unexpected response."""
+
+
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+
+# Celery-style task states POP may return while a task is still running.
+_IN_PROGRESS_STATES = {"PENDING", "RECEIVED", "STARTED", "PROGRESS", "RETRY"}
+
+
+def _body_snippet(resp: httpx.Response, limit: int = 300) -> str:
+    """A short, safe slice of a response body for error messages/logs."""
+    try:
+        return resp.text[:limit]
+    except Exception:
+        return "<unreadable body>"
+
+
+async def _request_json(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    json_body: dict | None = None,
+    max_attempts: int = 3,
+) -> dict:
+    """POP HTTP call with explicit status checks and retry/backoff on 429/5xx.
+
+    Raises PopApiError with the HTTP status and a body snippet instead of
+    blindly calling resp.json() on error pages (which previously surfaced as
+    opaque JSONDecodeErrors or silently wrong data).
+    """
+    last_error: Exception = PopApiError(f"POP API request failed: {method} {url}")
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = await client.request(method, url, json=json_body)
+        except httpx.HTTPError as e:
+            last_error = PopApiError(f"POP API network error on {method} {url}: {e!r}")
+        else:
+            if resp.status_code in _RETRYABLE_STATUS:
+                last_error = PopApiError(
+                    f"POP API {resp.status_code} on {method} {url}: {_body_snippet(resp)}"
+                )
+            elif resp.status_code >= 400:
+                raise PopApiError(
+                    f"POP API {resp.status_code} on {method} {url}: {_body_snippet(resp)}"
+                )
+            else:
+                try:
+                    return resp.json()
+                except ValueError as e:
+                    raise PopApiError(
+                        f"POP API returned non-JSON ({resp.status_code}) on "
+                        f"{method} {url}: {_body_snippet(resp)}"
+                    ) from e
+        if attempt < max_attempts:
+            logger.warning(
+                "POP request attempt %d/%d failed, retrying: %s",
+                attempt, max_attempts, last_error,
+            )
+            await asyncio.sleep(2 ** (attempt - 1))
+    raise last_error
+
+
 async def _poll_task(task_id: str, max_attempts: int = 90, interval: float = 3.0) -> dict:
     """Poll POP API for task results."""
+    last_status: str | None = None
     async with httpx.AsyncClient(timeout=15) as client:
         for _ in range(max_attempts):
-            resp = await client.get(f"{POP_TASK_URL}/{task_id}/results/")
-            data = resp.json()
+            data = await _request_json(
+                client, "GET", f"{POP_TASK_URL}/{task_id}/results/"
+            )
+            status = data.get("status")
 
-            if data.get("status") == "SUCCESS":
+            if status == "SUCCESS":
                 return data
-            if data.get("status") == "FAILURE":
-                raise RuntimeError(data.get("msg") or "POP task failed")
+            if status == "FAILURE":
+                raise PopApiError(
+                    f"POP task {task_id} failed: {data.get('msg') or str(data)[:300]}"
+                )
+            if status not in _IN_PROGRESS_STATES:
+                # Schema change or error payload without a known status -
+                # fail fast instead of polling for 4.5 minutes.
+                raise PopApiError(
+                    f"POP task {task_id} returned unexpected payload: {str(data)[:300]}"
+                )
 
+            last_status = status
             await asyncio.sleep(interval)
 
-    raise TimeoutError("POP task timed out waiting for results")
+    raise PopApiError(
+        f"POP task {task_id} timed out after {int(max_attempts * interval)}s "
+        f"(last status: {last_status}). Note: POP returns PENDING for unknown "
+        "task ids, so this can also mean the task was lost upstream."
+    )
+
+
+def _require_task_id(data: dict, endpoint: str) -> str:
+    """POP reports failures as HTTP 200 + {"status": "FAILURE", "msg": ...}."""
+    if data.get("status") == "FAILURE":
+        raise PopApiError(f"POP {endpoint} failed: {data.get('msg') or str(data)[:300]}")
+    task_id = data.get("taskId")
+    if not task_id:
+        raise PopApiError(
+            f"POP {endpoint} response missing taskId: {str(data)[:300]}"
+        )
+    return task_id
 
 
 async def _get_terms(
@@ -101,9 +192,11 @@ async def _get_terms(
             location = "Canada"
 
     async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
+        data = await _request_json(
+            client,
+            "POST",
             f"{POP_EXPOSE_URL}/get-terms/",
-            json={
+            json_body={
                 "apiKey": POP_API_KEY,
                 "keyword": keyword,
                 "locationName": location,
@@ -111,34 +204,35 @@ async def _get_terms(
                 "targetLanguage": "english",
             },
         )
-        data = resp.json()
 
-    if data.get("status") == "FAILURE":
-        raise RuntimeError(data.get("msg") or "POP get-terms failed")
-
-    return await _poll_task(data["taskId"])
+    return await _poll_task(_require_task_id(data, "get-terms"))
 
 
 async def _create_report(terms_data: dict) -> dict:
     """Create POP report to get target recommendations."""
+    prepare_id = terms_data.get("prepareId")
+    if not prepare_id:
+        raise PopApiError(
+            "POP terms result missing prepareId "
+            f"(keys: {list(terms_data.keys())[:20]})"
+        )
+
     async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
+        data = await _request_json(
+            client,
+            "POST",
             f"{POP_EXPOSE_URL}/create-report/",
-            json={
+            json_body={
                 "apiKey": POP_API_KEY,
-                "prepareId": terms_data["prepareId"],
-                "lsaPhrases": terms_data["lsaPhrases"],
+                "prepareId": prepare_id,
+                "lsaPhrases": terms_data.get("lsaPhrases", []),
                 "variations": terms_data.get("variations", []),
                 "pageNotBuiltYet": 1,
                 "considerOverOptimization": 1,
             },
         )
-        data = resp.json()
 
-    if data.get("status") == "FAILURE":
-        raise RuntimeError(data.get("msg") or "POP create-report failed")
-
-    return await _poll_task(data["taskId"])
+    return await _poll_task(_require_task_id(data, "create-report"))
 
 
 async def get_enriched_brief(
@@ -147,12 +241,20 @@ async def get_enriched_brief(
     location_name: str | None = None,
 ) -> dict:
     """Get POP terms + report in one call. Returns term targets for prompt assembly."""
-    terms = await _get_terms(
-        keyword=keyword,
-        target_url=target_url,
-        location_name=location_name,
-    )
-    report_result = await _create_report(terms)
+    try:
+        terms = await _get_terms(
+            keyword=keyword,
+            target_url=target_url,
+            location_name=location_name,
+        )
+        report_result = await _create_report(terms)
+    except Exception:
+        # Log here with traceback: some callers (pipeline gather) swallow
+        # exceptions, so this is the only guaranteed record of the root cause.
+        logger.exception(
+            "POP brief failed for keyword=%r location=%r", keyword, location_name
+        )
+        raise
     report = report_result.get("report") or {}
     brief = report.get("cleanedContentBrief") or {}
 
@@ -262,12 +364,18 @@ async def score_content_with_pop(
     location_name: str | None = None,
 ) -> dict:
     """Score content using POP API terms + local counting."""
-    terms = await _get_terms(
-        keyword=target_keyword,
-        target_url=url,
-        location_name=location_name,
-    )
-    report_result = await _create_report(terms)
+    try:
+        terms = await _get_terms(
+            keyword=target_keyword,
+            target_url=url,
+            location_name=location_name,
+        )
+        report_result = await _create_report(terms)
+    except Exception:
+        logger.exception(
+            "POP scoring failed for keyword=%r location=%r", target_keyword, location_name
+        )
+        raise
     report = report_result.get("report") or {}
     brief = report.get("cleanedContentBrief") or {}
     target_word_count = (report.get("wordCount") or {}).get("target")

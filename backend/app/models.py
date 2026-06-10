@@ -1,12 +1,18 @@
 """Pydantic request/response models."""
 from __future__ import annotations
 from typing import Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+# Shared max-length bounds for user-supplied strings
+MAX_CONTENT_LEN = 200_000
+MAX_KEYWORD_LEN = 500
+MAX_URL_LEN = 2000
+MAX_FEEDBACK_LEN = 10_000
 
 
 # Auth
 class LoginRequest(BaseModel):
-    password: str
+    password: str = Field(max_length=500)
 
 
 class LoginResponse(BaseModel):
@@ -15,9 +21,9 @@ class LoginResponse(BaseModel):
 
 # Brief
 class BriefRequest(BaseModel):
-    keyword: str
-    target_url: str | None = None
-    location: str | None = None
+    keyword: str = Field(max_length=MAX_KEYWORD_LEN)
+    target_url: str | None = Field(default=None, max_length=MAX_URL_LEN)
+    location: str | None = Field(default=None, max_length=MAX_KEYWORD_LEN)
 
 
 class BriefResponse(BaseModel):
@@ -28,25 +34,25 @@ class BriefResponse(BaseModel):
 
 # Generate (legacy, kept for standalone endpoint)
 class GenerateRequest(BaseModel):
-    keyword: str
-    city: str
-    state: str = ""
+    keyword: str = Field(max_length=MAX_KEYWORD_LEN)
+    city: str = Field(max_length=200)
+    state: str = Field(default="", max_length=100)
     brief: dict[str, Any]
     template: dict[str, Any] | None = None
     outline: dict[str, Any] | None = None
     style_examples: list[dict[str, Any]] | None = None
     competitor_content: list[dict[str, Any]] | None = None
     services: list[str] = []
-    content_type: str = "landing_page"
-    business_name: str = ""
+    content_type: str = Field(default="landing_page", max_length=100)
+    business_name: str = Field(default="", max_length=MAX_KEYWORD_LEN)
     brand_id: str | None = None
     location_id: str | None = None
 
 
 class OutlineRequest(BaseModel):
-    keyword: str
-    city: str
-    state: str = ""
+    keyword: str = Field(max_length=MAX_KEYWORD_LEN)
+    city: str = Field(max_length=200)
+    state: str = Field(default="", max_length=100)
     brief: dict[str, Any]
     template: dict[str, Any] | None = None
     paa_questions: list[str] | None = None
@@ -55,17 +61,17 @@ class OutlineRequest(BaseModel):
 
 
 class ReviseRequest(BaseModel):
-    content: str
-    keyword: str
+    content: str = Field(max_length=MAX_CONTENT_LEN)
+    keyword: str = Field(max_length=MAX_KEYWORD_LEN)
     brief: dict[str, Any]
     pop_feedback: dict[str, Any] = {}
 
 
 # Score
 class ScoreRequest(BaseModel):
-    content: str
-    keyword: str
-    target_url: str | None = None
+    content: str = Field(max_length=MAX_CONTENT_LEN)
+    keyword: str = Field(max_length=MAX_KEYWORD_LEN)
+    target_url: str | None = Field(default=None, max_length=MAX_URL_LEN)
 
 
 class ScoreResponse(BaseModel):
@@ -79,21 +85,21 @@ class ScoreResponse(BaseModel):
 
 # Scrape
 class ScrapeRequest(BaseModel):
-    url: str
+    url: str = Field(max_length=MAX_URL_LEN)
 
 
 # SERP
 class SerpRequest(BaseModel):
-    keyword: str
-    location: str | None = None
+    keyword: str = Field(max_length=MAX_KEYWORD_LEN)
+    location: str | None = Field(default=None, max_length=MAX_KEYWORD_LEN)
 
 
 # Google Drive Export
 class ExportGDriveRequest(BaseModel):
-    title: str
-    content: str
-    keyword: str = ""
-    city: str = ""
+    title: str = Field(max_length=MAX_KEYWORD_LEN)
+    content: str = Field(max_length=MAX_CONTENT_LEN)
+    keyword: str = Field(default="", max_length=MAX_KEYWORD_LEN)
+    city: str = Field(default="", max_length=200)
     brand_id: str
 
 
@@ -105,14 +111,14 @@ class ExportGDriveResponse(BaseModel):
 # Save Generation
 class SaveGenerationRequest(BaseModel):
     brand_id: str
-    keyword: str
-    city: str = ""
-    content: str
+    keyword: str = Field(max_length=MAX_KEYWORD_LEN)
+    city: str = Field(default="", max_length=200)
+    content: str = Field(max_length=MAX_CONTENT_LEN)
     location_id: str | None = None
-    outline: str | None = None
-    content_type: str = "landing_page"
-    template_name: str | None = None
-    model: str = "sonnet"
+    outline: str | None = Field(default=None, max_length=MAX_CONTENT_LEN)
+    content_type: str = Field(default="landing_page", max_length=100)
+    template_name: str | None = Field(default=None, max_length=MAX_KEYWORD_LEN)
+    model: str = Field(default="sonnet", max_length=100)
     word_count: int = 0
     input_tokens: int = 0
     output_tokens: int = 0

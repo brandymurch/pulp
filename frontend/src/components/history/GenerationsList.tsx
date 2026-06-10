@@ -1,15 +1,5 @@
 "use client";
-import { Button } from "@/components/shared/Button";
-
-interface Generation {
-  id: string;
-  keyword: string;
-  city: string;
-  template_name: string | null;
-  word_count: number;
-  pop_score: { overall_score: number } | null;
-  created_at: string;
-}
+import type { Generation } from "@/lib/types";
 
 interface GenerationsListProps {
   generations: Generation[];

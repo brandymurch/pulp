@@ -1,51 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchOk } from "@/lib/api";
+import { ACTIVE_PIPELINE_PHASES, type Brand, type OutlineSection, type PipelineJob, type PipelinePhase, type PopScore } from "@/lib/types";
 import { Button } from "@/components/shared/Button";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
 
-type Phase =
-  | "pending"
-  | "brief"
-  | "outline"
-  | "outline_review"
-  | "generating"
-  | "scoring"
-  | "revising"
-  | "done"
-  | "error";
-
-interface PipelineJob {
-  id: string;
-  brand_id: string;
-  location_id: string | null;
-  keyword: string;
-  city: string;
-  state: string;
-  content_type: string;
-  template_id: string | null;
-  phase: Phase;
-  brief: any;
-  outline: any;
-  content: string | null;
-  score: any;
-  error: string | null;
-  revision_count: number;
-  word_count: number;
-  input_tokens: number;
-  output_tokens: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Brand {
-  id: string;
-  name: string;
-}
+type Phase = PipelinePhase;
 
 /* ------------------------------------------------------------------ */
 /*  Phase helpers                                                     */
@@ -54,6 +18,7 @@ interface Brand {
 const phaseLabels: Record<Phase, string> = {
   pending: "Starting...",
   brief: "Analyzing SEO...",
+  research: "Researching...",
   outline: "Building outline...",
   outline_review: "Awaiting approval",
   generating: "Writing...",
@@ -64,16 +29,14 @@ const phaseLabels: Record<Phase, string> = {
 };
 
 const needsAttentionPhases = new Set<Phase>(["outline_review"]);
-const inProgressPhases = new Set<Phase>([
-  "pending",
-  "brief",
-  "outline",
-  "generating",
-  "scoring",
-  "revising",
-]);
+const inProgressPhases = ACTIVE_PIPELINE_PHASES;
 const donePhases = new Set<Phase>(["done"]);
 const errorPhases = new Set<Phase>(["error"]);
+
+/* Polling limits */
+const POLL_INTERVAL_MS = 10_000;
+const MAX_POLL_FAILURES = 5;
+const MAX_POLL_DURATION_MS = 30 * 60 * 1000;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -106,11 +69,13 @@ function formatDate(iso: string): string {
   });
 }
 
-function overallScore(score: any): number | null {
+function overallScore(score: PipelineJob["score"]): number | null {
   if (!score) return null;
   if (typeof score === "number") return score;
-  if (typeof score.overall === "number") return score.overall;
-  if (typeof score.total === "number") return score.total;
+  const s = score as Partial<PopScore> & { overall?: number; total?: number };
+  if (typeof s.overall_score === "number") return s.overall_score;
+  if (typeof s.overall === "number") return s.overall;
+  if (typeof s.total === "number") return s.total;
   return null;
 }
 
@@ -176,16 +141,21 @@ function NeedsAttentionRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [approving, setApproving] = useState(false);
-  const [fullJob, setFullJob] = useState<any>(null);
+  const [fullJob, setFullJob] = useState<PipelineJob | null>(null);
   const [loadingOutline, setLoadingOutline] = useState(false);
+  const [outlineError, setOutlineError] = useState<string | null>(null);
 
   async function loadFullJob() {
     if (fullJob) return;
     setLoadingOutline(true);
+    setOutlineError(null);
     try {
-      const res = await apiFetch(`/api/pipeline/status/${job.id}`);
-      if (res.ok) setFullJob(await res.json());
-    } catch {} finally {
+      const res = await apiFetchOk(`/api/pipeline/status/${job.id}`);
+      setFullJob(await res.json());
+    } catch (err) {
+      console.error("Failed to load outline:", err);
+      setOutlineError("Failed to load the outline. Collapse and try again.");
+    } finally {
       setLoadingOutline(false);
     }
   }
@@ -236,6 +206,12 @@ function NeedsAttentionRow({
         </div>
       )}
 
+      {expanded && outlineError && (
+        <div className="px-1 pb-4">
+          <div className="text-[12px] text-[#b91c1c]">{outlineError}</div>
+        </div>
+      )}
+
       {expanded && outline && (
         <div className="px-1 pb-4 space-y-3">
           <div className="border border-line rounded-[14px] p-4 space-y-2">
@@ -248,7 +224,7 @@ function NeedsAttentionRow({
               </div>
             )}
             <div className="space-y-1.5">
-              {(outline.sections || []).map((s: any, i: number) => (
+              {(outline.sections || []).map((s: OutlineSection, i: number) => (
                 <div key={i}>
                   <div className="font-display font-normal text-pulp-deep text-[13px]">
                     {s.h2}
@@ -481,6 +457,14 @@ export default function QueuePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollFailuresRef = useRef(0);
+
+  function stopPolling() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }
 
   // Load brands on mount
   useEffect(() => {
@@ -501,7 +485,10 @@ export default function QueuePage() {
           const data: PipelineJob[] = await res.json();
           setJobs(data);
         }
-      } catch {} finally {
+      } catch (err) {
+        console.error("Failed to load queue:", err);
+        setError("Failed to load queue");
+      } finally {
         setLoading(false);
       }
     }
@@ -512,16 +499,20 @@ export default function QueuePage() {
   const fetchJobs = useCallback(async (id: string) => {
     try {
       const url = id ? `/api/pipeline/list?brand_id=${id}&limit=20` : `/api/pipeline/list?limit=20`;
-      const res = await apiFetch(url);
-      if (!res.ok) {
-        setError("Failed to load queue");
-        return;
-      }
+      const res = await apiFetchOk(url);
       const data: PipelineJob[] = await res.json();
+      pollFailuresRef.current = 0;
       setJobs(data);
       setError(null);
-    } catch {
-      setError("Failed to load queue");
+    } catch (err) {
+      console.error("Failed to load queue:", err);
+      pollFailuresRef.current += 1;
+      if (pollFailuresRef.current >= MAX_POLL_FAILURES && pollRef.current) {
+        stopPolling();
+        setError("Failed to load the queue repeatedly. Refresh the page to retry.");
+      } else {
+        setError("Failed to load queue");
+      }
     } finally {
       setLoading(false);
     }
@@ -530,26 +521,28 @@ export default function QueuePage() {
   // Fetch on brand change + start polling
   useEffect(() => {
     setLoading(true);
+    pollFailuresRef.current = 0;
     fetchJobs(brandId);
 
-    // Poll every 10 seconds
-    if (pollRef.current) clearInterval(pollRef.current);
+    // Poll every 10 seconds, with a hard cap so we never poll forever
+    const startedAt = Date.now();
+    stopPolling();
     pollRef.current = setInterval(() => {
-      fetchJobs(brandId);
-    }, 10_000);
-
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
+      if (Date.now() - startedAt > MAX_POLL_DURATION_MS) {
+        stopPolling();
+        setError("Auto-refresh paused. Refresh the page to see the latest jobs.");
+        return;
       }
-    };
+      fetchJobs(brandId);
+    }, POLL_INTERVAL_MS);
+
+    return stopPolling;
   }, [brandId, fetchJobs]);
 
   // Approve outline
   async function handleApprove(jobId: string) {
     try {
-      await apiFetch(`/api/pipeline/approve/${jobId}`, { method: "POST" });
+      await apiFetchOk(`/api/pipeline/approve/${jobId}`, { method: "POST" });
       // Immediate refresh
       fetchJobs(brandId);
     } catch {
@@ -585,7 +578,7 @@ export default function QueuePage() {
 
   async function handleDelete(jobId: string) {
     try {
-      await apiFetch(`/api/pipeline/${jobId}`, { method: "DELETE" });
+      await apiFetchOk(`/api/pipeline/${jobId}`, { method: "DELETE" });
       setJobs(prev => prev.filter(j => j.id !== jobId));
     } catch {
       setError("Failed to delete job");

@@ -10,8 +10,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
+# Recent-window size for in-Python aggregates (averages, freshness, top scores).
+_RECENT_WINDOW = 500
+
+
 @router.get("/stats")
-async def get_dashboard_stats(brand_id: str | None = None, _=Depends(require_auth)):
+def get_dashboard_stats(brand_id: str | None = None, _=Depends(require_auth)):
     """Return aggregated stats for the overview dashboard. If no brand_id, aggregates all brands."""
     db = get_db()
 
@@ -23,13 +27,19 @@ async def get_dashboard_stats(brand_id: str | None = None, _=Depends(require_aut
     locations = locations_result.data or []
     total_locations = len(locations)
 
-    # Fetch generations
+    # Exact total via count query (no rows fetched beyond one)
+    count_query = db.table("generations").select("id", count="exact")
+    if brand_id:
+        count_query = count_query.eq("brand_id", brand_id)
+    count_result = count_query.limit(1).execute()
+    total_generations = count_result.count or 0
+
+    # Fetch a bounded recent window for in-Python aggregates instead of the whole table
     gen_query = db.table("generations").select("id,keyword,city,location_id,word_count,pop_score,created_at")
     if brand_id:
         gen_query = gen_query.eq("brand_id", brand_id)
-    generations_result = gen_query.order("created_at", desc=True).execute()
+    generations_result = gen_query.order("created_at", desc=True).limit(_RECENT_WINDOW).execute()
     generations = generations_result.data or []
-    total_generations = len(generations)
 
     # Compute average SEO score
     scores = []

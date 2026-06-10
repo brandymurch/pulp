@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/notion/templates", tags=["notion"])
 
 
 @router.get("")
-async def get_templates(brand: str | None = None, _=Depends(require_auth)):
+def get_templates(brand: str | None = None, _=Depends(require_auth)):
     try:
         return list_templates(brand=brand)
     except Exception as e:
@@ -19,7 +19,7 @@ async def get_templates(brand: str | None = None, _=Depends(require_auth)):
 
 
 @router.get("/{page_id}")
-async def get_template_detail(page_id: str, _=Depends(require_auth)):
+def get_template_detail(page_id: str, _=Depends(require_auth)):
     try:
         return get_template(page_id)
     except Exception as e:

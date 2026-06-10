@@ -1,20 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchOk } from "@/lib/api";
 import { Button } from "@/components/shared/Button";
 import { LocationEditor } from "@/components/locations/LocationEditor";
 
 function LocationHistory({ locationId, brandId }: { locationId: string; brandId: string }) {
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
         const res = await apiFetch(`/api/generations?brand_id=${brandId}&location_id=${locationId}&limit=10`);
-        if (res.ok) setPages(await res.json());
-      } catch {} finally {
+        if (!res.ok) throw new Error(`Failed to load pages (${res.status})`);
+        setPages(await res.json());
+        setLoadError(false);
+      } catch (err) {
+        console.error("Failed to load location pages:", err);
+        setLoadError(true);
+      } finally {
         setLoading(false);
       }
     }
@@ -22,6 +28,7 @@ function LocationHistory({ locationId, brandId }: { locationId: string; brandId:
   }, [locationId, brandId]);
 
   if (loading) return <div className="text-[11px] text-ink-40 animate-pulse">Loading pages...</div>;
+  if (loadError) return <div className="text-[11px] text-[#b91c1c]">Failed to load pages for this location.</div>;
   if (pages.length === 0) return <div className="text-[11px] text-ink-40">No pages generated yet.</div>;
 
   return (
@@ -57,13 +64,17 @@ export default function LocationsPage() {
   const [selected, setSelected] = useState<any>(null);
   const [addingForBrand, setAddingForBrand] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load brands and all locations on mount
   useEffect(() => {
     async function loadAll() {
       try {
         const brandsRes = await apiFetch("/api/brands");
-        if (!brandsRes.ok) return;
+        if (!brandsRes.ok) {
+          setError("Failed to load brands. Refresh the page to try again.");
+          return;
+        }
         const brandsData = await brandsRes.json();
         setBrands(brandsData);
 
@@ -80,6 +91,9 @@ export default function LocationsPage() {
           })
         );
         setAllLocations(locationsByBrand);
+      } catch (err) {
+        console.error("Failed to load locations:", err);
+        setError("Failed to load locations. Refresh the page to try again.");
       } finally {
         setLoading(false);
       }
@@ -88,25 +102,23 @@ export default function LocationsPage() {
   }, []);
 
   async function handleSave(brandId: string, data: any) {
-    if (selected) {
-      const res = await apiFetch(`/api/locations/${selected.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
+    try {
+      if (selected) {
+        const res = await apiFetchOk(`/api/locations/${selected.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        });
         const updated = await res.json();
         setAllLocations(prev => ({
           ...prev,
           [brandId]: (prev[brandId] || []).map(l => l.id === updated.id ? updated : l),
         }));
         setSelected(null);
-      }
-    } else {
-      const res = await apiFetch("/api/locations", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
+      } else {
+        const res = await apiFetchOk("/api/locations", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
         const created = await res.json();
         setAllLocations(prev => ({
           ...prev,
@@ -114,16 +126,26 @@ export default function LocationsPage() {
         }));
         setAddingForBrand(null);
       }
+      setError(null);
+    } catch (err) {
+      console.error("Failed to save location:", err);
+      setError("Failed to save the location. Try again.");
     }
   }
 
   async function handleDelete(brandId: string, locationId: string) {
-    await apiFetch(`/api/locations/${locationId}`, { method: "DELETE" });
-    setAllLocations(prev => ({
-      ...prev,
-      [brandId]: (prev[brandId] || []).filter(l => l.id !== locationId),
-    }));
-    if (selected?.id === locationId) setSelected(null);
+    try {
+      await apiFetchOk(`/api/locations/${locationId}`, { method: "DELETE" });
+      setAllLocations(prev => ({
+        ...prev,
+        [brandId]: (prev[brandId] || []).filter(l => l.id !== locationId),
+      }));
+      if (selected?.id === locationId) setSelected(null);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to delete location:", err);
+      setError("Failed to delete the location. Try again.");
+    }
   }
 
   return (
@@ -136,6 +158,12 @@ export default function LocationsPage() {
           Manage locations and local context per brand.
         </p>
       </div>
+
+      {error && (
+        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-[13px] text-ink-40 animate-pulse">Loading locations...</div>
