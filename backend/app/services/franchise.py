@@ -1,11 +1,7 @@
 """Franchise development content - fact sheet extraction and page generation prompts."""
 from __future__ import annotations
-import logging
-from typing import Any
 
 from app.services.claude import MODELS, get_client, extract_json
-
-logger = logging.getLogger(__name__)
 
 FACT_SHEET_FIELDS = [
     "investment_min", "investment_max", "franchise_fee", "royalty_pct",
@@ -46,17 +42,18 @@ SCRAPED PAGES:
 async def extract_fact_sheet(scraped_pages: list[dict]) -> dict:
     """Run Claude extraction over scraped page content. Returns the fact sheet dict."""
     pages_text = "\n\n---\n\n".join(
-        f"URL: {p.get('url', 'unknown')}\n{(p.get('content') or p.get('markdown') or '')[:15000]}"
+        f"URL: {p.get('url', 'unknown')}\n{(p.get('content') or '')[:15000]}"
         for p in scraped_pages
     )
     client = get_client()
     resp = await client.messages.create(
         model=MODELS["sonnet"],
         max_tokens=4000,
+        temperature=0.2,
         output_config={"format": {"type": "json_schema", "schema": FACT_SHEET_SCHEMA}},
         messages=[{"role": "user", "content": EXTRACTION_PROMPT.format(pages=pages_text)}],
     )
-    text = next(b.text for b in resp.content if b.type == "text")
+    text = "".join(b.text for b in resp.content if hasattr(b, "text"))
     return extract_json(text)
 
 
