@@ -40,6 +40,24 @@ def _brief_cache_get(cache_key: str) -> dict | None:
     return res.data[0]["brief"] if res.data else None
 
 
+def _brief_cache_get_by_keyword(keyword: str) -> dict | None:
+    """Fallback lookup by keyword alone (the keyword usually embeds the city)."""
+    from app.db import get_db
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=BRIEF_CACHE_DAYS)).isoformat()
+    res = (
+        get_db()
+        .table("pop_brief_cache")
+        .select("brief")
+        .ilike("keyword", (keyword or "").strip())
+        .gte("created_at", cutoff)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0]["brief"] if res.data else None
+
+
 def _brief_cache_put(cache_key: str, keyword: str, location_name: str | None, brief: dict) -> None:
     from app.db import get_db
 
@@ -421,6 +439,38 @@ async def get_enriched_brief(
         logger.warning("POP brief cache write failed", exc_info=True)
 
     return result
+
+
+async def score_content_cached(
+    content: str,
+    target_keyword: str,
+    url: str | None = None,
+    location_name: str | None = None,
+) -> dict:
+    """Score content against the cached brief - zero POP credits on a hit.
+
+    Lookup order: exact (keyword, location, url) cache key, then keyword-only
+    (the keyword usually embeds the city). On a miss, fetches the brief via
+    get_enriched_brief (one POP run, which also populates the cache) and
+    scores locally. Same response shape as score_content_with_pop.
+    """
+    brief: dict | None = None
+    try:
+        brief = await asyncio.to_thread(
+            _brief_cache_get, _brief_cache_key(target_keyword, location_name, url)
+        )
+        if not brief:
+            brief = await asyncio.to_thread(_brief_cache_get_by_keyword, target_keyword)
+    except Exception:
+        logger.warning("Brief cache lookup failed during scoring", exc_info=True)
+
+    if brief:
+        logger.info("Scoring %r against cached brief (no POP credits)", target_keyword)
+    else:
+        brief = await get_enriched_brief(
+            keyword=target_keyword, target_url=url, location_name=location_name
+        )
+    return score_content_from_brief(content=content, brief=brief)
 
 
 async def score_content_with_pop(

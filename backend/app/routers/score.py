@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.auth import require_auth
 from app.config import POP_API_KEY
 from app.models import ScoreRequest
-from app.services.pop import score_content_with_pop, stub_score
+from app.services.pop import score_content_cached, stub_score
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,9 @@ def _run_score_job_sync(job_id: str, content: str, keyword: str, target_url: str
     loop = asyncio.new_event_loop()
     try:
         if POP_API_KEY:
-            result = loop.run_until_complete(score_content_with_pop(
+            # Scores against the cached brief when available; only a cache
+            # miss spends a POP run (which then caches the brief).
+            result = loop.run_until_complete(score_content_cached(
                 content=content,
                 target_keyword=keyword,
                 url=target_url,
