@@ -4,13 +4,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { apiFetch, apiFetchOk } from "@/lib/api";
 import {
   ACTIVE_PIPELINE_PHASES,
-  FRANCHISE_PAGE_TYPES,
   type Brand,
   type Generation,
   type OutlineSection,
   type PipelineJob,
   type PipelinePhase,
-  type PopScore,
 } from "@/lib/types";
 import { Button } from "@/components/shared/Button";
 import { GenerationsList } from "@/components/history/GenerationsList";
@@ -78,22 +76,6 @@ function formatDate(iso: string): string {
     month: "short",
     day: "numeric",
   });
-}
-
-function overallScore(score: PipelineJob["score"]): number | null {
-  if (!score) return null;
-  if (typeof score === "number") return score;
-  const s = score as Partial<PopScore> & { overall?: number; total?: number };
-  if (typeof s.overall_score === "number") return s.overall_score;
-  if (typeof s.overall === "number") return s.overall;
-  if (typeof s.total === "number") return s.total;
-  return null;
-}
-
-function scoreColor(s: number): string {
-  if (s >= 80) return "text-green";
-  if (s >= 60) return "text-amber";
-  return "text-[#b91c1c]";
 }
 
 /* ------------------------------------------------------------------ */
@@ -274,124 +256,6 @@ function InProgressRow({ job }: { job: PipelineJob }) {
   );
 }
 
-function CompletedRow({
-  job,
-  onDelete,
-}: {
-  job: PipelineJob;
-  onDelete?: (id: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const score = overallScore(job.score);
-  const preview = job.content ? job.content.slice(0, 200) : null;
-
-  return (
-    <div className="border-b border-line last:border-0">
-      <button
-        type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-3 py-2 px-1 text-left cursor-pointer bg-transparent border-0 hover:bg-[rgba(0,0,0,0.02)] transition-colors"
-      >
-        <StatusDot phase={job.phase} />
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] text-ink truncate">{job.keyword}</div>
-          <div className="text-[11px] text-ink-40">
-            {job.city}, {job.state}
-          </div>
-        </div>
-        <div className="flex items-center gap-4 flex-none">
-          {job.word_count > 0 && (
-            <span className="text-[11px] text-ink-40">
-              {job.word_count.toLocaleString()} words
-            </span>
-          )}
-          {score !== null && (
-            <span
-              className={`text-[12px] font-display font-[800] ${scoreColor(score)}`}
-            >
-              {score}
-            </span>
-          )}
-          <span className="text-[11px] text-ink-40 w-[60px] text-right">
-            {formatDate(job.created_at)}
-          </span>
-        </div>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`text-ink-40 flex-none transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
-        >
-          <path d="M3 5l3 3 3-3" />
-        </svg>
-      </button>
-
-      {expanded && (
-        <div className="px-1 pb-4 space-y-3">
-          {preview && (
-            <div className="text-[12px] text-ink-70 leading-relaxed border border-line rounded-[14px] p-4">
-              {preview}
-              {job.content && job.content.length > 200 && (
-                <span className="text-ink-40">...</span>
-              )}
-            </div>
-          )}
-
-          {score !== null && job.score && typeof job.score === "object" && (
-            <div className="flex gap-3 flex-wrap text-[11px]">
-              {Object.entries(job.score)
-                .filter(([k]) => k !== "overall" && k !== "total")
-                .map(([k, v]) => (
-                  <span key={k} className="text-ink-40">
-                    {k.replace(/_/g, " ")}:{" "}
-                    <span className="text-ink">{String(v)}</span>
-                  </span>
-                ))}
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            {job.content && (
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(job.content!);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-              >
-                {copied ? "Copied" : "Copy"}
-              </Button>
-            )}
-            <a
-              href={`/generate?pipeline=${job.id}`}
-              className="inline-flex items-center justify-center h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] border-ink text-ink bg-transparent transition-all hover:bg-ink hover:text-white"
-            >
-              Open
-            </a>
-            {onDelete && (
-              <button
-                onClick={() => onDelete(job.id)}
-                className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors"
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ErrorRow({
   job,
   onRetry,
@@ -470,20 +334,18 @@ function InProgressSection({
 }) {
   const needsAttention = jobs.filter((j) => needsAttentionPhases.has(j.phase));
   const inProgress = jobs.filter((j) => inProgressPhases.has(j.phase));
-  const completed = jobs.filter((j) => donePhases.has(j.phase)).slice(0, 10);
   const failed = jobs.filter((j) => errorPhases.has(j.phase));
 
   const hasActive =
     needsAttention.length > 0 ||
     inProgress.length > 0 ||
-    completed.length > 0 ||
     failed.length > 0;
 
-  // While loading: show nothing (no spinner flash)
-  if (loading) return null;
+  // While loading (and no error yet): show nothing (no spinner flash)
+  if (loading && error === null) return null;
 
-  // After load: hide entirely when there are no active/reviewable jobs
-  if (!hasActive) return null;
+  // After load: hide entirely when there are no active/reviewable jobs and no error to display
+  if (!hasActive && error === null) return null;
 
   return (
     <div className="space-y-6">
@@ -538,19 +400,6 @@ function InProgressSection({
             <div className="px-5 py-1">
               {inProgress.map((job) => (
                 <InProgressRow key={job.id} job={job} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {completed.length > 0 && (
-        <div>
-          <QueueSectionHeader label="Recently completed" count={completed.length} />
-          <div className="border-[1.5px] border-line rounded-pop-lg bg-white">
-            <div className="px-5 py-1">
-              {completed.map((job) => (
-                <CompletedRow key={job.id} job={job} onDelete={onDelete} />
               ))}
             </div>
           </div>
