@@ -55,6 +55,13 @@ def _run_scrape_job(job_id: str, urls: list[str]):
                 try:
                     page = await scrape_url(u)
                     page["url"] = u
+                    if not (page.get("content") or "").strip():
+                        reason = page.get("error") or (
+                            "scraper returned error source" if page.get("source") == "error"
+                            else "scrape returned no content"
+                        )
+                        errors.append(f"{u}: {reason}")
+                        continue
                     results.append(page)
                 except Exception as e:
                     errors.append(f"{u}: {e}")
