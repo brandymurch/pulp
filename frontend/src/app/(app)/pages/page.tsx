@@ -588,7 +588,9 @@ export default function PagesPage() {
 
   const loadGenerations = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/generations");
+      const res = await apiFetch(
+        brandId ? `/api/generations?brand_id=${brandId}` : "/api/generations"
+      );
       if (res.ok) {
         const data = await res.json();
         setGenerations(data);
@@ -602,7 +604,7 @@ export default function PagesPage() {
     } finally {
       setHistoryLoading(false);
     }
-  }, []);
+  }, [brandId]);
 
   useEffect(() => {
     loadGenerations();
