@@ -45,16 +45,6 @@ function VoiceIcon() {
   );
 }
 
-function OverviewIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="5" height="5" rx="1" />
-      <rect x="9" y="2" width="5" height="5" rx="1" />
-      <rect x="2" y="9" width="5" height="5" rx="1" />
-      <rect x="9" y="9" width="5" height="5" rx="1" />
-    </svg>
-  );
-}
 
 function LocationsIcon() {
   return (
@@ -94,15 +84,14 @@ function SettingsIcon() {
 }
 
 const mainNav: NavItem[] = [
-  { label: "Overview", href: "/overview", icon: <OverviewIcon /> },
   { label: "Generate", href: "/generate", icon: <GenerateIcon /> },
-  { label: "Copy queue", href: "/queue", icon: <QueueIcon /> },
-  { label: "History", href: "/history", icon: <HistoryIcon /> },
+  { label: "Pages", href: "/pages", icon: <HistoryIcon /> },
+  { label: "Franchise", href: "/franchise", icon: <QueueIcon /> },
 ];
 
 const brandNav: NavItem[] = [
   { label: "Locations", href: "/locations", icon: <LocationsIcon /> },
-  { label: "Brand Voice", href: "/voice", icon: <VoiceIcon /> },
+  { label: "Voice", href: "/voice", icon: <VoiceIcon /> },
 ];
 
 const systemNav: NavItem[] = [

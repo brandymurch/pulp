@@ -130,3 +130,29 @@ export interface Generation {
 
 /** Request body for streaming generation endpoints (see useGeneration). */
 export type GenerationPayload = Record<string, unknown>;
+
+export interface FranchiseGeneratePayload {
+  brand_id: string;
+  page_type: string;
+}
+
+export interface FranchiseFactSheet {
+  investment_min?: number | null;
+  investment_max?: number | null;
+  franchise_fee?: number | null;
+  royalty_pct?: string | null;
+  ad_fund_pct?: string | null;
+  territory_model?: string | null;
+  training_support?: string[];
+  process_steps?: string[];
+  differentiators?: string[];
+  ideal_candidate?: string | null;
+  proof_points?: string[];
+  source_urls?: string[];
+  scraped_at?: string;
+}
+
+export const FRANCHISE_PAGE_TYPES = [
+  { key: "franchise_why", label: "Why Franchise With Us" },
+  { key: "franchise_investment", label: "Investment & Fees" },
+] as const;

@@ -217,7 +217,7 @@ async def list_pipelines(brand_id: str | None = None, limit: int = 20, _=Depends
     """List recent pipeline jobs. Optionally filter by brand."""
     db = get_db()
     query = db.table("pipeline_jobs").select(
-        "id,keyword,city,state,phase,word_count,score,created_at,updated_at,content_type"
+        "id,keyword,city,state,phase,word_count,score,created_at,updated_at,content_type,brand_id,location_id,template_id,error"
     )
     if brand_id:
         query = query.eq("brand_id", brand_id)

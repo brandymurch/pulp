@@ -2,17 +2,26 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { apiFetch, apiFetchOk } from "@/lib/api";
-import { ACTIVE_PIPELINE_PHASES, type Brand, type OutlineSection, type PipelineJob, type PipelinePhase, type PopScore } from "@/lib/types";
+import {
+  ACTIVE_PIPELINE_PHASES,
+  type Brand,
+  type Generation,
+  type OutlineSection,
+  type PipelineJob,
+  type PipelinePhase,
+} from "@/lib/types";
 import { Button } from "@/components/shared/Button";
+import { GenerationsList } from "@/components/history/GenerationsList";
+import { GenerationDetail } from "@/components/history/GenerationDetail";
 
 /* ------------------------------------------------------------------ */
-/*  Types                                                             */
+/*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
 type Phase = PipelinePhase;
 
 /* ------------------------------------------------------------------ */
-/*  Phase helpers                                                     */
+/*  Phase helpers                                                      */
 /* ------------------------------------------------------------------ */
 
 const phaseLabels: Record<Phase, string> = {
@@ -39,7 +48,7 @@ const MAX_POLL_FAILURES = 5;
 const MAX_POLL_DURATION_MS = 30 * 60 * 1000;
 
 /* ------------------------------------------------------------------ */
-/*  Helpers                                                           */
+/*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 function relativeTime(iso: string): string {
@@ -69,24 +78,9 @@ function formatDate(iso: string): string {
   });
 }
 
-function overallScore(score: PipelineJob["score"]): number | null {
-  if (!score) return null;
-  if (typeof score === "number") return score;
-  const s = score as Partial<PopScore> & { overall?: number; total?: number };
-  if (typeof s.overall_score === "number") return s.overall_score;
-  if (typeof s.overall === "number") return s.overall;
-  if (typeof s.total === "number") return s.total;
-  return null;
-}
-
-function scoreColor(s: number): string {
-  if (s >= 80) return "text-green";
-  if (s >= 60) return "text-amber";
-  return "text-[#b91c1c]";
-}
-
 /* ------------------------------------------------------------------ */
-/*  StatusDot                                                         */
+/*  Queue sub-components (unexported — Next.js errors on named exports */
+/*  from page.tsx)                                                     */
 /* ------------------------------------------------------------------ */
 
 function StatusDot({ phase }: { phase: Phase }) {
@@ -106,17 +100,7 @@ function StatusDot({ phase }: { phase: Phase }) {
   return <span className="w-2 h-2 rounded-full bg-[#b91c1c] flex-none" />;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Section header                                                    */
-/* ------------------------------------------------------------------ */
-
-function SectionHeader({
-  label,
-  count,
-}: {
-  label: string;
-  count: number;
-}) {
+function QueueSectionHeader({ label, count }: { label: string; count: number }) {
   if (count === 0) return null;
   return (
     <div className="flex items-center gap-2.5 mb-2">
@@ -128,19 +112,12 @@ function SectionHeader({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  NeedsAttentionRow                                                 */
-/* ------------------------------------------------------------------ */
-
 function NeedsAttentionRow({
   job,
-  onApprove,
 }: {
   job: PipelineJob;
-  onApprove: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [approving, setApproving] = useState(false);
   const [fullJob, setFullJob] = useState<PipelineJob | null>(null);
   const [loadingOutline, setLoadingOutline] = useState(false);
   const [outlineError, setOutlineError] = useState<string | null>(null);
@@ -173,7 +150,7 @@ function NeedsAttentionRow({
       <button
         type="button"
         onClick={handleExpand}
-        className="w-full flex items-center gap-3 py-3 px-1 text-left cursor-pointer bg-transparent border-0 hover:bg-[rgba(0,0,0,0.02)] transition-colors"
+        className="w-full flex items-center gap-3 py-2 px-1 text-left cursor-pointer bg-transparent border-0 hover:bg-[rgba(0,0,0,0.02)] transition-colors"
       >
         <StatusDot phase={job.phase} />
         <div className="flex-1 min-w-0">
@@ -257,13 +234,9 @@ function NeedsAttentionRow({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  InProgressRow                                                     */
-/* ------------------------------------------------------------------ */
-
 function InProgressRow({ job }: { job: PipelineJob }) {
   return (
-    <div className="flex items-center gap-3 py-3 px-1 border-b border-line last:border-0">
+    <div className="flex items-center gap-3 py-2 px-1 border-b border-line last:border-0">
       <StatusDot phase={job.phase} />
       <div className="flex-1 min-w-0">
         <div className="text-[13px] text-ink truncate">{job.keyword}</div>
@@ -281,123 +254,6 @@ function InProgressRow({ job }: { job: PipelineJob }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  CompletedRow                                                      */
-/* ------------------------------------------------------------------ */
-
-function CompletedRow({ job, onDelete }: { job: PipelineJob; onDelete?: (id: string) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const score = overallScore(job.score);
-  const preview = job.content ? job.content.slice(0, 200) : null;
-
-  return (
-    <div className="border-b border-line last:border-0">
-      <button
-        type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-3 py-3 px-1 text-left cursor-pointer bg-transparent border-0 hover:bg-[rgba(0,0,0,0.02)] transition-colors"
-      >
-        <StatusDot phase={job.phase} />
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] text-ink truncate">{job.keyword}</div>
-          <div className="text-[11px] text-ink-40">
-            {job.city}, {job.state}
-          </div>
-        </div>
-        <div className="flex items-center gap-4 flex-none">
-          {job.word_count > 0 && (
-            <span className="text-[11px] text-ink-40">
-              {job.word_count.toLocaleString()} words
-            </span>
-          )}
-          {score !== null && (
-            <span
-              className={`text-[12px] font-display font-[800] ${scoreColor(score)}`}
-            >
-              {score}
-            </span>
-          )}
-          <span className="text-[11px] text-ink-40 w-[60px] text-right">
-            {formatDate(job.created_at)}
-          </span>
-        </div>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`text-ink-40 flex-none transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
-        >
-          <path d="M3 5l3 3 3-3" />
-        </svg>
-      </button>
-
-      {expanded && (
-        <div className="px-1 pb-4 space-y-3">
-          {preview && (
-            <div className="text-[12px] text-ink-70 leading-relaxed border border-line rounded-[14px] p-4">
-              {preview}
-              {job.content && job.content.length > 200 && (
-                <span className="text-ink-40">...</span>
-              )}
-            </div>
-          )}
-
-          {score !== null && job.score && typeof job.score === "object" && (
-            <div className="flex gap-3 flex-wrap text-[11px]">
-              {Object.entries(job.score)
-                .filter(([k]) => k !== "overall" && k !== "total")
-                .map(([k, v]) => (
-                  <span key={k} className="text-ink-40">
-                    {k.replace(/_/g, " ")}:{" "}
-                    <span className="text-ink">{String(v)}</span>
-                  </span>
-                ))}
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            {job.content && (
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(job.content!);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-              >
-                {copied ? "Copied" : "Copy"}
-              </Button>
-            )}
-            <a
-              href={`/generate?pipeline=${job.id}`}
-              className="inline-flex items-center justify-center h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] border-ink text-ink bg-transparent transition-all hover:bg-ink hover:text-white"
-            >
-              Open
-            </a>
-            {onDelete && (
-              <button onClick={() => onDelete(job.id)} className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors">
-                Delete
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  ErrorRow                                                          */
-/* ------------------------------------------------------------------ */
-
 function ErrorRow({
   job,
   onRetry,
@@ -410,7 +266,7 @@ function ErrorRow({
   const [retrying, setRetrying] = useState(false);
 
   return (
-    <div className="flex items-center gap-3 py-3 px-1 border-b border-line last:border-0">
+    <div className="flex items-center gap-3 py-2 px-1 border-b border-line last:border-0">
       <StatusDot phase={job.phase} />
       <div className="flex-1 min-w-0">
         <div className="text-[13px] text-ink truncate">{job.keyword}</div>
@@ -437,7 +293,10 @@ function ErrorRow({
           {retrying ? "Retrying..." : "Retry"}
         </Button>
         {onDelete && (
-          <button onClick={() => onDelete(job.id)} className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors">
+          <button
+            onClick={() => onDelete(job.id)}
+            className="text-[11px] text-[#b91c1c]/50 hover:text-[#b91c1c] transition-colors"
+          >
             Delete
           </button>
         )}
@@ -447,17 +306,176 @@ function ErrorRow({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Page                                                              */
+/*  InProgressSection — queue UI (hidden when no active jobs)         */
 /* ------------------------------------------------------------------ */
 
-export default function QueuePage() {
+function InProgressSection({
+  jobs,
+  loading,
+  error,
+  onRetry,
+  onDelete,
+}: {
+  jobs: PipelineJob[];
+  loading: boolean;
+  error: string | null;
+  onRetry: (job: PipelineJob) => void;
+  onDelete: (id: string) => void;
+}) {
+  const needsAttention = jobs.filter((j) => needsAttentionPhases.has(j.phase));
+  const inProgress = jobs.filter((j) => inProgressPhases.has(j.phase));
+  const failed = jobs.filter((j) => errorPhases.has(j.phase));
+
+  const hasActive =
+    needsAttention.length > 0 ||
+    inProgress.length > 0 ||
+    failed.length > 0;
+
+  // While loading (and no error yet): show nothing (no spinner flash)
+  if (loading && error === null) return null;
+
+  // After load: hide entirely when there are no active/reviewable jobs and no error to display
+  if (!hasActive && error === null) return null;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[0.95] tracking-[-0.03em] m-0">
+        In progress
+      </h2>
+
+      {error && (
+        <div className="border-[1.5px] border-[#b91c1c] rounded-pop px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+          {error}
+        </div>
+      )}
+
+      {needsAttention.length > 0 && (
+        <div>
+          <QueueSectionHeader label="Needs attention" count={needsAttention.length} />
+          <div className="border-[1.5px] border-ink rounded-pop-lg bg-white">
+            <div className="px-5 py-1">
+              {needsAttention.map((job) => (
+                <NeedsAttentionRow
+                  key={job.id}
+                  job={job}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {inProgress.length > 0 && (
+        <div>
+          <QueueSectionHeader label="In progress" count={inProgress.length} />
+          <div className="border-[1.5px] border-line rounded-pop-lg bg-white">
+            <div className="px-5 py-1">
+              {inProgress.map((job) => (
+                <InProgressRow key={job.id} job={job} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {failed.length > 0 && (
+        <div>
+          <QueueSectionHeader label="Failed" count={failed.length} />
+          <div className="border-[1.5px] border-[#b91c1c]/30 rounded-pop-lg bg-white">
+            <div className="px-5 py-1">
+              {failed.map((job) => (
+                <ErrorRow
+                  key={job.id}
+                  job={job}
+                  onRetry={onRetry}
+                  onDelete={onDelete}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FinishedPagesSection — history UI                                  */
+/* ------------------------------------------------------------------ */
+
+function FinishedPagesSection({
+  generations,
+  selected,
+  loading,
+  error,
+  onSelect,
+  onDelete,
+  onClose,
+}: {
+  generations: Generation[];
+  selected: Generation | null;
+  loading: boolean;
+  error: string | null;
+  onSelect: (gen: Generation) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <h2 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[0.95] tracking-[-0.03em] m-0">
+        Finished pages
+      </h2>
+
+      {error && (
+        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-[13px] text-ink-40 animate-pulse">
+          Loading generations...
+        </div>
+      ) : (
+        <>
+          <GenerationsList
+            generations={generations}
+            selectedId={selected?.id || null}
+            onSelect={onSelect}
+            onDelete={onDelete}
+          />
+          {selected && (
+            <GenerationDetail generation={selected} onClose={onClose} />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
+
+export default function PagesPage() {
+  /* ---- Queue state ---- */
   const [brands, setBrands] = useState<Brand[]>([]);
   const [brandId, setBrandId] = useState("");
   const [jobs, setJobs] = useState<PipelineJob[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [queueLoading, setQueueLoading] = useState(true);
+  const [queueError, setQueueError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollFailuresRef = useRef(0);
+
+  /* ---- History state ---- */
+  const [generations, setGenerations] = useState<Generation[]>([]);
+  const [selected, setSelected] = useState<Generation | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  /* ---------------------------------------------------------------- */
+  /*  Queue effects / handlers                                        */
+  /* ---------------------------------------------------------------- */
 
   function stopPolling() {
     if (pollRef.current) {
@@ -475,52 +493,42 @@ export default function QueuePage() {
         const data: Brand[] = await res.json();
         setBrands(data);
       } catch {
-        setError("Failed to load brands");
+        setQueueError("Failed to load brands");
       }
-      // Always fetch all jobs initially
-      try {
-        const url = "/api/pipeline/list?limit=20";
-        const res = await apiFetch(url);
-        if (res.ok) {
-          const data: PipelineJob[] = await res.json();
-          setJobs(data);
-        }
-      } catch (err) {
-        console.error("Failed to load queue:", err);
-        setError("Failed to load queue");
-      } finally {
-        setLoading(false);
-      }
+      // Job fetching is handled exclusively by the brand-change effect below
     }
     init();
   }, []);
 
-  // Fetch jobs for brand
   const fetchJobs = useCallback(async (id: string) => {
     try {
-      const url = id ? `/api/pipeline/list?brand_id=${id}&limit=20` : `/api/pipeline/list?limit=20`;
+      const url = id
+        ? `/api/pipeline/list?brand_id=${id}&limit=20`
+        : `/api/pipeline/list?limit=20`;
       const res = await apiFetchOk(url);
       const data: PipelineJob[] = await res.json();
       pollFailuresRef.current = 0;
       setJobs(data);
-      setError(null);
+      setQueueError(null);
     } catch (err) {
       console.error("Failed to load queue:", err);
       pollFailuresRef.current += 1;
       if (pollFailuresRef.current >= MAX_POLL_FAILURES && pollRef.current) {
         stopPolling();
-        setError("Failed to load the queue repeatedly. Refresh the page to retry.");
+        setQueueError(
+          "Failed to load the queue repeatedly. Refresh the page to retry."
+        );
       } else {
-        setError("Failed to load queue");
+        setQueueError("Failed to load queue");
       }
     } finally {
-      setLoading(false);
+      setQueueLoading(false);
     }
   }, []);
 
   // Fetch on brand change + start polling
   useEffect(() => {
-    setLoading(true);
+    setQueueLoading(true);
     pollFailuresRef.current = 0;
     fetchJobs(brandId);
 
@@ -530,7 +538,9 @@ export default function QueuePage() {
     pollRef.current = setInterval(() => {
       if (Date.now() - startedAt > MAX_POLL_DURATION_MS) {
         stopPolling();
-        setError("Auto-refresh paused. Refresh the page to see the latest jobs.");
+        setQueueError(
+          "Auto-refresh paused. Refresh the page to see the latest jobs."
+        );
         return;
       }
       fetchJobs(brandId);
@@ -539,18 +549,6 @@ export default function QueuePage() {
     return stopPolling;
   }, [brandId, fetchJobs]);
 
-  // Approve outline
-  async function handleApprove(jobId: string) {
-    try {
-      await apiFetchOk(`/api/pipeline/approve/${jobId}`, { method: "POST" });
-      // Immediate refresh
-      fetchJobs(brandId);
-    } catch {
-      setError("Failed to approve outline");
-    }
-  }
-
-  // Retry failed job
   async function handleRetry(job: PipelineJob) {
     try {
       const res = await apiFetch("/api/pipeline/start", {
@@ -566,48 +564,86 @@ export default function QueuePage() {
         }),
       });
       if (!res.ok) {
-        setError("Failed to retry job");
+        setQueueError("Failed to retry job");
         return;
       }
-      // Immediate refresh
       fetchJobs(brandId);
     } catch {
-      setError("Failed to retry job");
+      setQueueError("Failed to retry job");
     }
   }
 
-  async function handleDelete(jobId: string) {
+  async function handleQueueDelete(jobId: string) {
     try {
       await apiFetchOk(`/api/pipeline/${jobId}`, { method: "DELETE" });
-      setJobs(prev => prev.filter(j => j.id !== jobId));
+      setJobs((prev) => prev.filter((j) => j.id !== jobId));
     } catch {
-      setError("Failed to delete job");
+      setQueueError("Failed to delete job");
     }
   }
 
-  // Group jobs
-  const needsAttention = jobs.filter((j) => needsAttentionPhases.has(j.phase));
-  const inProgress = jobs.filter((j) => inProgressPhases.has(j.phase));
-  const completed = jobs
-    .filter((j) => donePhases.has(j.phase))
-    .slice(0, 10);
-  const failed = jobs.filter((j) => errorPhases.has(j.phase));
+  /* ---------------------------------------------------------------- */
+  /*  History effects / handlers                                      */
+  /* ---------------------------------------------------------------- */
 
-  const isEmpty =
-    !loading &&
-    needsAttention.length === 0 &&
-    inProgress.length === 0 &&
-    completed.length === 0 &&
-    failed.length === 0;
+  const loadGenerations = useCallback(async () => {
+    try {
+      const res = await apiFetch(
+        brandId ? `/api/generations?brand_id=${brandId}` : "/api/generations"
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setGenerations(data);
+        setHistoryError(null);
+      } else {
+        setHistoryError("Failed to load generations. Refresh the page to try again.");
+      }
+    } catch (err) {
+      console.error("Failed to load generations:", err);
+      setHistoryError("Failed to load generations. Refresh the page to try again.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [brandId]);
+
+  useEffect(() => {
+    loadGenerations();
+  }, [loadGenerations]);
+
+  async function handleHistoryDelete(id: string) {
+    try {
+      await apiFetchOk(`/api/generations/${id}`, { method: "DELETE" });
+      setGenerations((prev) => prev.filter((g) => g.id !== id));
+      if (selected?.id === id) setSelected(null);
+    } catch (err) {
+      console.error("Failed to delete generation:", err);
+      setHistoryError("Failed to delete the generation. Try again.");
+    }
+  }
+
+  async function handleSelect(gen: Generation) {
+    try {
+      const res = await apiFetchOk(`/api/generations/${gen.id}`);
+      const full = await res.json();
+      setSelected(full);
+      setHistoryError(null);
+    } catch (err) {
+      console.error("Failed to load generation detail:", err);
+      setHistoryError("Failed to load that generation. Try again.");
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Render                                                          */
+  /* ---------------------------------------------------------------- */
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+    <div className="space-y-10">
+      {/* Page heading row with optional brand filter */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
-          Copy queue
+          Pages
         </h1>
-
         {brands.length > 1 && (
           <select
             value={brandId}
@@ -624,100 +660,25 @@ export default function QueuePage() {
         )}
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-pop px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
-          {error}
-        </div>
-      )}
+      {/* In progress — hidden entirely when no active jobs (and during initial load) */}
+      <InProgressSection
+        jobs={jobs}
+        loading={queueLoading}
+        error={queueError}
+        onRetry={handleRetry}
+        onDelete={handleQueueDelete}
+      />
 
-      {/* Loading */}
-      {loading && (
-        <div className="text-[13px] text-ink-40 animate-pulse">
-          Loading queue...
-        </div>
-      )}
-
-      {/* Empty state */}
-      {isEmpty && (
-        <div className="border-[1.5px] border-line rounded-pop-lg p-8 text-center">
-          <div className="font-display font-normal text-pulp-deep text-lg mb-2">
-            No jobs in the queue
-          </div>
-          <p className="text-[13px] text-ink-40 mb-4">
-            Start generating content and your pipeline jobs will appear here.
-          </p>
-          <Button
-            variant="ink"
-            size="sm"
-            onClick={() => {
-              window.location.href = "/generate";
-            }}
-          >
-            Generate content
-          </Button>
-        </div>
-      )}
-
-      {/* Needs attention */}
-      {needsAttention.length > 0 && (
-        <div>
-          <SectionHeader label="Needs attention" count={needsAttention.length} />
-          <div className="border-[1.5px] border-ink rounded-pop-lg bg-white">
-            <div className="px-5 py-1">
-              {needsAttention.map((job) => (
-                <NeedsAttentionRow
-                  key={job.id}
-                  job={job}
-                  onApprove={handleApprove}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* In progress */}
-      {inProgress.length > 0 && (
-        <div>
-          <SectionHeader label="In progress" count={inProgress.length} />
-          <div className="border-[1.5px] border-line rounded-pop-lg bg-white">
-            <div className="px-5 py-1">
-              {inProgress.map((job) => (
-                <InProgressRow key={job.id} job={job} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Recently completed */}
-      {completed.length > 0 && (
-        <div>
-          <SectionHeader label="Recently completed" count={completed.length} />
-          <div className="border-[1.5px] border-line rounded-pop-lg bg-white">
-            <div className="px-5 py-1">
-              {completed.map((job) => (
-                <CompletedRow key={job.id} job={job} onDelete={handleDelete} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Failed */}
-      {failed.length > 0 && (
-        <div>
-          <SectionHeader label="Failed" count={failed.length} />
-          <div className="border-[1.5px] border-[#b91c1c]/30 rounded-pop-lg bg-white">
-            <div className="px-5 py-1">
-              {failed.map((job) => (
-                <ErrorRow key={job.id} job={job} onRetry={handleRetry} onDelete={handleDelete} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Finished pages */}
+      <FinishedPagesSection
+        generations={generations}
+        selected={selected}
+        loading={historyLoading}
+        error={historyError}
+        onSelect={handleSelect}
+        onDelete={handleHistoryDelete}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }

@@ -81,6 +81,9 @@ function GeneratePageInner() {
   const [feedback, setFeedback] = useState("");
   const [exporting, setExporting] = useState(false);
 
+  // More options disclosure
+  const [moreOpen, setMoreOpen] = useState(false);
+
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -189,6 +192,13 @@ function GeneratePageInner() {
     }
     loadLocations();
   }, [brandId, urlLocationId]);
+
+  // Auto-expand More options if any advanced field has a value
+  useEffect(() => {
+    if (competitorUrls.length > 0 || pageSlug !== "" || contentType !== "landing_page") {
+      setMoreOpen(true);
+    }
+  }, [competitorUrls.length, pageSlug, contentType]);
 
   // Poll pipeline status
   function startPolling(id: string) {
@@ -413,7 +423,7 @@ function GeneratePageInner() {
             )}
           </div>
 
-          {/* Keyword + target city + slug */}
+          {/* Keyword + target city */}
           {contentType === "landing_page" ? (
             <div className="space-y-3">
               <div className="grid grid-cols-[1fr_80px] gap-3">
@@ -429,32 +439,57 @@ function GeneratePageInner() {
               <div className="text-[12px] text-ink-40">
                 Keyword: <span className="text-ink">{brands.find(b => b.id === brandId)?.primary_keyword || brandName} {city} {state}</span>
               </div>
-              <div>
-                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug (optional)</label>
-                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
-              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 max-[820px]:grid-cols-1">
-              <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
-              <div>
-                <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug (optional)</label>
-                <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
-              </div>
-            </div>
+            <KeywordInput keyword={keyword} city={city} state={state} onKeywordChange={setKeyword} onCityChange={setCity} onStateChange={setState} />
           )}
 
-          <div className="grid grid-cols-3 gap-4 max-[820px]:grid-cols-1">
-            <div>
-              <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Content type</label>
-              <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
-                <option value="landing_page">Landing Page</option>
-                <option value="service_page">Service Page</option>
-                <option value="blog_post">Blog Post</option>
-                <option value="product_page">Product Page</option>
-              </select>
-            </div>
-            <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
+          {/* More options disclosure */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setMoreOpen(o => !o)}
+              className="flex items-center gap-1.5 text-[11px] text-ink-40 hover:text-ink transition-colors duration-150 cursor-pointer bg-transparent border-0 p-0"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`flex-none transition-transform duration-150 ${moreOpen ? "rotate-180" : ""}`}
+              >
+                <path d="M3 5l3 3 3-3" />
+              </svg>
+              More options
+            </button>
+
+            {moreOpen && (
+              <div className="mt-4 space-y-4">
+                {/* Content type */}
+                <div>
+                  <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Content type</label>
+                  <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
+                    <option value="landing_page">Landing Page</option>
+                    <option value="service_page">Service Page</option>
+                    <option value="blog_post">Blog Post</option>
+                    <option value="product_page">Product Page</option>
+                  </select>
+                </div>
+
+                {/* Page slug */}
+                <div>
+                  <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug (optional)</label>
+                  <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
+                </div>
+
+                {/* Competitor URLs */}
+                <CompetitorInput urls={competitorUrls} onChange={setCompetitorUrls} />
+              </div>
+            )}
           </div>
 
           {(!selectedLocationId || !city.trim() || (contentType !== "landing_page" && !keyword.trim())) && (
