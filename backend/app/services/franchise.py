@@ -95,6 +95,23 @@ LIGHT_SEO = (
     "and persuasion win every tradeoff."
 )
 
+LIGHT_SEO_PLAN = (
+    "SEO: Start the output with 'Title tag:' and 'Meta description:' suggestion lines, then "
+    "the page itself with one H1 and descriptive H2 sections. Work the TARGET KEYWORDS "
+    "above into the copy naturally where they genuinely fit - no usage counts, no "
+    "stuffing. Readability and persuasion win every tradeoff."
+)
+
+
+def _fact_sheet_lines(fact_sheet: dict) -> list[str]:
+    """Return non-empty fact-sheet fields as '- key: value' strings."""
+    result = []
+    for key in FACT_SHEET_FIELDS:
+        val = fact_sheet.get(key)
+        if val not in (None, "", []):
+            result.append(f"- {key}: {val}")
+    return result
+
 
 def build_franchise_user_prompt(page_type: str, brand_name: str, fact_sheet: dict) -> str:
     spec = PAGE_TYPES[page_type]
@@ -102,10 +119,57 @@ def build_franchise_user_prompt(page_type: str, brand_name: str, fact_sheet: dic
     lines.append(FACT_DISCIPLINE)
     lines.append("")
     lines.append("FACT SHEET:")
-    for key in FACT_SHEET_FIELDS:
-        val = fact_sheet.get(key)
-        if val not in (None, "", []):
-            lines.append(f"- {key}: {val}")
+    lines.extend(_fact_sheet_lines(fact_sheet))
     lines.append("")
     lines.append(LIGHT_SEO)
+    return "\n".join(lines)
+
+
+def build_franchise_user_prompt_from_plan(page_entry: dict, brand_name: str, fact_sheet: dict) -> str:
+    """Build a user prompt from a plan page entry (title, format, intent, rationale, etc.)."""
+    title = page_entry.get("title") or "Untitled"
+    fmt = page_entry.get("format") or ""
+    intent = page_entry.get("intent") or ""
+    rationale = page_entry.get("rationale") or ""
+    serp_notes = page_entry.get("serp_notes") or ""
+    target_keywords = page_entry.get("target_keywords") or []
+    outline = page_entry.get("outline") or []
+
+    lines: list[str] = []
+    lines.append(f"PAGE TO WRITE: {title}")
+    lines.append("")
+    if fmt or intent:
+        parts = []
+        if fmt:
+            parts.append(f"Format: {fmt}")
+        if intent:
+            parts.append(f"Intent: {intent}")
+        lines.append(" | ".join(parts))
+    lines.append("")
+    if rationale:
+        lines.append(f"WHY THIS PAGE (strategy context): {rationale}")
+        lines.append("")
+    if serp_notes:
+        lines.append(f"SERP CONTEXT: {serp_notes}")
+        lines.append("")
+    if target_keywords:
+        lines.append("TARGET KEYWORDS (work these in naturally where they fit - no counts, no stuffing):")
+        for kw_entry in target_keywords:
+            kw = kw_entry.get("kw") or ""
+            volume = kw_entry.get("volume") or 0
+            lines.append(f"- {kw} ({volume}/mo)")
+        lines.append("")
+    if outline:
+        lines.append("COVER THIS STRUCTURE (H1 implied by the title):")
+        for item in outline:
+            h2 = item.get("h2") or ""
+            note = item.get("note") or ""
+            lines.append(f"- {h2}: {note}")
+        lines.append("")
+    lines.append(FACT_DISCIPLINE)
+    lines.append("")
+    lines.append("FACT SHEET:")
+    lines.extend(_fact_sheet_lines(fact_sheet))
+    lines.append("")
+    lines.append(LIGHT_SEO_PLAN)
     return "\n".join(lines)

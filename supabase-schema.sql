@@ -7,6 +7,7 @@ CREATE TABLE brands (
   default_content_type TEXT DEFAULT 'landing page',
   services JSONB DEFAULT '[]',
   franchise_profile JSONB,
+  franchise_content_plan JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

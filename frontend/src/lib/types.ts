@@ -133,7 +133,39 @@ export type GenerationPayload = Record<string, unknown>;
 
 export interface FranchiseGeneratePayload {
   brand_id: string;
-  page_type: string;
+  page_type?: string;
+  plan_page_id?: string;
+}
+
+export interface PlanKeyword { kw: string; volume: number; }
+export interface PlanOutlineItem { h2: string; note: string; }
+export interface PlanPage {
+  id: string;
+  tier: "now" | "next" | "later";
+  title: string;
+  format: string;
+  target_keywords: PlanKeyword[];
+  intent: string;
+  rationale: string;
+  serp_notes: string;
+  outline: PlanOutlineItem[];
+  pillar_id: string | null;
+  status: "planned" | "generated";
+  generation_id: string | null;
+}
+export interface PlanCluster {
+  name: string;
+  keywords: PlanKeyword[];
+  intent: string;
+  serp_top?: { domain: string; title: string }[];
+}
+export interface FranchiseContentPlan {
+  generated_at: string;
+  site_urls: string[];
+  seed_keywords_used: string[];
+  brand_profile: string;
+  clusters: PlanCluster[];
+  pages: PlanPage[];
 }
 
 export interface FranchiseFactSheet {
