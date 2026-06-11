@@ -156,19 +156,31 @@ async def _call_claude(
     max_tokens: int,
     temperature: float | None = None,
 ) -> Any:
-    """Structured-output Claude call. temperature=None omits the param."""
+    """Structured-output Claude call. temperature=None omits the param.
+
+    Uses streaming so long Opus calls don't hit the HTTP read-timeout;
+    structured outputs are supported in streaming mode.
+    """
     client = get_client()
-    kwargs: dict[str, Any] = {}
+    kwargs: dict[str, Any] = {
+        "model": MODELS[model_key],
+        "max_tokens": max_tokens,
+        "output_config": {"format": {"type": "json_schema", "schema": schema}},
+        "messages": [{"role": "user", "content": prompt}],
+    }
     if temperature is not None:
         kwargs["temperature"] = temperature
-    resp = await client.messages.create(
-        model=MODELS[model_key],
-        max_tokens=max_tokens,
-        output_config={"format": {"type": "json_schema", "schema": schema}},
-        messages=[{"role": "user", "content": prompt}],
-        **kwargs,
-    )
+    async with client.messages.stream(**kwargs) as stream:
+        resp = await stream.get_final_message()
+    if resp.stop_reason == "max_tokens":
+        raise RuntimeError(
+            "Claude response hit the output token limit before completing"
+            " - the roadmap was too large for the budget"
+        )
     text = "".join(b.text for b in resp.content if hasattr(b, "text"))
+    # Normalize em/en-dashes to hyphens before parsing (Claude emits literal
+    # unicode dashes; this also covers the rare — escape path).
+    text = text.replace("—", "-").replace("–", "-")
     return extract_json(text)
 
 
@@ -177,23 +189,31 @@ async def _call_claude(
 # ---------------------------------------------------------------------------
 
 async def crawl_sites(urls: list[str]) -> tuple[list[dict], list[str]]:
-    """Scrape each URL. Empty content -> warning. Zero successes -> RuntimeError."""
-    pages: list[dict] = []
-    warnings: list[str] = []
-    for u in urls:
+    """Scrape each URL concurrently. Empty content -> warning. Zero successes -> RuntimeError.
+
+    Results are ordered to match the input URL list.
+    """
+    async def _fetch(u: str) -> tuple[dict | None, str | None]:
         try:
             page = await scrape_url(u)
-            page["url"] = u
             if not (page.get("content") or "").strip():
                 reason = page.get("error") or (
                     "scraper returned error source" if page.get("source") == "error"
                     else "scrape returned no content"
                 )
-                warnings.append(f"{u}: {reason}")
-                continue
-            pages.append({"url": u, "content": page["content"]})
+                return None, f"{u}: {reason}"
+            return {"url": u, "content": page["content"]}, None
         except Exception as e:
-            warnings.append(f"{u}: {e}")
+            return None, f"{u}: {e}"
+
+    results = await asyncio.gather(*(_fetch(u) for u in urls))
+    pages: list[dict] = []
+    warnings: list[str] = []
+    for page, warn in results:
+        if warn:
+            warnings.append(warn)
+        if page:
+            pages.append(page)
     if not pages:
         raise RuntimeError("All site crawls failed: " + "; ".join(warnings))
     return pages, warnings
@@ -574,7 +594,7 @@ THE RESEARCH:
 
 async def draft_plan(bundle: dict) -> dict:
     prompt = DRAFT_PLAN_INSTRUCTIONS + _render_bundle(bundle)
-    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=16000)
+    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=20000)
 
 
 # ---------------------------------------------------------------------------
@@ -612,7 +632,7 @@ async def review_plan(draft: dict, bundle: dict) -> dict:
         )
         + _render_bundle(bundle)
     )
-    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=16000)
+    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=20000)
 
 
 # ---------------------------------------------------------------------------
@@ -633,6 +653,7 @@ def _normalize_pages(pages: list[dict]) -> list[dict]:
         out.append(page)
     for page, raw in zip(out, pages):
         pillar = raw.get("pillar_id")
+        # Unknown pillar refs resolve to None; the review pass is responsible for pillar hygiene.
         page["pillar_id"] = id_map.get(pillar) if pillar else None
         if page["pillar_id"] == page["id"]:
             page["pillar_id"] = None
@@ -657,28 +678,42 @@ async def build_content_plan(
     warnings: list[str] = []
 
     set_stage("Crawling site")
+    logger.info("Stage: crawling %d site URL(s)", len(site_urls))
     pages, crawl_warnings = await crawl_sites(site_urls)
     warnings.extend(crawl_warnings)
+    if crawl_warnings:
+        logger.info("Crawl warnings: %s", "; ".join(crawl_warnings))
 
     set_stage("Profiling brand")
+    logger.info("Stage: profiling brand from %d crawled page(s)", len(pages))
     profile = await profile_brand(pages)
 
     set_stage("Researching keywords")
+    logger.info("Stage: generating seed keywords")
     seeds = await generate_seeds(profile, fact_sheet, seed_keywords)
+    logger.info("Stage: fetching keyword data for %d seeds", len(seeds))
     keywords = await research_keywords(seeds)
 
     set_stage("Clustering keywords")
+    logger.info("Stage: clustering %d keywords", len(keywords))
     clusters = await cluster_keywords(keywords)
     if not clusters:
         raise RuntimeError("Clustering produced no franchise-intent keyword clusters")
+    logger.info("Clustering produced %d clusters", len(clusters))
 
     set_stage("Analyzing rankings")
+    logger.info("Stage: SERP analysis for %d clusters", len(clusters))
     clusters, serp_warnings = await serp_for_clusters(clusters)
     warnings.extend(serp_warnings)
+    if serp_warnings:
+        logger.info("SERP warnings: %s", "; ".join(serp_warnings))
 
     set_stage("Studying competitors")
+    logger.info("Stage: sampling competitor structures")
     structures, comp_warnings = await sample_competitor_structures(clusters)
     warnings.extend(comp_warnings)
+    if comp_warnings:
+        logger.info("Competitor sampling warnings: %s", "; ".join(comp_warnings))
 
     bundle = {
         "brand_name": brand_name,
@@ -690,9 +725,12 @@ async def build_content_plan(
     }
 
     set_stage("Drafting roadmap")
+    logger.info("Stage: drafting roadmap (Opus)")
     draft = await draft_plan(bundle)
+    logger.info("Draft produced %d page(s)", len((draft.get("pages") or [])))
 
     set_stage("Reviewing roadmap")
+    logger.info("Stage: reviewing roadmap (Opus)")
     final = await review_plan(draft, bundle)
 
     final_pages = _normalize_pages(final.get("pages") or [])
