@@ -54,7 +54,7 @@ New JSONB column: `brands.franchise_content_plan` (migration + schema file):
   "generated_at": "...", "site_urls": [...], "seed_keywords_used": [...],
   "brand_profile": "...",
   "clusters": [{"name": "...", "keywords": [{"kw": "...", "volume": 1300}],
-                "intent": "...", "serp_class": "directory|competitor|informational|mixed",
+                "intent": "...",
                 "serp_top": [{"domain": "...", "title": "..."}]}],
   "pages": [{"id": "p1", "tier": "now|next|later", "title": "...", "format": "...",
              "target_keywords": [{"kw": "...", "volume": 1300}], "intent": "...",
