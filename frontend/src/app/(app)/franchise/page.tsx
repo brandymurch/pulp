@@ -422,9 +422,11 @@ function ContentPlanSection({
   useEffect(() => {
     if (!planPageUpdate || !plan) return;
     const { pageId, generationId } = planPageUpdate;
+    // Flush drafts so edits made while generation streamed survive the reseed.
+    const flushed = flushDraftsToPlan(plan);
     const updatedPlan: FranchiseContentPlan = {
-      ...plan,
-      pages: plan.pages.map((p) =>
+      ...flushed,
+      pages: flushed.pages.map((p) =>
         p.id === pageId
           ? { ...p, status: "generated" as const, generation_id: generationId }
           : p
@@ -638,7 +640,10 @@ function ContentPlanSection({
 
   function handleDeletePage(pageId: string) {
     if (!plan) return;
-    const updated = { ...plan, pages: plan.pages.filter((p) => p.id !== pageId) };
+    // Flush drafts first so the plan-driven draft reseed can't revert
+    // in-progress edits on other rows.
+    const flushed = flushDraftsToPlan(plan);
+    const updated = { ...flushed, pages: flushed.pages.filter((p) => p.id !== pageId) };
     setPlan(updated);
     setDirty(true);
     setExpandedIds((prev) => {

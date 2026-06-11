@@ -47,7 +47,9 @@ export function GenerationsList({ generations, selectedId, onSelect, onDelete }:
               <td className="px-5 py-2 border-b border-line text-ink-70">
                 {gen.content_type && franchisePageTypeMap[gen.content_type]
                   ? franchisePageTypeMap[gen.content_type]
-                  : gen.city}
+                  : gen.content_type?.startsWith("franchise")
+                    ? "Franchise page"
+                    : gen.city}
               </td>
               <td className="px-5 py-2 border-b border-line text-ink-40">{gen.template_name || "-"}</td>
               <td className="px-5 py-2 border-b border-line text-ink-70">{gen.word_count.toLocaleString()}</td>
