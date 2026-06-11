@@ -95,6 +95,13 @@ LIGHT_SEO = (
     "and persuasion win every tradeoff."
 )
 
+LIGHT_SEO_PLAN = (
+    "SEO: Start the output with 'Title tag:' and 'Meta description:' suggestion lines, then "
+    "the page itself with one H1 and descriptive H2 sections. Work the TARGET KEYWORDS "
+    "above into the copy naturally where they genuinely fit - no usage counts, no "
+    "stuffing. Readability and persuasion win every tradeoff."
+)
+
 
 def _fact_sheet_lines(fact_sheet: dict) -> list[str]:
     """Return non-empty fact-sheet fields as '- key: value' strings."""
@@ -164,5 +171,5 @@ def build_franchise_user_prompt_from_plan(page_entry: dict, brand_name: str, fac
     lines.append("FACT SHEET:")
     lines.extend(_fact_sheet_lines(fact_sheet))
     lines.append("")
-    lines.append(LIGHT_SEO)
+    lines.append(LIGHT_SEO_PLAN)
     return "\n".join(lines)

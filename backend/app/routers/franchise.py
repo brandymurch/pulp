@@ -53,7 +53,7 @@ class PlanUpdate(BaseModel):
 
 class FranchiseGenerateRequest(BaseModel):
     brand_id: str = Field(max_length=100)
-    page_type: str = Field(max_length=50)
+    page_type: str = Field(default="", max_length=50)
     plan_page_id: str | None = None
 
 
@@ -109,7 +109,9 @@ def _run_plan_job(
 
     def set_stage(label: str) -> None:
         last_stage[0] = label
-        _plan_jobs[job_id]["stage"] = label
+        job = _plan_jobs.get(job_id)
+        if job is not None:  # guard against TTL eviction mid-run
+            job["stage"] = label
 
     try:
         from app.services.franchise_plan import build_content_plan
