@@ -587,6 +587,8 @@ HARD REQUIREMENTS - the plan is rejected if any of these are violated:
 
 10. STAY INSIDE THE RESEARCH: target keywords and volumes must come from the cluster data verbatim - never invent keywords or volumes. Claims about the brand come only from the brand profile and fact sheet. Where the research has warnings or gaps, plan conservatively rather than guessing.
 
+11. BE COMPACT - the plan must fit the output budget across 30-50 pages: rationale is at most 2 tight sentences, serp_notes at most 1 sentence, each outline note at most 10 words. Density of insight, not length, is what gets graded.
+
 THE RESEARCH:
 
 """
@@ -594,7 +596,7 @@ THE RESEARCH:
 
 async def draft_plan(bundle: dict) -> dict:
     prompt = DRAFT_PLAN_INSTRUCTIONS + _render_bundle(bundle)
-    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=20000)
+    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=30000)
 
 
 # ---------------------------------------------------------------------------
@@ -613,6 +615,7 @@ CHECK ALL OF THESE:
 6. PADDING: redundant, thin, or invented pages that exist only to inflate the count. Cut them - a tight plan beats a padded one.
 7. KEYWORD-STUFFED TITLES: rewrite any title a real marketing team would refuse to ship.
 8. OUTLINE QUALITY: every outline must be a skeleton of 4-8 H2s with a one-line note each (H1 implied by the title). Trim bloated outlines, flesh out thin ones, and make sure the sections actually answer the page's intent.
+9. COMPACTNESS: the corrected plan must fit the output budget - rationale at most 2 sentences, serp_notes at most 1 sentence, outline notes at most 10 words. Tighten anything longer.
 
 OUTPUT: the complete corrected plan - the FULL pages array, including every page you kept unchanged. Do NOT output a critique, commentary, or a diff. What you output ships as-is.
 
@@ -632,7 +635,7 @@ async def review_plan(draft: dict, bundle: dict) -> dict:
         )
         + _render_bundle(bundle)
     )
-    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=20000)
+    return await _call_claude("opus", prompt, PLAN_SCHEMA, max_tokens=30000)
 
 
 # ---------------------------------------------------------------------------
