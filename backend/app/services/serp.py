@@ -78,24 +78,29 @@ async def get_serp_results(
     related: list[str] = []
     ai_queries: list[str] = []
 
+    def _sub_title(sub: Any) -> str:
+        # DataForSEO sub-items are dicts for most elements, but plain strings
+        # for related_searches (and occasionally elsewhere).
+        if isinstance(sub, str):
+            return sub
+        if isinstance(sub, dict):
+            return sub.get("title") or ""
+        return ""
+
     for it in items:
         if it.get("type") == "people_also_ask":
             paa.extend(
-                sub.get("title", "")
-                for sub in (it.get("items") or [])
-                if sub.get("title")
+                t for t in (_sub_title(sub) for sub in (it.get("items") or [])) if t
             )
         elif it.get("type") == "related_searches":
             related.extend(
-                sub.get("title", "")
-                for sub in (it.get("items") or [])
-                if sub.get("title")
+                t for t in (_sub_title(sub) for sub in (it.get("items") or [])) if t
             )
         elif it.get("type") in ("ai_overview", "ai_overview_element"):
             if it.get("type") == "ai_overview_element":
                 ai_queries.append(it.get("title", ""))
             for sub in it.get("items") or []:
-                if sub.get("type") == "ai_overview_element" and sub.get("title"):
+                if isinstance(sub, dict) and sub.get("type") == "ai_overview_element" and sub.get("title"):
                     ai_queries.append(sub["title"])
 
     return {
