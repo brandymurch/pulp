@@ -27,7 +27,7 @@ import { useGeneration } from "@/hooks/useGeneration";
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_FAILURES = 5;
 const MAX_POLL_DURATION_MS = 10 * 60 * 1000; // 10-minute hard cap (scrape)
-const MAX_PLAN_POLL_DURATION_MS = 15 * 60 * 1000; // 15-minute hard cap (plan)
+const MAX_PLAN_POLL_DURATION_MS = 25 * 60 * 1000; // 25-minute hard cap (plan; two large Opus calls)
 
 // ---------------------------------------------------------------------------
 // Small helpers
