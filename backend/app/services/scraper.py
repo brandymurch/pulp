@@ -103,3 +103,48 @@ async def _firecrawl(url: str) -> dict[str, Any]:
 async def scrape_urls(urls: list[str]) -> list[dict]:
     import asyncio
     return await asyncio.gather(*(scrape_url(u) for u in urls))
+
+
+async def map_site(url: str, limit: int = 300) -> list[str]:
+    """Discover all URLs on a site via Firecrawl /v1/map.
+
+    Unlike scrape_url, a missing API key is a hard error here — site
+    discovery cannot degrade gracefully without a URL list.
+    """
+    if not FIRECRAWL_API_KEY:
+        raise RuntimeError("FIRECRAWL_API_KEY not set - site discovery requires Firecrawl")
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                "https://api.firecrawl.dev/v1/map",
+                json={"url": url, "limit": limit},
+                headers={
+                    "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+            )
+            if resp.status_code != 200:
+                body_snippet = resp.text[:300]
+                raise RuntimeError(
+                    f"Firecrawl /v1/map returned {resp.status_code}: {body_snippet}"
+                )
+
+            data = resp.json()
+            links = data.get("links") or []
+            # Each link is either a dict with a "url" key or a plain string
+            urls_out: list[str] = []
+            for item in links:
+                if isinstance(item, dict):
+                    u = item.get("url") or ""
+                elif isinstance(item, str):
+                    u = item
+                else:
+                    continue
+                if u:
+                    urls_out.append(u)
+            return urls_out[:limit]
+    except RuntimeError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Firecrawl /v1/map failed for {url}: {e}") from e

@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.auth import require_auth
 from app.db import get_db
@@ -34,7 +34,18 @@ def _evict_stale_jobs(store: dict[str, dict[str, Any]]) -> None:
 
 class ScrapeRequest(BaseModel):
     brand_id: str = Field(max_length=100)
-    urls: list[str] = Field(min_length=1, max_length=10)
+    urls: list[str] = Field(default=[], max_length=10)
+    main_url: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def _require_exactly_one_input(self) -> "ScrapeRequest":
+        has_urls = bool(self.urls)
+        has_main = bool(self.main_url)
+        if has_urls and has_main:
+            raise ValueError("Provide either 'urls' or 'main_url', not both.")
+        if not has_urls and not has_main:
+            raise ValueError("Provide either 'urls' (list) or 'main_url' (string).")
+        return self
 
 
 class ProfileUpdate(BaseModel):
@@ -43,8 +54,19 @@ class ProfileUpdate(BaseModel):
 
 class PlanRequest(BaseModel):
     brand_id: str = Field(max_length=100)
-    site_urls: list[str] = Field(min_length=1, max_length=5)
+    site_urls: list[str] = Field(default=[], max_length=5)
+    main_url: str | None = Field(default=None, max_length=2000)
     seed_keywords: list[str] = Field(default=[], max_length=20)
+
+    @model_validator(mode="after")
+    def _require_exactly_one_input(self) -> "PlanRequest":
+        has_urls = bool(self.site_urls)
+        has_main = bool(self.main_url)
+        if has_urls and has_main:
+            raise ValueError("Provide either 'site_urls' or 'main_url', not both.")
+        if not has_urls and not has_main:
+            raise ValueError("Provide either 'site_urls' (list) or 'main_url' (string).")
+        return self
 
 
 class PlanUpdate(BaseModel):
@@ -57,14 +79,29 @@ class FranchiseGenerateRequest(BaseModel):
     plan_page_id: str | None = None
 
 
-def _run_scrape_job(job_id: str, urls: list[str]):
+def _run_scrape_job(job_id: str, urls: list[str], main_url: str | None = None):
     loop = asyncio.new_event_loop()
     try:
-        from app.services.scraper import scrape_url
+        from app.services.scraper import scrape_url, map_site
+        from app.services.franchise import select_relevant_urls
 
         async def run():
+            # Discovery path: map the site then let Claude select pages
+            if main_url:
+                logger.info("Scrape job %s: mapping site %s", job_id, main_url)
+                mapped = await map_site(main_url)
+                # Ensure main_url is in the list for selection
+                if main_url not in mapped:
+                    mapped = [main_url] + mapped
+                logger.info("Scrape job %s: map returned %d URLs", job_id, len(mapped))
+                selected = await select_relevant_urls(mapped, "fact_sheet", main_url=main_url)
+                logger.info("Scrape job %s: selected %d URLs", job_id, len(selected))
+                scrape_urls = selected
+            else:
+                scrape_urls = urls
+
             results, errors = [], []
-            for u in urls:
+            for u in scrape_urls:
                 try:
                     page = await scrape_url(u)
                     page["url"] = u
@@ -81,7 +118,8 @@ def _run_scrape_job(job_id: str, urls: list[str]):
             if not results:
                 raise RuntimeError("All scrapes failed: " + "; ".join(errors))
             sheet = await extract_fact_sheet(results)
-            sheet["source_urls"] = urls
+            # Store the URLs actually scraped successfully
+            sheet["source_urls"] = [r["url"] for r in results]
             sheet["scraped_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             return sheet, errors
 
@@ -103,6 +141,7 @@ def _run_plan_job(
     fact_sheet: dict,
     site_urls: list[str],
     seed_keywords: list[str],
+    main_url: str | None = None,
 ):
     loop = asyncio.new_event_loop()
     last_stage: list[str] = ["Starting"]
@@ -115,10 +154,27 @@ def _run_plan_job(
 
     try:
         from app.services.franchise_plan import build_content_plan
+        from app.services.scraper import map_site
+        from app.services.franchise import select_relevant_urls
 
-        plan = loop.run_until_complete(
-            build_content_plan(brand, fact_sheet, site_urls, seed_keywords, set_stage)
-        )
+        async def run():
+            resolved_urls = site_urls
+            if main_url:
+                set_stage("Discovering pages")
+                logger.info("Plan job %s: mapping site %s", job_id, main_url)
+                mapped = await map_site(main_url)
+                if main_url not in mapped:
+                    mapped = [main_url] + mapped
+                logger.info("Plan job %s: map returned %d URLs", job_id, len(mapped))
+                resolved_urls = await select_relevant_urls(
+                    mapped, "plan_profile", main_url=main_url
+                )
+                logger.info("Plan job %s: selected %d URLs", job_id, len(resolved_urls))
+            return await build_content_plan(
+                brand, fact_sheet, resolved_urls, seed_keywords, set_stage
+            )
+
+        plan = loop.run_until_complete(run())
         _plan_jobs[job_id] = {
             "status": "done",
             "plan": plan,
@@ -141,7 +197,11 @@ def start_scrape(req: ScrapeRequest, _auth: dict = Depends(require_auth)):
     _evict_stale_jobs(_scrape_jobs)
     job_id = str(uuid.uuid4())
     _scrape_jobs[job_id] = {"status": "pending", "_created": time.time()}
-    threading.Thread(target=_run_scrape_job, args=(job_id, req.urls), daemon=True).start()
+    threading.Thread(
+        target=_run_scrape_job,
+        args=(job_id, req.urls, req.main_url),
+        daemon=True,
+    ).start()
     return {"job_id": job_id, "status": "pending"}
 
 
@@ -206,7 +266,7 @@ def start_plan(req: PlanRequest, _auth: dict = Depends(require_auth)):
     _plan_jobs[job_id] = {"status": "pending", "stage": "Starting", "_created": time.time()}
     threading.Thread(
         target=_run_plan_job,
-        args=(job_id, brand, fact_sheet, req.site_urls, req.seed_keywords),
+        args=(job_id, brand, fact_sheet, req.site_urls, req.seed_keywords, req.main_url),
         daemon=True,
     ).start()
     return {"job_id": job_id, "status": "pending"}

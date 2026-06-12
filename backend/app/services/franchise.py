@@ -3,6 +3,134 @@ from __future__ import annotations
 
 from app.services.claude import MODELS, get_client, extract_json
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# URL selection for site discovery
+# ---------------------------------------------------------------------------
+
+URL_SELECTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "urls": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["urls"],
+    "additionalProperties": False,
+}
+
+_URL_SELECTION_PROMPTS = {
+    "fact_sheet": (
+        "You are selecting pages from a franchise brand's website to scrape for franchise fact extraction.\n"
+        "Pick up to {max_pages} URLs most relevant to franchise/ownership information:\n"
+        "INCLUDE: pages about franchising, own-a-franchise, franchise opportunity, investment, "
+        "fees, FAQ, the franchise process, territory information, about/leadership as supporting context.\n"
+        "SKIP: blog post archives, privacy/terms policies, consumer-facing careers pages (not franchise), "
+        "store/location finder pages with hundreds of individual location entries, generic contact pages.\n"
+        "Always include the main URL itself first in your list if it appears in the input."
+    ),
+    "plan_profile": (
+        "You are selecting pages from a brand's website to scrape for building a brand profile.\n"
+        "Pick up to {max_pages} URLs that best explain what the company is and does:\n"
+        "INCLUDE: homepage, services/solutions pages, about page, locations/markets overview, "
+        "any franchise section pages (why franchise, investment, process).\n"
+        "SKIP: individual location/store pages, blog archives, privacy/terms, press releases "
+        "older than the main navigation.\n"
+        "Always include the main URL itself first in your list if it appears in the input."
+    ),
+}
+
+
+async def select_relevant_urls(
+    urls: list[str],
+    purpose: str,
+    main_url: str,
+    max_pages: int = 20,
+) -> list[str]:
+    """Have Claude pick the most relevant URLs for the given purpose.
+
+    `main_url` is always attempted first (after stripping trailing slash) and is
+    the fallback if the model returns nothing usable.
+
+    `purpose` is "fact_sheet" or "plan_profile".
+    """
+    purpose_prompt = _URL_SELECTION_PROMPTS.get(purpose, _URL_SELECTION_PROMPTS["fact_sheet"])
+    instructions = purpose_prompt.format(max_pages=max_pages)
+
+    # Cap the rendered list at 300 URLs sent to the model
+    capped = urls[:300]
+    url_list_text = "\n".join(capped)
+
+    prompt = (
+        f"{instructions}\n\n"
+        f"SITE URL LIST ({len(capped)} URLs):\n{url_list_text}\n\n"
+        f"Return a JSON object with a single key 'urls' containing your selection "
+        f"(up to {max_pages} items). Output only valid JSON."
+    )
+
+    client = get_client()
+    resp = await client.messages.create(
+        model=MODELS["sonnet"],
+        max_tokens=2000,
+        temperature=0.2,
+        output_config={"format": {"type": "json_schema", "schema": URL_SELECTION_SCHEMA}},
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = "".join(b.text for b in resp.content if hasattr(b, "text"))
+
+    try:
+        data = extract_json(text)
+        selected: list[str] = data.get("urls") or []
+    except Exception as exc:
+        logger.warning("select_relevant_urls: failed to parse Claude output: %s", exc)
+        selected = []
+
+    # Build a normalised lookup set from the input list
+    def _norm(u: str) -> str:
+        return u.rstrip("/").lower()
+
+    input_norm: dict[str, str] = {}
+    for u in urls:
+        input_norm[_norm(u)] = u  # norm -> original
+
+    main_norm = _norm(main_url)
+
+    # Filter: keep only URLs that were actually in the input list
+    seen: set[str] = set()
+    validated: list[str] = []
+
+    # Always try to put main_url first
+    if main_norm in input_norm and main_norm not in seen:
+        seen.add(main_norm)
+        validated.append(input_norm[main_norm])
+
+    for u in selected:
+        n = _norm(u)
+        if n in input_norm and n not in seen:
+            seen.add(n)
+            validated.append(input_norm[n])
+
+    # Cap at max_pages
+    validated = validated[:max_pages]
+
+    # Fallback: if nothing survived validation, return the main URL alone
+    if not validated:
+        logger.warning(
+            "select_relevant_urls: no valid URLs survived validation for purpose=%s; "
+            "falling back to main_url",
+            purpose,
+        )
+        # Try to use the canonical form from input_norm; otherwise the raw main_url
+        return [input_norm.get(main_norm, main_url)]
+
+    return validated
+
+
+# ---------------------------------------------------------------------------
+# Fact sheet extraction
+# ---------------------------------------------------------------------------
+
 FACT_SHEET_FIELDS = [
     "investment_min", "investment_max", "franchise_fee", "royalty_pct",
     "ad_fund_pct", "territory_model", "training_support", "process_steps",
