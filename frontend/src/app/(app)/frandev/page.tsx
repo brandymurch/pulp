@@ -1348,10 +1348,10 @@ function FranchisePageInner() {
       {/* Header */}
       <div>
         <h1 className="font-display font-[800] text-[clamp(32px,4vw,56px)] leading-[0.95] tracking-[-0.035em] m-0">
-          Franchise
+          FranDev
         </h1>
         <p className="text-[13px] text-ink-70 mt-2">
-          Scrape your franchise facts, edit the sheet, then generate recruitment pages.
+          Franchise development content: build the fact sheet, research the roadmap, generate recruitment pages.
         </p>
       </div>
 

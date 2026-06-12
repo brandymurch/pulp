@@ -86,7 +86,7 @@ function SettingsIcon() {
 const mainNav: NavItem[] = [
   { label: "Generate", href: "/generate", icon: <GenerateIcon /> },
   { label: "Pages", href: "/pages", icon: <HistoryIcon /> },
-  { label: "Franchise", href: "/franchise", icon: <QueueIcon /> },
+  { label: "FranDev", href: "/frandev", icon: <QueueIcon /> },
 ];
 
 const brandNav: NavItem[] = [
