@@ -1,9 +1,10 @@
 """Franchise development content - fact sheet extraction and page generation prompts."""
 from __future__ import annotations
 
-from app.services.claude import MODELS, get_client, extract_json
-
+import asyncio
 import logging
+
+from app.services.claude import MODELS, get_client, extract_json
 
 logger = logging.getLogger(__name__)
 
@@ -361,13 +362,14 @@ async def gather_competitor_context(keyword: str, max_pages: int = 3) -> str | N
         )
         return None
 
-    # Scrape and excerpt
+    # Scrape concurrently and excerpt (keeps pre-stream latency to one scrape's worth)
+    scraped = await asyncio.gather(
+        *(scrape_url(u) for u in target_urls), return_exceptions=True
+    )
     pages: list[tuple[str, str]] = []
-    for url in target_urls:
-        try:
-            page = await scrape_url(url)
-        except Exception as exc:
-            logger.warning("gather_competitor_context: scrape failed for %s: %s", url, exc)
+    for url, page in zip(target_urls, scraped):
+        if isinstance(page, BaseException):
+            logger.warning("gather_competitor_context: scrape failed for %s: %s", url, page)
             continue
         content = (page.get("content") or "").strip()
         if not content:
