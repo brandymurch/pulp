@@ -403,7 +403,7 @@ const TIER_LABELS: Record<string, string> = { now: "Now", next: "Next", later: "
 interface ContentPlanSectionProps {
   brandId: string;
   hasFactSheet: boolean;
-  onGenerateFromPlan: (page: PlanPage) => void;
+  onGenerateFromPlan: (page: PlanPage, popBoost: boolean) => void;
   /** Set by parent after a plan-page generation is saved to history. */
   planPageUpdate: { pageId: string; generationId: string | null } | null;
   /** Parent calls this after ContentPlanSection has consumed the update. */
@@ -450,6 +450,9 @@ function ContentPlanSection({
 
   // Per-page outline drafts: pageId -> raw textarea string
   const [outlineDrafts, setOutlineDrafts] = useState<Record<string, string>>({});
+
+  // Per-row POP boost checkbox state: pageId -> boolean
+  const [popBoostMap, setPopBoostMap] = useState<Record<string, boolean>>({});
 
   // "Built, unsaved" notice
   const [justBuilt, setJustBuilt] = useState(false);
@@ -686,7 +689,7 @@ function ContentPlanSection({
     });
   }
 
-  async function handleGenerateFromPlan(page: PlanPage) {
+  async function handleGenerateFromPlan(page: PlanPage, popBoost: boolean) {
     if (!plan) return;
     // If dirty, flush + save first
     if (dirty) {
@@ -695,7 +698,7 @@ function ContentPlanSection({
       const ok = await savePlan(flushed);
       if (!ok) return; // error already surfaced
     }
-    onGenerateFromPlan(page);
+    onGenerateFromPlan(page, popBoost);
   }
 
   // ---------------------------------------------------------------------------
@@ -1061,21 +1064,40 @@ function ContentPlanSection({
                         </div>
 
                         {/* Row actions */}
-                        <div className="flex items-center gap-2 pt-1">
-                          <Button
-                            variant="ink"
-                            size="sm"
-                            onClick={() => handleGenerateFromPlan(page)}
-                          >
-                            Generate
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeletePage(page.id)}
-                          >
-                            Delete row
-                          </Button>
+                        <div className="space-y-2 pt-1">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={popBoostMap[page.id] ?? false}
+                              onChange={(e) =>
+                                setPopBoostMap((prev) => ({
+                                  ...prev,
+                                  [page.id]: e.target.checked,
+                                }))
+                              }
+                              className="w-[14px] h-[14px] accent-ink cursor-pointer"
+                            />
+                            <span className="text-[12px] text-ink-70">POP term boost</span>
+                            <span className="text-[11px] text-ink-40">(uses 1 POP run, cached 30 days)</span>
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ink"
+                              size="sm"
+                              onClick={() =>
+                                handleGenerateFromPlan(page, popBoostMap[page.id] ?? false)
+                              }
+                            >
+                              Generate
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeletePage(page.id)}
+                            >
+                              Delete row
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1127,6 +1149,7 @@ function FranchisePageInner() {
     useGeneration();
   const [activePageType, setActivePageType] = useState<string | null>(null);
   const [activePlanPage, setActivePlanPage] = useState<PlanPage | null>(null);
+  const [popBoostActive, setPopBoostActive] = useState(false);
   const [saveHistoryStatus, setSaveHistoryStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle"
   );
@@ -1268,13 +1291,18 @@ function FranchisePageInner() {
   // ---------------------------------------------------------------------------
   // Generate from plan page
   // ---------------------------------------------------------------------------
-  function handleGenerateFromPlan(page: PlanPage) {
+  function handleGenerateFromPlan(page: PlanPage, popBoost: boolean) {
     setActivePlanPage(page);
+    setPopBoostActive(popBoost);
     setActivePageType(null);
     setOutput("");
     setSaveHistoryStatus("idle");
     setSaveHistoryError(null);
-    const payload: FranchiseGeneratePayload = { brand_id: brandId, plan_page_id: page.id };
+    const payload: FranchiseGeneratePayload = {
+      brand_id: brandId,
+      plan_page_id: page.id,
+      ...(popBoost ? { pop_boost: true } : {}),
+    };
     generate("/api/franchise/generate", payload);
     // Scroll to generation card
     setTimeout(() => {
@@ -1491,6 +1519,9 @@ function FranchisePageInner() {
               <div className="flex-1 text-[13px] text-ink-70 bg-[#F3F1ED] rounded-[10px] px-4 py-2.5">
                 Generating from plan:{" "}
                 <span className="font-medium text-ink">{activePlanPage.title}</span>
+                {popBoostActive && (
+                  <span className="text-ink-40"> + POP boost</span>
+                )}
               </div>
               {isGenerating && (
                 <Button variant="light" size="sm" onClick={abort}>
@@ -1541,14 +1572,20 @@ function FranchisePageInner() {
             </div>
           )}
 
-          {/* Generating spinner for plan-page mode */}
+          {/* Generating spinner / pre-stream status for plan-page mode */}
           {activePlanPage && isGenerating && (
             <div className="text-[12px] text-ink-40 flex items-center gap-2">
               <span className="inline-block w-[5px] h-[5px] rounded-full bg-ink-40 animate-pulse" />
-              Writing
-              <span className="inline-block animate-[ellipsis_1.5s_steps(4,end)_infinite] w-[1.5em] text-left">
-                ...
-              </span>
+              {!output ? (
+                "Researching competitors before writing..."
+              ) : (
+                <>
+                  Writing
+                  <span className="inline-block animate-[ellipsis_1.5s_steps(4,end)_infinite] w-[1.5em] text-left">
+                    ...
+                  </span>
+                </>
+              )}
             </div>
           )}
 

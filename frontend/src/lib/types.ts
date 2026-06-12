@@ -135,6 +135,7 @@ export interface FranchiseGeneratePayload {
   brand_id: string;
   page_type?: string;
   plan_page_id?: string;
+  pop_boost?: boolean;
 }
 
 export interface PlanKeyword { kw: string; volume: number; }
