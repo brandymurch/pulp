@@ -826,7 +826,7 @@ function ContentPlanSection({
 
         {!hasFactSheet && (
           <div className="text-[13px] text-ink-70 bg-[#F3F1ED] rounded-[10px] px-4 py-3">
-            Save a fact sheet first — the plan builder uses it for brand context.
+            Save a fact sheet first - the plan builder uses it for brand context.
           </div>
         )}
 
@@ -862,7 +862,7 @@ function ContentPlanSection({
             disabled={isDisabled}
           />
           <p className="text-[11px] text-ink-40 mt-1.5">
-            Leave blank — Pulp researches the keyword landscape itself. Add seeds only to force specific angles.
+            Leave blank - Pulp researches the keyword landscape itself. Add seeds only to force specific angles.
           </p>
         </div>
 
@@ -1814,7 +1814,7 @@ function FranchisePageInner() {
                 <div className="text-[12px] font-medium text-ink">Quick pages</div>
                 <div className="text-[11px] text-ink-40 mt-0.5">
                   Two standalone staples. For the full researched roadmap (30-50 pages), build the
-                  content plan above — every roadmap row gets its own Generate button.
+                  content plan above - every roadmap row gets its own Generate button.
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
