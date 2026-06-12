@@ -15,7 +15,7 @@ from app.auth import require_auth
 from app.db import get_db
 from app.services.franchise import (
     PAGE_TYPES, build_franchise_user_prompt, build_franchise_user_prompt_from_plan,
-    extract_fact_sheet,
+    extract_fact_sheet, gather_competitor_context, render_pop_term_guidance,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,6 +77,7 @@ class FranchiseGenerateRequest(BaseModel):
     brand_id: str = Field(max_length=100)
     page_type: str = Field(default="", max_length=50)
     plan_page_id: str | None = None
+    pop_boost: bool = False
 
 
 def _run_scrape_job(job_id: str, urls: list[str], main_url: str | None = None):
@@ -346,7 +347,31 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
         page_entry = next((p for p in pages if p.get("id") == req.plan_page_id), None)
         if page_entry is None:
             raise HTTPException(400, f"Plan page {req.plan_page_id} not found.")
-        user = build_franchise_user_prompt_from_plan(page_entry, brand.get("name", ""), sheet)
+
+        # --- Competitor grounding pre-work ---
+        kws = page_entry.get("target_keywords") or []
+        top_keyword = kws[0].get("kw") if kws else None
+
+        competitor_context: str | None = None
+        if top_keyword:
+            competitor_context = await gather_competitor_context(top_keyword)
+
+        pop_guidance: str | None = None
+        if req.pop_boost and top_keyword:
+            try:
+                from app.services.pop import get_enriched_brief
+                brief = await get_enriched_brief(keyword=top_keyword)
+                pop_guidance = render_pop_term_guidance(brief)
+            except Exception as exc:
+                logger.warning(
+                    "POP boost failed for keyword %r (non-blocking): %s", top_keyword, exc
+                )
+
+        user = build_franchise_user_prompt_from_plan(
+            page_entry, brand.get("name", ""), sheet,
+            competitor_context=competitor_context,
+            pop_guidance=pop_guidance,
+        )
     else:
         user = build_franchise_user_prompt(req.page_type, brand.get("name", ""), sheet)
 

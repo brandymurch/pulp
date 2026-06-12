@@ -253,7 +253,13 @@ def build_franchise_user_prompt(page_type: str, brand_name: str, fact_sheet: dic
     return "\n".join(lines)
 
 
-def build_franchise_user_prompt_from_plan(page_entry: dict, brand_name: str, fact_sheet: dict) -> str:
+def build_franchise_user_prompt_from_plan(
+    page_entry: dict,
+    brand_name: str,
+    fact_sheet: dict,
+    competitor_context: str | None = None,
+    pop_guidance: str | None = None,
+) -> str:
     """Build a user prompt from a plan page entry (title, format, intent, rationale, etc.)."""
     title = page_entry.get("title") or "Untitled"
     fmt = page_entry.get("format") or ""
@@ -287,6 +293,10 @@ def build_franchise_user_prompt_from_plan(page_entry: dict, brand_name: str, fac
             volume = kw_entry.get("volume") or 0
             lines.append(f"- {kw} ({volume}/mo)")
         lines.append("")
+    # POP guidance immediately after keywords block
+    if pop_guidance:
+        lines.append(pop_guidance)
+        lines.append("")
     if outline:
         lines.append("COVER THIS STRUCTURE (H1 implied by the title):")
         for item in outline:
@@ -294,10 +304,130 @@ def build_franchise_user_prompt_from_plan(page_entry: dict, brand_name: str, fac
             note = item.get("note") or ""
             lines.append(f"- {h2}: {note}")
         lines.append("")
+    # Competitor context after outline, before FACT_DISCIPLINE
+    if competitor_context:
+        lines.append(competitor_context)
+        lines.append("")
     lines.append(FACT_DISCIPLINE)
     lines.append("")
     lines.append("FACT SHEET:")
     lines.extend(_fact_sheet_lines(fact_sheet))
     lines.append("")
     lines.append(LIGHT_SEO_PLAN)
+    return "\n".join(lines)
+
+
+async def gather_competitor_context(keyword: str, max_pages: int = 3) -> str | None:
+    """Scrape top-ranking non-directory competitor pages for a keyword.
+
+    Returns a formatted block for inclusion in the generation prompt, or None
+    on any failure (SERP error, all scrapes empty). Never raises.
+    """
+    from app.services.serp import get_serp_results
+    from app.services.scraper import scrape_url
+    from app.services.franchise_plan import _domain, _is_directory
+
+    try:
+        serp = await get_serp_results(keyword)
+    except Exception as exc:
+        logger.warning("gather_competitor_context: SERP call failed for %r: %s", keyword, exc)
+        return None
+
+    organic = (serp.get("organic_results") or [])
+    if not organic:
+        logger.warning("gather_competitor_context: no organic results for %r", keyword)
+        return None
+
+    # Walk organic results; collect distinct domains, skip directories, cap at max_pages
+    seen_domains: set[str] = set()
+    target_urls: list[str] = []
+    for result in organic:
+        url = result.get("url") or ""
+        if not url:
+            continue
+        dom = _domain(url)
+        if _is_directory(dom):
+            continue
+        if dom in seen_domains:
+            continue
+        seen_domains.add(dom)
+        target_urls.append(url)
+        if len(target_urls) >= max_pages:
+            break
+
+    if not target_urls:
+        logger.warning(
+            "gather_competitor_context: all top results for %r were directories", keyword
+        )
+        return None
+
+    # Scrape and excerpt
+    pages: list[tuple[str, str]] = []
+    for url in target_urls:
+        try:
+            page = await scrape_url(url)
+        except Exception as exc:
+            logger.warning("gather_competitor_context: scrape failed for %s: %s", url, exc)
+            continue
+        content = (page.get("content") or "").strip()
+        if not content:
+            logger.warning("gather_competitor_context: empty scrape for %s", url)
+            continue
+        pages.append((url, content[:6000]))
+
+    if not pages:
+        logger.warning(
+            "gather_competitor_context: all scrapes empty/failed for keyword %r", keyword
+        )
+        return None
+
+    lines: list[str] = [
+        f"TOP-RANKING COMPETITOR PAGES for '{keyword}' - study what they cover and the "
+        "language they use, then write something BETTER: cover what they cover, answer what "
+        "they answer, close the gaps they leave, match the depth prospects evidently expect. "
+        "NEVER copy phrasing, NEVER mention these competitors by name in the page.",
+    ]
+    for url, excerpt in pages:
+        lines.append(f"--- {url} ---")
+        lines.append(excerpt)
+
+    return "\n".join(lines)
+
+
+def render_pop_term_guidance(brief: dict) -> str | None:
+    """Render POP term targets as a prompt guidance block.
+
+    Returns None if term_targets is absent or empty.
+    """
+    term_targets: list[dict] = brief.get("term_targets") or []
+    if not term_targets:
+        return None
+
+    # Top 25 by weight descending
+    sorted_terms = sorted(term_targets, key=lambda t: t.get("weight") or 0, reverse=True)[:25]
+
+    lines: list[str] = [
+        "SEO TERM GUIDANCE (statistical analysis of what top-ranking pages use):",
+    ]
+
+    target_word_count = brief.get("target_word_count")
+    if target_word_count:
+        lines.append(f"Aim for roughly {target_word_count} words (top-ranking pages average this).")
+
+    for t in sorted_terms:
+        phrase = t.get("phrase") or ""
+        target = t.get("target") or 0
+        if not phrase:
+            continue
+        if target == 0:
+            lines.append(f"- {phrase}: mention if natural")
+        else:
+            lo = max(1, target - 1)
+            hi = target + 1
+            lines.append(f"- {phrase}: aim for {lo}-{hi} uses")
+
+    lines.append(
+        "Readability beats exact counts. If a target would force awkward phrasing, "
+        "use fewer. Never stuff."
+    )
     return "\n".join(lines)
