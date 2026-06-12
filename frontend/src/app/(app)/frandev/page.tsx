@@ -11,6 +11,13 @@ import {
   type PlanOutlineItem,
   FRANCHISE_PAGE_TYPES,
 } from "@/lib/types";
+import {
+  factSheetToMarkdown,
+  planToMarkdown,
+  planToCsv,
+  downloadFile,
+  slugify,
+} from "@/lib/franchiseExport";
 import { Button } from "@/components/shared/Button";
 import { useGeneration } from "@/hooks/useGeneration";
 
@@ -402,7 +409,10 @@ const TIER_LABELS: Record<string, string> = { now: "Now", next: "Next", later: "
 
 interface ContentPlanSectionProps {
   brandId: string;
+  brandName: string;
   hasFactSheet: boolean;
+  /** Source URLs from the fact sheet — used to prefill the plan builder URL. */
+  factSheetSourceUrls?: string[];
   onGenerateFromPlan: (page: PlanPage, popBoost: boolean) => void;
   /** Set by parent after a plan-page generation is saved to history. */
   planPageUpdate: { pageId: string; generationId: string | null } | null;
@@ -412,7 +422,9 @@ interface ContentPlanSectionProps {
 
 function ContentPlanSection({
   brandId,
+  brandName,
   hasFactSheet,
+  factSheetSourceUrls,
   onGenerateFromPlan,
   planPageUpdate,
   onPlanPageUpdateApplied,
@@ -456,6 +468,11 @@ function ContentPlanSection({
 
   // "Built, unsaved" notice
   const [justBuilt, setJustBuilt] = useState(false);
+
+  // Plan Drive export state
+  const [planDriveExporting, setPlanDriveExporting] = useState(false);
+  const [planDriveUrl, setPlanDriveUrl] = useState<string | null>(null);
+  const [planDriveError, setPlanDriveError] = useState<string | null>(null);
 
   // React to parent signalling that a plan-page generation was saved to history.
   // Flip the page's status + generation_id in local plan state, then PUT the plan.
@@ -528,6 +545,20 @@ function ContentPlanSection({
     setTitleDrafts(titles);
     setOutlineDrafts(outlines);
   }, [plan]);
+
+  // Prefill main URL from fact sheet source URLs (only when the input is still empty)
+  useEffect(() => {
+    if (mainUrlRaw) return; // don't fight the user
+    if (!factSheetSourceUrls || factSheetSourceUrls.length === 0) return;
+    try {
+      const origin = new URL(factSheetSourceUrls[0]).origin;
+      setMainUrlRaw(origin);
+    } catch {
+      // ignore invalid URLs
+    }
+  // Run once when source URLs become available (or on brand switch)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [factSheetSourceUrls]);
 
   async function handleBuildPlan() {
     const trimmedUrl = mainUrlRaw.trim();
@@ -636,6 +667,33 @@ function ContentPlanSection({
     }, POLL_INTERVAL_MS);
   }
 
+  async function handlePlanExportToDrive(planToExport: FranchiseContentPlan) {
+    setPlanDriveExporting(true);
+    setPlanDriveError(null);
+    try {
+      const res = await apiFetch("/api/export/gdrive", {
+        method: "POST",
+        body: JSON.stringify({
+          title: `${brandName} - Franchise Content Roadmap`,
+          content: planToMarkdown(brandName, planToExport),
+          brand_id: brandId,
+          city: "",
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to export to Google Drive" }));
+        setPlanDriveError(err.detail || "Failed to export to Google Drive");
+        return;
+      }
+      const data = await res.json() as { doc_url: string };
+      setPlanDriveUrl(data.doc_url);
+    } catch (err: unknown) {
+      setPlanDriveError(err instanceof Error ? err.message : "Failed to export to Google Drive");
+    } finally {
+      setPlanDriveExporting(false);
+    }
+  }
+
   async function savePlan(planToSave: FranchiseContentPlan): Promise<boolean> {
     setSaveStatus("saving");
     setSavePlanError(null);
@@ -672,6 +730,21 @@ function ContentPlanSection({
     const flushed = flushDraftsToPlan(plan);
     setPlan(flushed);
     await savePlan(flushed);
+  }
+
+  /** Flush + save, then run callback with the saved plan. Returns false if save failed. */
+  async function flushSaveThenRun(
+    callback: (saved: FranchiseContentPlan) => void
+  ): Promise<boolean> {
+    if (!plan) return false;
+    const flushed = flushDraftsToPlan(plan);
+    setPlan(flushed);
+    if (dirty) {
+      const ok = await savePlan(flushed);
+      if (!ok) return false;
+    }
+    callback(flushed);
+    return true;
   }
 
   function handleDeletePage(pageId: string) {
@@ -779,15 +852,18 @@ function ContentPlanSection({
         </div>
 
         <div>
-          <label className={labelCls}>Seed keywords (comma-separated, optional, max 20)</label>
+          <label className={labelCls}>Seed keywords (optional)</label>
           <input
             type="text"
             value={seedKeywordsRaw}
             onChange={(e) => setSeedKeywordsRaw(e.target.value)}
             className={inputCls}
-            placeholder="franchise opportunity, low cost franchise, food franchise"
+            placeholder="e.g. low cost franchise, food franchise (max 20)"
             disabled={isDisabled}
           />
+          <p className="text-[11px] text-ink-40 mt-1.5">
+            Leave blank — Pulp researches the keyword landscape itself. Add seeds only to force specific angles.
+          </p>
         </div>
 
         {buildError && (
@@ -856,6 +932,44 @@ function ContentPlanSection({
             Rebuild plan
           </Button>
           <Button
+            variant="light"
+            size="sm"
+            onClick={() =>
+              flushSaveThenRun((saved) =>
+                downloadFile(
+                  `${slugify(brandName)}-content-roadmap.csv`,
+                  planToCsv(saved),
+                  "text/csv"
+                )
+              )
+            }
+          >
+            Download .csv
+          </Button>
+          <Button
+            variant="light"
+            size="sm"
+            onClick={() =>
+              flushSaveThenRun((saved) =>
+                downloadFile(
+                  `${slugify(brandName)}-content-roadmap.md`,
+                  planToMarkdown(brandName, saved),
+                  "text/markdown"
+                )
+              )
+            }
+          >
+            Download .md
+          </Button>
+          <Button
+            variant="light"
+            size="sm"
+            onClick={() => flushSaveThenRun(handlePlanExportToDrive)}
+            disabled={planDriveExporting || !!planDriveUrl}
+          >
+            {planDriveUrl ? "Exported" : planDriveExporting ? "Exporting..." : "Export to Drive"}
+          </Button>
+          <Button
             variant="ink"
             size="sm"
             onClick={handleSavePlan}
@@ -869,6 +983,23 @@ function ContentPlanSection({
           </Button>
         </div>
       </div>
+
+      {/* Plan Drive export feedback */}
+      {planDriveUrl && (
+        <a
+          href={planDriveUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] text-ink-70 underline"
+        >
+          Open in Drive
+        </a>
+      )}
+      {planDriveError && (
+        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+          {planDriveError}
+        </div>
+      )}
 
       {/* Just-built notice */}
       {justBuilt && (
@@ -1144,6 +1275,16 @@ function FranchisePageInner() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Fact sheet Drive export state
+  const [sheetDriveExporting, setSheetDriveExporting] = useState(false);
+  const [sheetDriveUrl, setSheetDriveUrl] = useState<string | null>(null);
+  const [sheetDriveError, setSheetDriveError] = useState<string | null>(null);
+
+  // Output panel Drive export state
+  const [outputDriveExporting, setOutputDriveExporting] = useState(false);
+  const [outputDriveUrl, setOutputDriveUrl] = useState<string | null>(null);
+  const [outputDriveError, setOutputDriveError] = useState<string | null>(null);
+
   // Generation
   const { output, setOutput, isGenerating, error: genError, usage, generate, abort } =
     useGeneration();
@@ -1198,6 +1339,10 @@ function FranchisePageInner() {
       setOutput("");
       setActivePageType(null);
       setActivePlanPage(null);
+      setSheetDriveUrl(null);
+      setSheetDriveError(null);
+      setOutputDriveUrl(null);
+      setOutputDriveError(null);
 
       try {
         const res = await apiFetch(`/api/franchise/profile/${id}`);
@@ -1244,18 +1389,26 @@ function FranchisePageInner() {
   // ---------------------------------------------------------------------------
   // Save fact sheet
   // ---------------------------------------------------------------------------
-  async function saveSheet() {
-    if (!sheet || !brandId) return;
-    setSaveStatus("saving");
-    setSaveError(null);
 
-    // Flush raw list drafts → parsed arrays into the sheet before saving.
-    const flushedSheet: FranchiseFactSheet = {
+  /** Flush list drafts into the sheet struct. Does NOT call API. */
+  function buildFlushedSheet(): FranchiseFactSheet | null {
+    if (!sheet) return null;
+    return {
       ...sheet,
       ...Object.fromEntries(
         LIST_FIELDS.map(([field]) => [field, splitLines(listDrafts[field] ?? "")])
       ),
     };
+  }
+
+  /** Flush + save. Returns the saved sheet on success, null on failure. */
+  async function saveSheet(): Promise<FranchiseFactSheet | null> {
+    if (!sheet || !brandId) return null;
+    setSaveStatus("saving");
+    setSaveError(null);
+
+    const flushedSheet = buildFlushedSheet();
+    if (!flushedSheet) return null;
     // Keep sheet state in sync with what we're persisting.
     setSheet(flushedSheet);
 
@@ -1267,11 +1420,90 @@ function FranchisePageInner() {
       setSaveStatus("saved");
       // Reset to idle after a moment
       setTimeout(() => setSaveStatus("idle"), 2500);
+      return flushedSheet;
     } catch (err: unknown) {
       setSaveStatus("error");
       setSaveError(
         err instanceof Error ? err.message : "Failed to save fact sheet. Try again."
       );
+      return null;
+    }
+  }
+
+  /** Download the fact sheet as markdown (flush+save first). */
+  async function handleSheetDownloadMd() {
+    const saved = await saveSheet();
+    if (!saved) return;
+    const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
+    downloadFile(
+      `${slugify(brandName)}-fact-sheet.md`,
+      factSheetToMarkdown(brandName, saved),
+      "text/markdown"
+    );
+  }
+
+  /** Export the fact sheet to Google Drive (flush+save first). */
+  async function handleSheetExportToDrive() {
+    const saved = await saveSheet();
+    if (!saved) return;
+    const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
+    setSheetDriveExporting(true);
+    setSheetDriveError(null);
+    try {
+      const res = await apiFetch("/api/export/gdrive", {
+        method: "POST",
+        body: JSON.stringify({
+          title: `${brandName} - Franchise Fact Sheet`,
+          content: factSheetToMarkdown(brandName, saved),
+          brand_id: brandId,
+          city: "",
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to export to Google Drive" }));
+        setSheetDriveError(err.detail || "Failed to export to Google Drive");
+        return;
+      }
+      const data = await res.json() as { doc_url: string };
+      setSheetDriveUrl(data.doc_url);
+    } catch (err: unknown) {
+      setSheetDriveError(err instanceof Error ? err.message : "Failed to export to Google Drive");
+    } finally {
+      setSheetDriveExporting(false);
+    }
+  }
+
+  /** Export the generated output to Google Drive. */
+  async function handleOutputExportToDrive() {
+    if (!output || !brandId) return;
+    const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
+    const label = activePlanPage
+      ? activePlanPage.title
+      : (FRANCHISE_PAGE_TYPES.find((t) => t.key === activePageType)?.label ?? "");
+    const title = label || `${brandName} - Franchise Page`;
+    setOutputDriveExporting(true);
+    setOutputDriveError(null);
+    try {
+      const res = await apiFetch("/api/export/gdrive", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          content: output,
+          brand_id: brandId,
+          city: "",
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to export to Google Drive" }));
+        setOutputDriveError(err.detail || "Failed to export to Google Drive");
+        return;
+      }
+      const data = await res.json() as { doc_url: string };
+      setOutputDriveUrl(data.doc_url);
+    } catch (err: unknown) {
+      setOutputDriveError(err instanceof Error ? err.message : "Failed to export to Google Drive");
+    } finally {
+      setOutputDriveExporting(false);
     }
   }
 
@@ -1284,6 +1516,8 @@ function FranchisePageInner() {
     setOutput("");
     setSaveHistoryStatus("idle");
     setSaveHistoryError(null);
+    setOutputDriveUrl(null);
+    setOutputDriveError(null);
     const payload: FranchiseGeneratePayload = { brand_id: brandId, page_type: pageTypeKey };
     generate("/api/franchise/generate", payload);
   }
@@ -1298,6 +1532,8 @@ function FranchisePageInner() {
     setOutput("");
     setSaveHistoryStatus("idle");
     setSaveHistoryError(null);
+    setOutputDriveUrl(null);
+    setOutputDriveError(null);
     const payload: FranchiseGeneratePayload = {
       brand_id: brandId,
       plan_page_id: page.id,
@@ -1479,7 +1715,7 @@ function FranchisePageInner() {
           <div className="flex items-center gap-3 flex-wrap">
             <Button
               variant="ink"
-              onClick={saveSheet}
+              onClick={() => saveSheet()}
               disabled={saveStatus === "saving"}
             >
               {saveStatus === "saving"
@@ -1488,8 +1724,35 @@ function FranchisePageInner() {
                 ? "Saved"
                 : "Save fact sheet"}
             </Button>
+            <Button
+              variant="light"
+              onClick={handleSheetDownloadMd}
+              disabled={saveStatus === "saving"}
+            >
+              Download .md
+            </Button>
+            <Button
+              variant="light"
+              onClick={handleSheetExportToDrive}
+              disabled={saveStatus === "saving" || sheetDriveExporting || !!sheetDriveUrl}
+            >
+              {sheetDriveUrl ? "Exported" : sheetDriveExporting ? "Exporting..." : "Export to Drive"}
+            </Button>
+            {sheetDriveUrl && (
+              <a
+                href={sheetDriveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] text-ink-70 underline"
+              >
+                Open in Drive
+              </a>
+            )}
             {saveStatus === "error" && saveError && (
               <span className="text-[12px] text-[#b91c1c]">{saveError}</span>
+            )}
+            {sheetDriveError && (
+              <span className="text-[12px] text-[#b91c1c]">{sheetDriveError}</span>
             )}
           </div>
         </div>
@@ -1499,7 +1762,9 @@ function FranchisePageInner() {
       {hasSheet && !profileLoading && brandId && (
         <ContentPlanSection
           brandId={brandId}
+          brandName={brands.find((b) => b.id === brandId)?.name ?? ""}
           hasFactSheet={hasSheet}
+          factSheetSourceUrls={sheet?.source_urls}
           onGenerateFromPlan={handleGenerateFromPlan}
           planPageUpdate={planPageUpdate}
           onPlanPageUpdateApplied={() => setPlanPageUpdate(null)}
@@ -1544,31 +1809,40 @@ function FranchisePageInner() {
             </div>
           ) : (
             /* Standard page-type buttons */
-            <div className="flex gap-2 flex-wrap">
-              {FRANCHISE_PAGE_TYPES.map((pt) => (
-                <Button
-                  key={pt.key}
-                  variant={activePageType === pt.key ? "ink" : "ghost"}
-                  onClick={() => handleGenerate(pt.key)}
-                  disabled={isGenerating}
-                >
-                  {isGenerating && activePageType === pt.key ? (
-                    <>
-                      Writing
-                      <span className="inline-block animate-[ellipsis_1.5s_steps(4,end)_infinite] w-[1.5em] text-left">
-                        ...
-                      </span>
-                    </>
-                  ) : (
-                    pt.label
-                  )}
-                </Button>
-              ))}
-              {isGenerating && (
-                <Button variant="light" size="sm" onClick={abort}>
-                  Stop
-                </Button>
-              )}
+            <div className="space-y-3">
+              <div>
+                <div className="text-[12px] font-medium text-ink">Quick pages</div>
+                <div className="text-[11px] text-ink-40 mt-0.5">
+                  Two standalone staples. For the full researched roadmap (30-50 pages), build the
+                  content plan above — every roadmap row gets its own Generate button.
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {FRANCHISE_PAGE_TYPES.map((pt) => (
+                  <Button
+                    key={pt.key}
+                    variant={activePageType === pt.key ? "ink" : "ghost"}
+                    onClick={() => handleGenerate(pt.key)}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating && activePageType === pt.key ? (
+                      <>
+                        Writing
+                        <span className="inline-block animate-[ellipsis_1.5s_steps(4,end)_infinite] w-[1.5em] text-left">
+                          ...
+                        </span>
+                      </>
+                    ) : (
+                      pt.label
+                    )}
+                  </Button>
+                ))}
+                {isGenerating && (
+                  <Button variant="light" size="sm" onClick={abort}>
+                    Stop
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
@@ -1646,8 +1920,45 @@ function FranchisePageInner() {
                 ? "Saved to history"
                 : "Save to history"}
             </Button>
+            <Button
+              variant="light"
+              size="sm"
+              onClick={() => {
+                const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
+                const label = activePlanPage
+                  ? activePlanPage.title
+                  : (FRANCHISE_PAGE_TYPES.find((t) => t.key === activePageType)?.label ?? "");
+                const filename = label
+                  ? `${slugify(label)}.md`
+                  : `${slugify(brandName)}-franchise-page.md`;
+                downloadFile(filename, output, "text/markdown");
+              }}
+            >
+              Download .md
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOutputExportToDrive}
+              disabled={outputDriveExporting || !!outputDriveUrl}
+            >
+              {outputDriveUrl ? "Exported" : outputDriveExporting ? "Exporting..." : "Export to Drive"}
+            </Button>
+            {outputDriveUrl && (
+              <a
+                href={outputDriveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] text-ink-70 underline"
+              >
+                Open in Drive
+              </a>
+            )}
             {saveHistoryStatus === "error" && saveHistoryError && (
               <span className="text-[12px] text-[#b91c1c]">{saveHistoryError}</span>
+            )}
+            {outputDriveError && (
+              <span className="text-[12px] text-[#b91c1c]">{outputDriveError}</span>
             )}
           </div>
         </div>
