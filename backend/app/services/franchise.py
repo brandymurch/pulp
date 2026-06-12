@@ -167,9 +167,34 @@ Rules:
 SCRAPED PAGES:
 {pages}"""
 
+# The qualitative fields benefit from synthesis (brands rarely state them
+# crisply); the hard numbers above stay strictly extract-only.
+QUALITATIVE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "differentiators": {"type": "array", "items": {"type": "string"}},
+        "ideal_candidate": {"type": ["string", "null"]},
+        "proof_points": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["differentiators", "ideal_candidate", "proof_points"],
+    "additionalProperties": False,
+}
+
+SYNTHESIS_PROMPT = """You are a franchise development strategist reading a brand's website. Based on EVERYTHING in the scraped pages below, synthesize the brand's qualitative recruitment story. Unlike pure extraction, you may connect dots and articulate what the brand implies but never states crisply - but stay grounded in the text:
+
+- differentiators: 3-6 things that genuinely distinguish this franchise from category norms (business model, support depth, market position, economics structure, brand assets). Specific and concrete, never generic filler like "great support" or "proven model" unless backed by a specific detail.
+- ideal_candidate: 2-3 sentences on the owner profile this brand implicitly targets (background, capital comfort, hands-on vs semi-absentee, what they value).
+- proof_points: the strongest credibility evidence found in the text (years operating, unit counts, parent company, awards, guarantees, rankings). Any NUMBER you cite must appear in the text - never invent figures.
+
+SCRAPED PAGES:
+{pages}"""
+
 
 async def extract_fact_sheet(scraped_pages: list[dict]) -> dict:
-    """Run Claude extraction over scraped page content. Returns the fact sheet dict."""
+    """Two-pass fact sheet: strict extraction for hard facts, then a synthesis
+    pass that articulates the qualitative fields (differentiators, ideal
+    candidate, proof points). Synthesis output replaces the extracted values
+    for those fields when non-empty; numbers remain extract-only."""
     pages_text = "\n\n---\n\n".join(
         f"URL: {p.get('url', 'unknown')}\n{(p.get('content') or '')[:15000]}"
         for p in scraped_pages
@@ -183,7 +208,26 @@ async def extract_fact_sheet(scraped_pages: list[dict]) -> dict:
         messages=[{"role": "user", "content": EXTRACTION_PROMPT.format(pages=pages_text)}],
     )
     text = "".join(b.text for b in resp.content if hasattr(b, "text"))
-    return extract_json(text)
+    sheet = extract_json(text)
+
+    try:
+        resp2 = await client.messages.create(
+            model=MODELS["sonnet"],
+            max_tokens=2000,
+            temperature=0.4,
+            output_config={"format": {"type": "json_schema", "schema": QUALITATIVE_SCHEMA}},
+            messages=[{"role": "user", "content": SYNTHESIS_PROMPT.format(pages=pages_text)}],
+        )
+        text2 = "".join(b.text for b in resp2.content if hasattr(b, "text"))
+        qual = extract_json(text2.replace("—", "-").replace("–", "-"))
+        for field in ("differentiators", "ideal_candidate", "proof_points"):
+            value = qual.get(field)
+            if value not in (None, "", []):
+                sheet[field] = value
+    except Exception:
+        logger.warning("Qualitative synthesis pass failed; keeping extracted values", exc_info=True)
+
+    return sheet
 
 
 PAGE_TYPES: dict[str, dict[str, str]] = {
