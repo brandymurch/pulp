@@ -61,6 +61,40 @@ function serializeOutlineItems(items: PlanOutlineItem[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Expandable source URL list
+// ---------------------------------------------------------------------------
+
+interface SourceUrlsDetailProps {
+  urls: string[];
+  label: string;
+}
+
+function SourceUrlsDetail({ urls, label }: SourceUrlsDetailProps) {
+  const [expanded, setExpanded] = useState(false);
+  if (!urls.length) return null;
+  return (
+    <div className="text-[11px] text-ink-40">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="hover:text-ink-70 transition-colors"
+      >
+        {label} ({urls.length}) {expanded ? "▾" : "▸"}
+      </button>
+      {expanded && (
+        <ul className="mt-1.5 space-y-0.5 font-mono">
+          {urls.map((u) => (
+            <li key={u} className="truncate max-w-full">
+              {u}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Fact-sheet editor
 // ---------------------------------------------------------------------------
 
@@ -217,7 +251,7 @@ interface ScrapeCardProps {
 }
 
 function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
-  const [urlsRaw, setUrlsRaw] = useState("");
+  const [mainUrl, setMainUrl] = useState("");
   const [scraping, setScraping] = useState(false);
   const [error, setScrapeError] = useState<string | null>(null);
 
@@ -234,9 +268,9 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
   useEffect(() => () => stopPolling(), []);
 
   async function handleScrape() {
-    const urls = splitLines(urlsRaw);
-    if (!urls.length) {
-      setScrapeError("Enter at least one URL.");
+    const trimmed = mainUrl.trim();
+    if (!trimmed) {
+      setScrapeError("Enter the main website URL.");
       return;
     }
     setScraping(true);
@@ -246,7 +280,7 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
     try {
       const res = await apiFetchOk("/api/franchise/scrape", {
         method: "POST",
-        body: JSON.stringify({ brand_id: brandId, urls }),
+        body: JSON.stringify({ brand_id: brandId, main_url: trimmed }),
       });
       const data = await res.json();
       jobId = data.job_id;
@@ -321,21 +355,24 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
     <div className="border-[1.5px] border-line rounded-[14px] bg-white p-5 space-y-4">
       {isRescrape && (
         <p className="text-[12px] text-ink-70">
-          Scraping new URLs and saving will overwrite the current fact sheet.
+          Scraping a new URL and saving will overwrite the current fact sheet.
         </p>
       )}
       <div>
         <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-1.5">
-          Franchise page URLs (one per line)
+          Main website URL
         </label>
-        <textarea
-          value={urlsRaw}
-          onChange={(e) => setUrlsRaw(e.target.value)}
-          rows={4}
-          className="w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y font-mono"
-          placeholder="https://example.com/franchise&#10;https://example.com/franchise/investment"
+        <input
+          type="url"
+          value={mainUrl}
+          onChange={(e) => setMainUrl(e.target.value)}
+          className="w-full h-[42px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] font-mono outline-none focus:border-ink transition-colors"
+          placeholder="https://example.com"
           disabled={scraping}
         />
+        <p className="text-[11px] text-ink-40 mt-1.5">
+          We&apos;ll find and scrape the relevant franchise pages automatically.
+        </p>
       </div>
       {error && (
         <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
@@ -385,7 +422,7 @@ function ContentPlanSection({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Build form state
-  const [siteUrlsRaw, setSiteUrlsRaw] = useState("");
+  const [mainUrlRaw, setMainUrlRaw] = useState("");
   const [seedKeywordsRaw, setSeedKeywordsRaw] = useState("");
 
   // Plan build job state
@@ -490,13 +527,9 @@ function ContentPlanSection({
   }, [plan]);
 
   async function handleBuildPlan() {
-    const siteUrls = splitLines(siteUrlsRaw);
-    if (!siteUrls.length) {
-      setBuildError("Enter at least one site URL.");
-      return;
-    }
-    if (siteUrls.length > 5) {
-      setBuildError("Maximum 5 site URLs.");
+    const trimmedUrl = mainUrlRaw.trim();
+    if (!trimmedUrl) {
+      setBuildError("Enter the main website URL.");
       return;
     }
     const seedKeywords = seedKeywordsRaw
@@ -521,7 +554,7 @@ function ContentPlanSection({
     try {
       const res = await apiFetchOk("/api/franchise/plan", {
         method: "POST",
-        body: JSON.stringify({ brand_id: brandId, site_urls: siteUrls, seed_keywords: seedKeywords }),
+        body: JSON.stringify({ brand_id: brandId, main_url: trimmedUrl, seed_keywords: seedKeywords }),
       });
       const data = await res.json();
       jobId = data.job_id;
@@ -728,15 +761,18 @@ function ContentPlanSection({
         )}
 
         <div>
-          <label className={labelCls}>Site URLs to analyze (1-5, one per line)</label>
-          <textarea
-            value={siteUrlsRaw}
-            onChange={(e) => setSiteUrlsRaw(e.target.value)}
-            rows={3}
-            className={`${textareaCls} font-mono`}
-            placeholder={"https://example.com/franchise\nhttps://example.com/why-franchise"}
+          <label className={labelCls}>Main website URL</label>
+          <input
+            type="url"
+            value={mainUrlRaw}
+            onChange={(e) => setMainUrlRaw(e.target.value)}
+            className={`${inputCls} font-mono`}
+            placeholder="https://example.com"
             disabled={isDisabled}
           />
+          <p className="text-[11px] text-ink-40 mt-1.5">
+            We&apos;ll find and scrape the relevant pages automatically.
+          </p>
         </div>
 
         <div>
@@ -809,7 +845,7 @@ function ContentPlanSection({
             size="sm"
             onClick={() => {
               setShowRebuildNotice(true);
-              setSiteUrlsRaw("");
+              setMainUrlRaw("");
               setSeedKeywordsRaw("");
               setBuildError(null);
             }}
@@ -850,6 +886,10 @@ function ContentPlanSection({
         Generated {new Date(plan.generated_at).toLocaleDateString()} &middot;{" "}
         {plan.pages.length} pages &middot; {plan.clusters.length} clusters
       </div>
+
+      {plan.site_urls && plan.site_urls.length > 0 && (
+        <SourceUrlsDetail urls={plan.site_urls} label="Researched from" />
+      )}
 
       {/* Tiers */}
       {TIER_ORDER.map((tier) => {
@@ -1403,6 +1443,10 @@ function FranchisePageInner() {
             listDrafts={listDrafts}
             onListDraftChange={handleListDraftChange}
           />
+
+          {sheet.source_urls && sheet.source_urls.length > 0 && (
+            <SourceUrlsDetail urls={sheet.source_urls} label="Built from" />
+          )}
 
           <div className="flex items-center gap-3 flex-wrap">
             <Button
