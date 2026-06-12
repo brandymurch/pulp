@@ -388,7 +388,26 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
     )
     system = with_role_block(
         system_blocks,
-        "You write franchise development (franchisee recruitment) pages for prospective franchisees.",
+        (
+            "You write franchise development (franchisee recruitment) pages for "
+            "prospective franchisees.\n\n"
+            "STYLE AND DISCIPLINE RULES FOR THESE PAGES:\n"
+            "- NEVER fabricate hyperlinks or placeholder links like [page](#). If a "
+            "related page is worth mentioning, name it in plain text only.\n"
+            "- Banned construction: a claim followed by a portentous one-liner like "
+            "'That kind of X is not common.', 'That level of X is rare.', or 'X is one "
+            "of the most underrated Y.' Use it zero times. Make the claim carry its own "
+            "weight with specifics instead.\n"
+            "- Vary section shapes: some sections short and punchy, some with lists, "
+            "some narrative. If two consecutive sections have the same structure, "
+            "rework one.\n"
+            "- No throat-clearing intros ('In this guide we will cover...'). Open with "
+            "the single most compelling specific fact you have.\n"
+            "- Industry-level claims (market size, recession resilience, growth trends) "
+            "may ONLY appear if they are present in the provided fact sheet, research, "
+            "or competitor context. Never supply them from memory.\n"
+            "- One closing call to action, two sentences max, no boilerplate urgency."
+        ),
     )
 
     return StreamingResponse(
