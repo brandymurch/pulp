@@ -88,14 +88,17 @@ def _run_scrape_job(job_id: str, urls: list[str], main_url: str | None = None):
         async def run():
             # Discovery path: map the site then let Claude select pages
             if main_url:
-                logger.info("Scrape job %s: mapping site %s", job_id, main_url)
-                mapped = await map_site(main_url)
-                # Ensure main_url is in the list for selection
-                if main_url not in mapped:
-                    mapped = [main_url] + mapped
-                logger.info("Scrape job %s: map returned %d URLs", job_id, len(mapped))
-                selected = await select_relevant_urls(mapped, "fact_sheet", main_url=main_url)
-                logger.info("Scrape job %s: selected %d URLs", job_id, len(selected))
+                try:
+                    logger.info("Scrape job %s: mapping site %s", job_id, main_url)
+                    mapped = await map_site(main_url)
+                    # Ensure main_url is in the list for selection
+                    if main_url not in mapped:
+                        mapped = [main_url] + mapped
+                    logger.info("Scrape job %s: map returned %d URLs", job_id, len(mapped))
+                    selected = await select_relevant_urls(mapped, "fact_sheet", main_url=main_url)
+                    logger.info("Scrape job %s: selected %d URLs", job_id, len(selected))
+                except Exception as e:
+                    raise RuntimeError(f"Failed while discovering pages: {e}") from e
                 scrape_urls = selected
             else:
                 scrape_urls = urls

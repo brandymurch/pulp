@@ -72,7 +72,7 @@ async def select_relevant_urls(
     client = get_client()
     resp = await client.messages.create(
         model=MODELS["sonnet"],
-        max_tokens=2000,
+        max_tokens=4000,
         temperature=0.2,
         output_config={"format": {"type": "json_schema", "schema": URL_SELECTION_SCHEMA}},
         messages=[{"role": "user", "content": prompt}],
