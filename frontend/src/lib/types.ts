@@ -28,6 +28,11 @@ export interface Brand {
   name: string;
   short_name?: string | null;
   primary_keyword?: string | null;
+  frandev_voice?: {
+    dimensions?: { key: string; value: number }[];
+    notes?: string;
+    guidelines?: string;
+  } | null;
 }
 
 export interface Location {
