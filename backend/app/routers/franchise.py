@@ -375,14 +375,20 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
     else:
         user = build_franchise_user_prompt(req.page_type, brand.get("name", ""), sheet)
 
-    from app.services.claude import stream_claude, get_generation_model
+    from app.services.claude import stream_claude, get_frandev_model
     from app.services.content_generator import build_system_prompt, with_role_block
 
+    # Prefer FranDev-specific voice profile when present; fall back to brand fields.
+    fd_voice = brand.get("frandev_voice") or {}
+    voice_dimensions = fd_voice.get("dimensions") or brand.get("voice_dimensions")
+    voice_notes = fd_voice.get("notes") or brand.get("voice_notes")
+    guidelines = fd_voice.get("guidelines") or brand.get("brand_guidelines")
+
     system_blocks = build_system_prompt(
-        voice_dimensions=brand.get("voice_dimensions"),
-        voice_notes=brand.get("voice_notes"),
+        voice_dimensions=voice_dimensions,
+        voice_notes=voice_notes,
         brand_banned_words=brand.get("brand_banned_words"),
-        brand_guidelines=brand.get("brand_guidelines"),
+        brand_guidelines=guidelines,
         brand_competitors=brand.get("competitors") or [],
         prompt_learnings=brand.get("prompt_learnings"),
     )
@@ -411,7 +417,7 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
     )
 
     return StreamingResponse(
-        stream_claude(system, user, model=get_generation_model()),
+        stream_claude(system, user, model=get_frandev_model()),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )

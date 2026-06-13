@@ -50,6 +50,12 @@ def get_generation_model() -> str:
     return resolve_model(key)
 
 
+def get_frandev_model() -> str:
+    """FranDev pages default to opus for prose quality; env-overridable."""
+    key = os.environ.get("FRANDEV_MODEL") or os.environ.get("GENERATION_MODEL") or "opus"
+    return resolve_model(key)
+
+
 def extract_json(raw: str) -> Any:
     """Parse JSON from a model response that may include preamble or fences.
 

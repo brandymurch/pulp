@@ -36,6 +36,7 @@ class UpdateBrandRequest(BaseModel):
     competitors: list[str] | None = None
     prompt_learnings: list[str] | None = None
     content_templates: dict[str, str] | None = None
+    frandev_voice: dict[str, Any] | None = None
 
 
 @router.get("")
