@@ -8,6 +8,7 @@ CREATE TABLE brands (
   services JSONB DEFAULT '[]',
   franchise_profile JSONB,
   franchise_content_plan JSONB,
+  frandev_voice JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
