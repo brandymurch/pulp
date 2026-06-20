@@ -61,12 +61,12 @@ export default function SignInPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 autoFocus
-                className="w-full h-[46px] px-5 rounded-full border-[1.5px] border-ink bg-white font-mono text-[13px] text-ink placeholder:text-ink-40 outline-none transition-shadow focus:shadow-[4px_4px_0_0_var(--ink)]"
+                className="w-full h-[46px] px-5 rounded-full border border-line bg-white font-mono text-[13px] text-ink placeholder:text-ink-40 outline-none transition-shadow focus:shadow-card-md"
               />
               <button
                 type="submit"
                 disabled={loading || !password}
-                className="group w-full h-[46px] rounded-full bg-ink text-white font-medium text-xs tracking-[0.04em] inline-flex items-center justify-center gap-2 border-[1.5px] border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group w-full h-[46px] rounded-full bg-ink text-white font-medium text-xs tracking-[0.04em] inline-flex items-center justify-center gap-2 border border-line transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Signing in..." : "Sign in"}
                 {!loading && (

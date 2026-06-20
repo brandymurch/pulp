@@ -224,7 +224,7 @@ function NeedsAttentionRow({
           </div>
           <a
             href={`/generate?pipeline=${job.id}`}
-            className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] bg-ink text-white border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp"
+            className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border bg-ink text-white border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp"
           >
             Open
           </a>
@@ -344,7 +344,7 @@ function InProgressSection({
       </h2>
 
       {error && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-pop px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-pop px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {error}
         </div>
       )}
@@ -352,7 +352,7 @@ function InProgressSection({
       {needsAttention.length > 0 && (
         <div>
           <QueueSectionHeader label="Needs attention" count={needsAttention.length} />
-          <div className="border-[1.5px] border-ink rounded-pop-lg bg-white">
+          <div className="border border-line rounded-pop-lg bg-white">
             <div className="px-5 py-1">
               {needsAttention.map((job) => (
                 <NeedsAttentionRow
@@ -368,7 +368,7 @@ function InProgressSection({
       {inProgress.length > 0 && (
         <div>
           <QueueSectionHeader label="In progress" count={inProgress.length} />
-          <div className="border-[1.5px] border-line rounded-pop-lg bg-white">
+          <div className="border border-line rounded-pop-lg bg-white">
             <div className="px-5 py-1">
               {inProgress.map((job) => (
                 <InProgressRow key={job.id} job={job} />
@@ -381,7 +381,7 @@ function InProgressSection({
       {failed.length > 0 && (
         <div>
           <QueueSectionHeader label="Failed" count={failed.length} />
-          <div className="border-[1.5px] border-[#b91c1c]/30 rounded-pop-lg bg-white">
+          <div className="border border-[#b91c1c]/30 rounded-pop-lg bg-white">
             <div className="px-5 py-1">
               {failed.map((job) => (
                 <ErrorRow
@@ -427,7 +427,7 @@ function FinishedPagesSection({
       </h2>
 
       {error && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {error}
         </div>
       )}
@@ -641,14 +641,14 @@ export default function PagesPage() {
     <div className="space-y-10">
       {/* Page heading row with optional brand filter */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
+        <h1 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[0.95] tracking-[-0.035em] m-0">
           Pages
         </h1>
         {brands.length > 1 && (
           <select
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
-            className="h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 pr-8 text-[12px] outline-none focus:border-ink cursor-pointer"
+            className="h-10 border border-line rounded-lg bg-white text-ink px-3 pr-8 text-[12px] outline-none focus:border-ink cursor-pointer"
           >
             <option value="">All brands</option>
             {brands.map((b) => (

@@ -71,7 +71,7 @@ export default function VoicePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[1.0] tracking-[-0.02em] m-0">
+        <h1 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[1.0] tracking-[-0.02em] m-0">
           Brand Voice
         </h1>
         <p className="text-[15px] leading-[1.5] text-ink-70 mt-3">
@@ -92,7 +92,7 @@ export default function VoicePage() {
               setBrandName(brand.name);
             }
           }}
-          className="w-full max-w-[400px] h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
+          className="w-full max-w-[400px] h-[46px] border border-line rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-card-md appearance-none cursor-pointer"
         >
           {brands.map(b => (
             <option key={b.id} value={b.id}>{b.name}</option>

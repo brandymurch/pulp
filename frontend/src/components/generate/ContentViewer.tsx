@@ -13,8 +13,8 @@ export function ContentViewer({ content, isStreaming = false, onEdit }: ContentV
   }
 
   return (
-    <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-3 border-b-[1.5px] border-ink">
+    <div className="border border-line rounded-[18px] bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-line">
         <div className="flex items-center gap-2">
           <h3 className="font-display font-[800] text-base tracking-[-0.02em] m-0">Content</h3>
           {isStreaming && (

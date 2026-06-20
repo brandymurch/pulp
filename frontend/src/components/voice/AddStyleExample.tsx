@@ -30,7 +30,7 @@ export function AddStyleExample({ onAdd }: AddStyleExampleProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="border-[1.5px] border-ink rounded-[18px] p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="border border-line rounded-[18px] p-6 space-y-4">
       <h3 className="font-display font-[800] text-xl tracking-[-0.01em] m-0">
         Add <span className="font-display font-normal text-pulp-deep">example</span>
       </h3>
@@ -50,7 +50,7 @@ export function AddStyleExample({ onAdd }: AddStyleExampleProps) {
           onChange={e => setContent(e.target.value)}
           placeholder="Paste a sample of the brand's copy here..."
           rows={8}
-          className="w-full border-[1.5px] border-ink rounded-[14px] bg-white text-ink px-4 py-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] resize-y"
+          className="w-full border border-line rounded-[14px] bg-white text-ink px-4 py-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-card-md resize-y"
         />
       </div>
 

@@ -24,8 +24,8 @@ const DEFAULT_DIMENSIONS: VoiceDimension[] = [
 ];
 
 const labelClass = "block text-[12px] tracking-[0.14em] uppercase text-ink font-semibold mb-1.5";
-const inputClass = "w-full h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none focus:border-ink transition-colors";
-const textareaClass = "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
+const inputClass = "w-full h-10 border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none focus:border-ink transition-colors";
+const textareaClass = "w-full border border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
 
 function EditableSection({ title, editing, onEdit, onSave, onCancel, saving, children, display }: {
   title: string;
@@ -408,7 +408,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
 
       {/* Learned patterns (read-only, from past generations) — brand mode only */}
       {mode === "brand" && brand?.prompt_learnings?.length > 0 && (
-        <div className="border-[1.5px] border-line rounded-[14px] p-4">
+        <div className="border border-line rounded-[14px] p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[12px] tracking-[0.14em] uppercase text-ink font-semibold">
               Learned patterns

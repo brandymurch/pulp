@@ -31,8 +31,8 @@ export function POPScoreCard({ score, contentWordCount, onRevise, isRevising }: 
     : "bg-[rgba(185,28,28,0.05)]";
 
   return (
-    <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
-      <div className="px-6 py-4 border-b-[1.5px] border-ink">
+    <div className="border border-line rounded-[18px] bg-white overflow-hidden">
+      <div className="px-6 py-4 border-b border-line">
         <h3 className="font-display font-[800] text-base tracking-[-0.02em] m-0">
           SEO <span className="font-display font-normal text-pulp-deep">score</span>
         </h3>

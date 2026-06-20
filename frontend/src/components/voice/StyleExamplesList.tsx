@@ -26,7 +26,7 @@ export function StyleExamplesList({ examples, onDelete }: StyleExamplesListProps
   return (
     <div className="space-y-3">
       {examples.map(ex => (
-        <div key={ex.id} className="border-[1.5px] border-line rounded-[14px] p-5 hover:border-ink transition-colors">
+        <div key={ex.id} className="border border-line rounded-[14px] p-5 hover:border-ink transition-colors">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div>
               <div className="font-display font-[800] text-[17px] tracking-[-0.01em]">{ex.title}</div>

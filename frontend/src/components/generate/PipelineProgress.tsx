@@ -55,7 +55,7 @@ export function PipelineProgress({ steps }: PipelineProgressProps) {
   };
 
   return (
-    <div className="border-[1.5px] border-line rounded-[14px] bg-white p-5 space-y-3">
+    <div className="border border-line rounded-[14px] bg-white p-5 space-y-3">
       <div className="flex items-center justify-between">
         <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70">
           Research {hasLoading ? "in progress" : "complete"} ({doneCount}/{totalActive})

@@ -41,8 +41,8 @@ export function OutlineReview({ outline, onApprove }: OutlineReviewProps) {
   const current = editing ? editedOutline : outline;
 
   return (
-    <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b-[1.5px] border-ink">
+    <div className="border border-line rounded-[18px] bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-line">
         <h3 className="font-display font-[800] text-lg tracking-[-0.02em] m-0">
           Outline <span className="font-display font-normal text-pulp-deep">review</span>
         </h3>
@@ -60,7 +60,7 @@ export function OutlineReview({ outline, onApprove }: OutlineReviewProps) {
             <input
               value={editedOutline.h1}
               onChange={e => setEditedOutline({ ...editedOutline, h1: e.target.value })}
-              className="w-full border-b-[1.5px] border-ink bg-transparent outline-none font-display font-[800] text-2xl tracking-[-0.02em]"
+              className="w-full border-b border-line bg-transparent outline-none font-display font-[800] text-2xl tracking-[-0.02em]"
             />
           ) : (
             current.h1
@@ -69,7 +69,7 @@ export function OutlineReview({ outline, onApprove }: OutlineReviewProps) {
 
         {/* Sections */}
         {current.sections.map((section, sIdx) => (
-          <div key={sIdx} className="border-[1.5px] border-line rounded-[14px] p-4">
+          <div key={sIdx} className="border border-line rounded-[14px] p-4">
             <div className="font-display font-[800] text-base tracking-[-0.01em] mb-2">
               {editing ? (
                 <input

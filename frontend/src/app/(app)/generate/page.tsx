@@ -363,7 +363,7 @@ function GeneratePageInner() {
       {/* Header */}
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
+          <h1 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[0.95] tracking-[-0.035em] m-0">
             {phaseLabels[phase]}
             {isActive && <span className="inline-block w-[1.5em] text-left animate-[ellipsis_1.5s_steps(4,end)_infinite]">...</span>}
           </h1>
@@ -379,7 +379,7 @@ function GeneratePageInner() {
 
       {/* Error */}
       {error && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)] flex items-center justify-between gap-3 flex-wrap">
+        <div className="border border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)] flex items-center justify-between gap-3 flex-wrap">
           <span>{error}</span>
           {pollStalled && pipelineId && (
             <button
@@ -401,7 +401,7 @@ function GeneratePageInner() {
             <select value={brandId} onChange={e => {
               const brand = brands.find(b => b.id === e.target.value);
               if (brand) { setBrandId(brand.id); setBrandName(brand.name); setSelectedLocationId(""); }
-            }} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
+            }} className="w-full h-[46px] border border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
               {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
@@ -414,7 +414,7 @@ function GeneratePageInner() {
                 const loc = locations.find(l => l.id === e.target.value);
                 setSelectedLocationId(e.target.value);
                 if (loc) { setCity(loc.city); setState(loc.state); }
-              }} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
+              }} className="w-full h-[46px] border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
                 <option value="">Select a location</option>
                 {locations.map(l => <option key={l.id} value={l.id}>{l.name || `${brandName} ${l.city}`}, {l.state}</option>)}
               </select>
@@ -429,11 +429,11 @@ function GeneratePageInner() {
               <div className="grid grid-cols-[1fr_80px] gap-3">
                 <div>
                   <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Target city</label>
-                  <input value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
+                  <input value={city} onChange={e => setCity(e.target.value)} placeholder="Columbus" className="w-full h-[46px] border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
                 </div>
                 <div>
                   <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">State</label>
-                  <input value={state} onChange={e => setState(e.target.value)} placeholder="OH" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
+                  <input value={state} onChange={e => setState(e.target.value)} placeholder="OH" className="w-full h-[46px] border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
                 </div>
               </div>
               <div className="text-[12px] text-ink-40">
@@ -472,7 +472,7 @@ function GeneratePageInner() {
                 {/* Content type */}
                 <div>
                   <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Content type</label>
-                  <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
+                  <select value={contentType} onChange={e => setContentType(e.target.value)} className="w-full h-[46px] border border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer">
                     <option value="landing_page">Landing Page</option>
                     <option value="service_page">Service Page</option>
                     <option value="blog_post">Blog Post</option>
@@ -483,7 +483,7 @@ function GeneratePageInner() {
                 {/* Page slug */}
                 <div>
                   <label className="block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-2">Page slug (optional)</label>
-                  <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
+                  <input value={pageSlug} onChange={e => setPageSlug(e.target.value)} placeholder="/officename/city" className="w-full h-[46px] border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-shadow duration-150 focus:border-ink" />
                 </div>
 
                 {/* Competitor URLs */}
@@ -507,7 +507,7 @@ function GeneratePageInner() {
 
       {/* Progress indicator for active phases */}
       {isActive && (
-        <div className="border-[1.5px] border-line rounded-[14px] bg-white p-5">
+        <div className="border border-line rounded-[14px] bg-white p-5">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-ink animate-pulse" />
             <span className="text-[13px] text-ink">{phaseDescriptions[phase]}</span>
@@ -536,7 +536,7 @@ function GeneratePageInner() {
 
       {/* Outline review (waiting for approval) */}
       {phase === "outline_review" && outlineData && (
-        <div className="border-[1.5px] border-ink rounded-[18px] p-6 space-y-4">
+        <div className="border border-line rounded-[18px] p-6 space-y-4">
           <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">Outline for approval</div>
           <input
             value={outlineData.h1 || ""}
@@ -588,7 +588,7 @@ function GeneratePageInner() {
               onChange={e => setFeedback(e.target.value)}
               placeholder="Add more local detail. Emphasize emergency services. Keep intro under 2 sentences."
               rows={2}
-              className="w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y"
+              className="w-full border border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y"
             />
           </div>
           <Button variant="ink" onClick={async () => {
@@ -661,7 +661,7 @@ function GeneratePageInner() {
               onChange={e => setFeedback(e.target.value)}
               placeholder="Too salesy. Needs more local detail. Mention the team lead. Shorter intro."
               rows={2}
-              className="w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y"
+              className="w-full border border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y"
             />
           </div>
 

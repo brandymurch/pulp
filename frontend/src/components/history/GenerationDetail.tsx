@@ -10,8 +10,8 @@ export function GenerationDetail({ generation, onClose }: GenerationDetailProps)
   const g = generation;
 
   return (
-    <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b-[1.5px] border-ink">
+    <div className="border border-line rounded-[18px] bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-line">
         <div>
           <h3 className="font-display font-[800] text-lg tracking-[-0.02em] m-0">{g.keyword}</h3>
           <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70 mt-1">

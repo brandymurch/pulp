@@ -23,17 +23,17 @@ export function GenerationsList({ generations, selectedId, onSelect, onDelete }:
   }
 
   return (
-    <div className="border-[1.5px] border-ink rounded-[18px] overflow-hidden">
+    <div className="border border-line rounded-[18px] overflow-hidden">
       <table className="w-full border-collapse text-[12px]">
         <thead>
           <tr>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Keyword</th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Page</th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Template</th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Words</th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Score</th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">Date</th>
-            <th className="px-5 py-2.5 bg-line-soft border-b-[1.5px] border-ink"></th>
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">Keyword</th>
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">Page</th>
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">Template</th>
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">Words</th>
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">Score</th>
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">Date</th>
+            <th className="px-5 py-2.5 bg-line-soft border-b border-line"></th>
           </tr>
         </thead>
         <tbody>

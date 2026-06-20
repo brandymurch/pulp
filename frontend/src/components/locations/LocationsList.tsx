@@ -55,23 +55,23 @@ export function LocationsList({ locations, onSelect, onDelete, selectedId }: Loc
   }
 
   return (
-    <div className="border-[1.5px] border-ink rounded-[18px] overflow-hidden">
+    <div className="border border-line rounded-[18px] overflow-hidden">
       <table className="w-full border-collapse text-[12px]">
         <thead>
           <tr>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">
               Name
             </th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">
               Slug
             </th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">
               Status
             </th>
-            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b-[1.5px] border-ink">
+            <th className="text-left px-5 py-2.5 bg-line-soft text-[10px] tracking-[0.22em] uppercase text-ink-70 font-medium border-b border-line">
               Local context
             </th>
-            <th className="px-5 py-2.5 bg-line-soft border-b-[1.5px] border-ink" />
+            <th className="px-5 py-2.5 bg-line-soft border-b border-line" />
           </tr>
         </thead>
         <tbody>

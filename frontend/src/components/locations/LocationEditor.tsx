@@ -19,8 +19,8 @@ interface LocationEditorProps {
 }
 
 const labelClass = "block text-[10px] tracking-[0.22em] uppercase text-ink-40 mb-1.5";
-const inputClass = "w-full h-10 border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none focus:border-ink transition-colors";
-const textareaClass = "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
+const inputClass = "w-full h-10 border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none focus:border-ink transition-colors";
+const textareaClass = "w-full border border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
 
 export function LocationEditor({ location, brandId, brandName, onSave, onCancel }: LocationEditorProps) {
   const [name, setName] = useState("");
@@ -149,8 +149,8 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
   }
 
   return (
-    <div className="border-[1.5px] border-ink rounded-[18px] bg-white overflow-hidden">
-      <div className="px-6 py-5 border-b-[1.5px] border-ink flex items-center justify-between">
+    <div className="border border-line rounded-[18px] bg-white overflow-hidden">
+      <div className="px-6 py-5 border-b border-line flex items-center justify-between">
         <h2 className="font-display font-[800] text-xl tracking-[-0.02em] m-0">
           {location ? "Edit" : "Add"} <span className="font-display font-normal text-pulp-deep">location</span>
         </h2>
@@ -255,7 +255,7 @@ export function LocationEditor({ location, brandId, brandName, onSave, onCancel 
         </button>
 
         {additionalOpen && (
-          <div className="space-y-3 pl-4 border-l-[1.5px] border-line">
+          <div className="space-y-3 pl-4 border-l border-line">
             <div className="grid grid-cols-2 gap-3 max-[820px]:grid-cols-1">
               <div><label className={labelClass}>Team lead</label><input className={inputClass} value={teamLead} onChange={e => setTeamLead(e.target.value)} placeholder="Mike Johnson, 12 years experience" /></div>
               <div><label className={labelClass}>Neighborhoods (comma-separated)</label><input className={inputClass} value={neighborhoods} onChange={e => setNeighborhoods(e.target.value)} placeholder="Clintonville, German Village" /></div>
