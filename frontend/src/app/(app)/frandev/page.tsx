@@ -862,7 +862,7 @@ function ContentPlanSection({
             disabled={isDisabled}
           />
           <p className="text-[11px] text-ink-40 mt-1.5">
-            Leave blank - Pulp researches the keyword landscape itself. Add seeds only to force specific angles.
+            Leave blank - TMSContentAI researches the keyword landscape itself. Add seeds only to force specific angles.
           </p>
         </div>
 

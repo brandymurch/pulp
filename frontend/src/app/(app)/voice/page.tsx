@@ -75,7 +75,7 @@ export default function VoicePage() {
           Brand Voice
         </h1>
         <p className="text-[15px] leading-[1.5] text-ink-70 mt-3">
-          Add samples of copy you love. Pulp uses these to match your brand voice.
+          Add samples of copy you love. TMSContentAI uses these to match your brand voice.
         </p>
       </div>
 

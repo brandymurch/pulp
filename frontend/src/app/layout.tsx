@@ -24,9 +24,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pulp | Fresh-squeezed copy for every location",
+  title: "TMSContentAI",
   description:
-    "Pulp writes local landing pages, service pages, and ad copy for every franchise territory. In your voice, tuned to the neighborhood, refreshed weekly.",
+    "TMSContentAI writes local landing pages, franchise development content, and ad copy for every location. In your brand voice, tuned to the market.",
 };
 
 export default function RootLayout({

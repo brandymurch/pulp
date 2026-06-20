@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowIcon } from "@/components/shared/Icons";
-import { PulpLockup } from "@/components/shared/PulpLogo";
+import { BrandLockup } from "@/components/shared/BrandLockup";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function SignInPage() {
       <div className="flex flex-col justify-between p-10 max-[720px]:p-6 bg-white min-h-screen max-[900px]:min-h-0">
         {/* Brand lockup */}
         <a href="/">
-          <PulpLockup size={36} />
+          <BrandLockup size={34} />
         </a>
 
         {/* Centered form area */}
@@ -86,7 +86,7 @@ export default function SignInPage() {
 
         {/* Footer */}
         <div className="flex justify-between text-[10px] tracking-[0.2em] uppercase text-ink-40">
-          <span>Pulp Copy, Inc.</span>
+          <span>Threshold Marketing Services</span>
           <span>Cold-pressed. Oakland</span>
         </div>
       </div>

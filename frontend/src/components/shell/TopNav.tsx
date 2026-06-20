@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { PulpLockup } from "@/components/shared/PulpLogo";
+import { BrandLockup } from "@/components/shared/BrandLockup";
 
 interface TopNavProps {
   onSignOut: () => void;
@@ -39,7 +39,7 @@ export function TopNav({ onSignOut, email = "user@pulp.copy" }: TopNavProps) {
         <div className="h-16 flex items-center gap-4">
           {/* Brand */}
           <Link href="/" className="group flex-none">
-            <PulpLockup size={26} inkColor="#FFFFFF" className="transition-transform group-hover:scale-[1.03]" />
+            <BrandLockup size={26} onDark className="transition-transform group-hover:scale-[1.03]" />
           </Link>
 
           {/* Desktop nav */}
