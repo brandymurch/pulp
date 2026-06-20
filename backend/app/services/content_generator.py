@@ -14,6 +14,30 @@ def _load_banned_words() -> list:
         return []
 
 
+def extract_template_sections(resolved_template: str) -> list[str]:
+    """Pull the H2-level section headings from a resolved template.
+
+    Templates label heading levels with literal prefixes (`## H1:`, `## H2:`).
+    The H1 is the page title; H2s are the section structure the output must
+    match exactly. Returns the cleaned H2 heading texts in order.
+    """
+    sections: list[str] = []
+    for raw in resolved_template.splitlines():
+        line = raw.strip()
+        if not line.startswith("#"):
+            continue
+        # Strip leading markdown hashes and an optional "H2:"/"H3:" label.
+        text = line.lstrip("#").strip()
+        m = re.match(r"^H([1-6])\s*:\s*(.*)$", text, flags=re.IGNORECASE)
+        if m:
+            level, text = int(m.group(1)), m.group(2).strip()
+        else:
+            level = len(line) - len(line.lstrip("#"))
+        if level == 2 and text:
+            sections.append(text)
+    return sections
+
+
 def resolve_template_placeholders(
     template_content: str,
     keyword: str,
@@ -397,8 +421,14 @@ def build_user_prompt(
                 if point:
                     outline_points.append(point)
         if outline_points:
-            parts.append("**APPROVED OUTLINE KEY POINTS (content guidance):**")
-            parts.append("The brand template below is the structural skeleton. Within the template structure, cover these approved points:")
+            parts.append("**TOPICAL COVERAGE (weave into the existing template sections):**")
+            parts.append(
+                "These are topics worth covering. The brand content template below is "
+                "the authoritative structure. Distribute this coverage INTO the template's "
+                "existing sections where each topic fits naturally. Do NOT create new "
+                "sections, headings, or H2s for these topics -- the output must use only "
+                "the template's sections."
+            )
             for point in outline_points[:20]:
                 parts.append(f"- {point}")
             parts.append("")
@@ -466,6 +496,23 @@ def build_user_prompt(
         parts.append("---")
         parts.append("**BRAND CONTENT TEMPLATE (this is the required structure for your output):**")
         parts.append("")
+        section_titles = extract_template_sections(resolved)
+        if section_titles:
+            parts.append(
+                f"Your output must contain EXACTLY these {len(section_titles)} H2 sections, "
+                "in this order, and NO others. Do not add, remove, merge, split, reorder, "
+                "or duplicate sections. You may rephrase a heading for SEO but it must map "
+                "1:1 to the same section in the same position:"
+            )
+            for i, title in enumerate(section_titles, 1):
+                parts.append(f"{i}. {title}")
+            parts.append("")
+            parts.append(
+                f"That is {len(section_titles)} H2 sections total (plus the single H1 title). "
+                "If you find yourself writing a section that does not map to one of the above, "
+                "stop -- that topic belongs inside an existing section, not a new one."
+            )
+            parts.append("")
         parts.append("STRUCTURE -- MUST MATCH EXACTLY:")
         parts.append("- Keep every section in the same order as the template.")
         parts.append("- Preserve every heading and its hierarchy level. If the template uses literal labels like `## H1:`, `## H2:`, `### H3:` as heading prefixes, those indicate the INTENDED markdown level (H1 = `#`, H2 = `##`, H3 = `###`). Convert them to the correct markdown level in your output and do NOT include the literal `H1:` / `H2:` / `H3:` text.")
@@ -783,8 +830,19 @@ def build_critique_user_prompt(
             s.get("h2", "") for s in outline.get("sections", []) if s.get("h2")
         ))
     if brand_template:
-        parts.append("**Brand template (required structure, truncated):**")
-        parts.append(f"```\n{brand_template[:3000]}\n```")
+        tmpl_sections = extract_template_sections(brand_template)
+        if tmpl_sections:
+            parts.append(
+                f"**Required template structure: EXACTLY these {len(tmpl_sections)} H2 "
+                "sections, in order, no others.** Flag any section in the draft that is "
+                "not one of these as an extra section to delete (fold its content into the "
+                "right section); flag any of these that is missing:"
+            )
+            for i, t in enumerate(tmpl_sections, 1):
+                parts.append(f"{i}. {t}")
+        else:
+            parts.append("**Brand template (required structure, truncated):**")
+            parts.append(f"```\n{brand_template[:3000]}\n```")
     if local_context:
         hooks = []
         for k in ("neighborhoods", "local_landmarks", "local_challenge", "common_job",
