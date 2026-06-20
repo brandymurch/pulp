@@ -49,7 +49,7 @@ export function TemplateSelector({ brandName, selectedId, onSelect }: TemplateSe
           const found = templates.find(t => t.id === e.target.value) || null;
           onSelect(found);
         }}
-        className="w-full h-[46px] border-[1.5px] border-ink rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-[4px_4px_0_0_var(--ink)] appearance-none cursor-pointer"
+        className="w-full h-[46px] border border-line rounded-full bg-white text-ink px-[18px] font-mono text-[13px] outline-none transition-shadow duration-150 focus:shadow-card-md appearance-none cursor-pointer"
         disabled={loading}
       >
         <option value="">{loading ? "Loading templates..." : "Select a template"}</option>

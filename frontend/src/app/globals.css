@@ -3,14 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --pulp: #F26430;
-  --pulp-deep: #C84A1F;
-  --cream: #F7EDD8;
-  --ink: #141210;
-  --ink-70: #4A4642;
-  --ink-40: #9A958E;
-  --line: #E8E5E0;
+  /* LocalEdge palette (navy + gold) — names preserved from the prior theme. */
+  --pulp: #F5B731;
+  --pulp-deep: #D99C2B;
+  --cream: #F8F4E8;
+  --ink: #141B2D;
+  --ink-70: #475569;
+  --ink-40: #94A3B8;
+  --line: #E5E7EB;
   --paper: #FFFFFF;
+  /* Warm beige-to-gray app backdrop. */
+  --app-bg: #F5F6F8;
 }
 
 * {
@@ -20,9 +23,9 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--paper);
+  background: var(--app-bg);
   color: var(--ink);
-  font-family: var(--font-body), "DM Sans", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;

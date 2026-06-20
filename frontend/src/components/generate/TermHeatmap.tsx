@@ -29,7 +29,7 @@ export function TermHeatmap({ content, termTargets }: TermHeatmapProps) {
   const misses = results.filter(r => !r.hit);
 
   return (
-    <div className="border-[1.5px] border-line rounded-[14px] p-4 space-y-3">
+    <div className="border border-line rounded-[14px] p-4 space-y-3">
       <div className="text-[10px] tracking-[0.22em] uppercase text-ink-70">
         Term coverage: {hits.length}/{results.length}
       </div>

@@ -30,7 +30,7 @@ export function CompetitorInput({ urls, onChange }: CompetitorInputProps) {
         onChange={e => handleChange(e.target.value)}
         placeholder={"https://competitor1.com/page\nhttps://competitor2.com/page"}
         rows={3}
-        className="w-full border-[1.5px] border-line rounded-[14px] bg-white text-ink px-4 py-3 font-mono text-[13px] outline-none transition-all duration-150 focus:border-ink focus:shadow-[4px_4px_0_0_var(--ink)] resize-none"
+        className="w-full border border-line rounded-[14px] bg-white text-ink px-4 py-3 font-mono text-[13px] outline-none transition-all duration-150 focus:border-ink focus:shadow-card-md resize-none"
       />
     </div>
   );

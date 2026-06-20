@@ -92,8 +92,8 @@ export function PulpLockup({
       <PulpMark size={size} />
       <span
         style={{
-          fontFamily: 'Fraunces, "Times New Roman", serif',
-          fontWeight: 800,
+          fontFamily: "var(--font-display), system-ui, sans-serif",
+          fontWeight: 700,
           fontSize: fontPx,
           letterSpacing: "-0.03em",
           display: "inline-flex",

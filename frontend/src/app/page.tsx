@@ -171,7 +171,7 @@ export default function Home() {
             {tiltCards.map((card, i) => (
               <div
                 key={i}
-                className="border-[1.5px] border-ink rounded-[14px] bg-white p-[18px_20px] flex flex-col gap-1.5 relative"
+                className="border border-line rounded-[14px] bg-white p-[18px_20px] flex flex-col gap-1.5 relative"
                 style={{
                   boxShadow: "6px 6px 0 0 var(--ink)",
                   transform: `rotate(${card.rotate})`,
@@ -284,7 +284,7 @@ export default function Home() {
             ].map((step, i) => (
               <div
                 key={i}
-                className={`border-[1.5px] border-ink rounded-[18px] p-[22px_24px] flex flex-col gap-3 transition-all duration-200 cursor-default ${
+                className={`border border-line rounded-[18px] p-[22px_24px] flex flex-col gap-3 transition-all duration-200 cursor-default ${
                   step.dark ? "bg-ink text-white" : "bg-white"
                 }`}
                 style={{
@@ -360,7 +360,7 @@ export default function Home() {
           {/* Feature grid */}
           <div className="grid grid-cols-3 max-[820px]:grid-cols-1 gap-4">
             {/* F/01 — wide, dark */}
-            <div className="col-span-2 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-ink text-white p-7 flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+            <div className="col-span-2 max-[820px]:col-span-1 border border-line rounded-[18px] bg-ink text-white p-7 flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
               <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
                 Your voice,{" "}
                 <em className="font-normal">held to the rind.</em>
@@ -373,7 +373,7 @@ export default function Home() {
             </div>
 
             {/* F/02 */}
-            <div className="border-[1.5px] border-ink rounded-[18px] bg-white p-7 flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+            <div className="border border-line rounded-[18px] bg-white p-7 flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
               <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
                 Territory <em className="font-normal">aware.</em>
               </h4>
@@ -384,7 +384,7 @@ export default function Home() {
             </div>
 
             {/* F/03 — full width */}
-            <div className="col-span-3 max-[820px]:col-span-1 border-[1.5px] border-ink rounded-[18px] bg-white p-7 flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
+            <div className="col-span-3 max-[820px]:col-span-1 border border-line rounded-[18px] bg-white p-7 flex flex-col gap-3.5 relative overflow-hidden transition-transform duration-200 hover:-translate-y-[3px]">
               <h4 className="font-display font-[800] text-[32px] leading-none tracking-[-0.02em] m-0">
                 Never-stale.{" "}
                 <em className="font-normal">Refreshed weekly.</em>
@@ -422,7 +422,7 @@ export default function Home() {
           {/* Compare cards */}
           <div className="grid grid-cols-2 max-[820px]:grid-cols-1 gap-5">
             {/* Templates (left) */}
-            <div className="border-[1.5px] border-ink rounded-[18px] p-8 bg-white">
+            <div className="border border-line rounded-[18px] p-8 bg-white">
               <h3 className="font-display font-[800] text-[36px] tracking-[-0.02em] m-0 mb-6 leading-none">
                 Templates.
               </h3>
@@ -443,7 +443,7 @@ export default function Home() {
                       textDecorationColor: "var(--ink-40)",
                     }}
                   >
-                    <span className="flex-none w-5 h-5 rounded-full flex items-center justify-center font-display font-[800] text-sm bg-white text-ink border-[1.5px] border-ink -mt-px">
+                    <span className="flex-none w-5 h-5 rounded-full flex items-center justify-center font-display font-[800] text-sm bg-white text-ink border border-line -mt-px">
                       &times;
                     </span>
                     {item}
@@ -454,7 +454,7 @@ export default function Home() {
 
             {/* Pulp (right, dark) */}
             <div
-              className="border-[1.5px] border-ink rounded-[18px] p-8 bg-ink text-white"
+              className="border border-line rounded-[18px] p-8 bg-ink text-white"
               style={{
                 boxShadow: "8px 8px 0 0 var(--ink)",
                 transform: "rotate(-0.8deg)",

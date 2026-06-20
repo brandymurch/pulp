@@ -151,7 +151,7 @@ export default function LocationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display font-[800] text-[clamp(40px,5vw,64px)] leading-[0.95] tracking-[-0.035em] m-0">
+        <h1 className="font-display font-[800] text-[clamp(28px,3vw,40px)] leading-[0.95] tracking-[-0.035em] m-0">
           Locations
         </h1>
         <p className="text-[13px] text-ink-70 mt-2">
@@ -160,7 +160,7 @@ export default function LocationsPage() {
       </div>
 
       {error && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {error}
         </div>
       )}
@@ -247,7 +247,7 @@ export default function LocationsPage() {
                               <div className="flex gap-2">
                                 <a
                                   href={`/generate?brand=${brand.id}&location=${loc.id}`}
-                                  className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border-[1.5px] bg-ink text-white border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp"
+                                  className="inline-flex items-center justify-center gap-2 h-8 px-3.5 text-[11px] font-medium tracking-[0.04em] rounded-full border bg-ink text-white border-ink transition-all hover:-translate-y-px hover:bg-pulp hover:text-ink hover:border-pulp"
                                 >
                                   Create new page
                                 </a>

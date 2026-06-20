@@ -1,0 +1,12 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
+  "/page": "app/page.js",
+  "/sign-in/page": "app/sign-in/page.js",
+  "/(app)/locations/page": "app/(app)/locations/page.js",
+  "/(app)/frandev/page": "app/(app)/frandev/page.js",
+  "/(app)/page": "app/(app)/page.js",
+  "/(app)/generate/page": "app/(app)/generate/page.js",
+  "/(app)/voice/page": "app/(app)/voice/page.js",
+  "/(app)/pages/page": "app/(app)/pages/page.js"
+}

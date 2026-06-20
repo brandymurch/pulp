@@ -138,9 +138,9 @@ function FactSheetEditor({ sheet, onChange, listDrafts, onListDraftChange }: Fac
 
   const labelCls = "block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-1.5";
   const inputCls =
-    "w-full h-[42px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-colors focus:border-ink";
+    "w-full h-[42px] border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-colors focus:border-ink";
   const textareaCls =
-    "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
+    "w-full border border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
 
   return (
     <div className="space-y-4">
@@ -359,7 +359,7 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
   }
 
   return (
-    <div className="border-[1.5px] border-line rounded-[14px] bg-white p-5 space-y-4">
+    <div className="border border-line rounded-[14px] bg-white p-5 space-y-4">
       {isRescrape && (
         <p className="text-[12px] text-ink-70">
           Scraping a new URL and saving will overwrite the current fact sheet.
@@ -373,7 +373,7 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
           type="url"
           value={mainUrl}
           onChange={(e) => setMainUrl(e.target.value)}
-          className="w-full h-[42px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] font-mono outline-none focus:border-ink transition-colors"
+          className="w-full h-[42px] border border-line rounded-lg bg-white text-ink px-3 text-[13px] font-mono outline-none focus:border-ink transition-colors"
           placeholder="https://example.com"
           disabled={scraping}
         />
@@ -382,7 +382,7 @@ function ScrapeCard({ brandId, isRescrape, onDone }: ScrapeCardProps) {
         </p>
       </div>
       {error && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {error}
         </div>
       )}
@@ -779,16 +779,16 @@ function ContentPlanSection({
   // ---------------------------------------------------------------------------
   const labelCls = "block text-[10px] tracking-[0.22em] uppercase text-ink-70 mb-1.5";
   const inputCls =
-    "w-full h-[42px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-colors focus:border-ink";
+    "w-full h-[42px] border border-line rounded-lg bg-white text-ink px-3 text-[13px] outline-none transition-colors focus:border-ink";
   const textareaCls =
-    "w-full border-[1.5px] border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
+    "w-full border border-line rounded-lg bg-white text-ink px-3 py-2.5 text-[13px] leading-[1.6] outline-none focus:border-ink transition-colors resize-y";
 
   // ---------------------------------------------------------------------------
   // Loading state
   // ---------------------------------------------------------------------------
   if (plan === undefined) {
     return (
-      <div className="border-[1.5px] border-line rounded-[18px] p-5">
+      <div className="border border-line rounded-[18px] p-5">
         <div className="text-[13px] text-ink-40">Loading content plan...</div>
       </div>
     );
@@ -802,7 +802,7 @@ function ContentPlanSection({
   if (showBuildForm) {
     const isDisabled = !hasFactSheet || building;
     return (
-      <div className="border-[1.5px] border-line rounded-[18px] p-5 space-y-4">
+      <div className="border border-line rounded-[18px] p-5 space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
             Content Plan
@@ -819,7 +819,7 @@ function ContentPlanSection({
         </div>
 
         {showRebuildNotice && (
-          <div className="border-[1.5px] border-[#d97706] rounded-[14px] px-4 py-2.5 text-[13px] text-[#d97706] bg-[rgba(217,119,6,0.05)]">
+          <div className="border border-[#d97706] rounded-[14px] px-4 py-2.5 text-[13px] text-[#d97706] bg-[rgba(217,119,6,0.05)]">
             Saving the new plan will overwrite the current one.
           </div>
         )}
@@ -831,7 +831,7 @@ function ContentPlanSection({
         )}
 
         {loadError && (
-          <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+          <div className="border border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
             {loadError}
           </div>
         )}
@@ -867,7 +867,7 @@ function ContentPlanSection({
         </div>
 
         {buildError && (
-          <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+          <div className="border border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
             {buildError}
           </div>
         )}
@@ -914,7 +914,7 @@ function ContentPlanSection({
   const pageIndex = Object.fromEntries(plan.pages.map((p) => [p.id, p]));
 
   return (
-    <div className="border-[1.5px] border-line rounded-[18px] p-5 space-y-5">
+    <div className="border border-line rounded-[18px] p-5 space-y-5">
       {/* Header row */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">Content Plan</div>
@@ -996,21 +996,21 @@ function ContentPlanSection({
         </a>
       )}
       {planDriveError && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {planDriveError}
         </div>
       )}
 
       {/* Just-built notice */}
       {justBuilt && (
-        <div className="border-[1.5px] border-[#d97706] rounded-[14px] px-4 py-2.5 text-[13px] text-[#d97706] bg-[rgba(217,119,6,0.05)]">
+        <div className="border border-[#d97706] rounded-[14px] px-4 py-2.5 text-[13px] text-[#d97706] bg-[rgba(217,119,6,0.05)]">
           Plan built - review and save it.
         </div>
       )}
 
       {/* Save error */}
       {saveStatus === "error" && saveError && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-[14px] px-4 py-2.5 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {saveError}
         </div>
       )}
@@ -1042,7 +1042,7 @@ function ContentPlanSection({
                 return (
                   <div
                     key={page.id}
-                    className="border-[1.5px] border-line rounded-[12px] bg-white overflow-hidden"
+                    className="border border-line rounded-[12px] bg-white overflow-hidden"
                   >
                     {/* Row */}
                     <div
@@ -1611,7 +1611,7 @@ function FranchisePageInner() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="font-display font-[800] text-[clamp(32px,4vw,56px)] leading-[0.95] tracking-[-0.035em] m-0">
+        <h1 className="font-display font-[800] text-[clamp(26px,2.6vw,34px)] leading-[0.95] tracking-[-0.035em] m-0">
           FranDev
         </h1>
         <p className="text-[13px] text-ink-70 mt-2">
@@ -1621,7 +1621,7 @@ function FranchisePageInner() {
 
       {/* Brand error */}
       {brandsError && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {brandsError}
         </div>
       )}
@@ -1637,7 +1637,7 @@ function FranchisePageInner() {
             onChange={(e) => {
               setBrandId(e.target.value);
             }}
-            className="w-full h-[46px] border-[1.5px] border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer"
+            className="w-full h-[46px] border border-line rounded-lg bg-white text-ink px-3 font-mono text-[13px] outline-none transition-shadow duration-150 focus:border-ink appearance-none cursor-pointer"
           >
             {brands.map((b) => (
               <option key={b.id} value={b.id}>
@@ -1655,14 +1655,14 @@ function FranchisePageInner() {
 
       {/* Profile error */}
       {profileError && (
-        <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+        <div className="border border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
           {profileError}
         </div>
       )}
 
       {/* Scrape warnings */}
       {scrapeWarnings.length > 0 && (
-        <div className="border-[1.5px] border-[#d97706] rounded-[14px] px-5 py-3 bg-[rgba(217,119,6,0.05)] space-y-1">
+        <div className="border border-[#d97706] rounded-[14px] px-5 py-3 bg-[rgba(217,119,6,0.05)] space-y-1">
           <div className="text-[10px] tracking-[0.22em] uppercase text-[#d97706]">
             Scrape warnings
           </div>
@@ -1681,7 +1681,7 @@ function FranchisePageInner() {
 
       {/* Fact sheet editor */}
       {hasSheet && !profileLoading && (
-        <div className="border-[1.5px] border-line rounded-[18px] p-5 space-y-5">
+        <div className="border border-line rounded-[18px] p-5 space-y-5">
           <div className="flex items-center justify-between gap-4">
             <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
               Franchise Fact Sheet
@@ -1773,7 +1773,7 @@ function FranchisePageInner() {
 
       {/* Generation card */}
       {hasSheet && !profileLoading && (
-        <div id="franchise-generate-card" className="border-[1.5px] border-line rounded-[18px] p-5 space-y-4">
+        <div id="franchise-generate-card" className="border border-line rounded-[18px] p-5 space-y-4">
           <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
             Generate Page
           </div>
@@ -1865,7 +1865,7 @@ function FranchisePageInner() {
 
           {/* Generation error */}
           {genError && (
-            <div className="border-[1.5px] border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
+            <div className="border border-[#b91c1c] rounded-[14px] px-5 py-3 text-[13px] text-[#b91c1c] bg-[rgba(185,28,28,0.05)]">
               {genError}
             </div>
           )}
@@ -1874,7 +1874,7 @@ function FranchisePageInner() {
 
       {/* Output panel */}
       {output && (
-        <div className="border-[1.5px] border-line rounded-[18px] p-5 space-y-4">
+        <div className="border border-line rounded-[18px] p-5 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[10px] tracking-[0.22em] uppercase text-ink-40">
               {outputLabel}
