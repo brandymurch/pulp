@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
-import { Fraunces, DM_Sans, JetBrains_Mono, Instrument_Serif } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "600", "800"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
   display: "swap",
 });
 
-const dmSans = DM_Sans({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-body",
   display: "swap",
 });
@@ -21,14 +20,6 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-mono",
-  display: "swap",
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-instrument",
   display: "swap",
 });
 
@@ -46,7 +37,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body>{children}</body>
     </html>
