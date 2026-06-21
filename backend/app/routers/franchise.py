@@ -27,8 +27,14 @@ _JOB_TTL_SECONDS = 30 * 60
 
 
 def _evict_stale_jobs(store: dict[str, dict[str, Any]]) -> None:
+    # Only evict terminal jobs (done/error) past the TTL. A "pending" job is
+    # still executing — plans run several minutes — and must never be evicted
+    # out from under its worker thread.
     cutoff = time.time() - _JOB_TTL_SECONDS
-    for key in [k for k, v in store.items() if v.get("_created", 0) < cutoff]:
+    for key in [
+        k for k, v in store.items()
+        if v.get("_created", 0) < cutoff and v.get("status") != "pending"
+    ]:
         store.pop(key, None)
 
 
@@ -328,7 +334,10 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
         raise HTTPException(400, f"Unknown page_type. Valid: {list(PAGE_TYPES)}")
 
     try:
-        res = get_db().table("brands").select("*").eq("id", req.brand_id).limit(1).execute()
+        # Sync supabase client off the event loop (this handler is async).
+        res = await asyncio.to_thread(
+            lambda: get_db().table("brands").select("*").eq("id", req.brand_id).limit(1).execute()
+        )
     except Exception:
         raise HTTPException(503, "Database error")
     if not res.data:
@@ -354,17 +363,33 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
 
         competitor_context: str | None = None
         if top_keyword:
-            competitor_context = await gather_competitor_context(top_keyword)
+            # Bound pre-stream latency: 1 SERP + up to 3 scrapes. Never block
+            # generation — degrade to None on timeout/any error.
+            try:
+                competitor_context = await asyncio.wait_for(
+                    gather_competitor_context(top_keyword), timeout=35
+                )
+            except Exception as exc:
+                logger.warning(
+                    "competitor context gathering timed out/failed for %r (non-blocking): %s",
+                    top_keyword, exc,
+                )
+                competitor_context = None
 
         pop_guidance: str | None = None
         if req.pop_boost and top_keyword:
             try:
                 from app.services.pop import get_enriched_brief
-                brief = await get_enriched_brief(keyword=top_keyword)
+                # POP polls up to ~4.5 min; cap it so the client never waits long.
+                brief = await asyncio.wait_for(
+                    get_enriched_brief(keyword=top_keyword), timeout=45
+                )
                 pop_guidance = render_pop_term_guidance(brief)
             except Exception as exc:
+                # Includes asyncio.TimeoutError from wait_for.
                 logger.warning(
-                    "POP boost failed for keyword %r (non-blocking): %s", top_keyword, exc
+                    "POP boost failed/timed out for keyword %r (non-blocking): %s",
+                    top_keyword, exc,
                 )
 
         user = build_franchise_user_prompt_from_plan(

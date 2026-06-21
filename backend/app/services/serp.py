@@ -5,6 +5,7 @@ import logging
 from typing import Any
 import httpx
 from app.config import DATAFORSEO_LOGIN, DATAFORSEO_PASSWORD
+from app.services.dataforseo_labs import DataForSeoError, post_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -35,30 +36,30 @@ async def get_serp_results(
         }
     ]
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            SERP_URL,
-            json=payload,
-            headers={
-                "Authorization": f"Basic {creds}",
-                "Content-Type": "application/json",
-            },
+    resp = await post_with_retry(
+        SERP_URL,
+        json=payload,
+        headers={
+            "Authorization": f"Basic {creds}",
+            "Content-Type": "application/json",
+        },
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        raise DataForSeoError(
+            f"DataForSEO SERP HTTP {resp.status_code}: {resp.text[:300]}"
         )
-        data = resp.json()
+    data = resp.json()
 
     tasks = data.get("tasks", [])
     if not tasks or tasks[0].get("status_code") != 20000:
-        logger.error(
-            "DataForSEO error: %s",
-            tasks[0].get("status_message") if tasks else "no tasks",
+        # Non-20000 task status (auth/quota/429/etc). RAISE so callers do not
+        # silently build on zero SERP evidence — every caller catches this and
+        # degrades gracefully.
+        raise DataForSeoError(
+            "DataForSEO SERP task error: "
+            f"{tasks[0].get('status_message') if tasks else 'no tasks'}"
         )
-        return {
-            "keyword": keyword,
-            "organic_results": [],
-            "paa_questions": [],
-            "related_searches": [],
-            "ai_fanout_queries": [],
-        }
 
     result = tasks[0].get("result", [{}])[0]
     items = result.get("items") or []

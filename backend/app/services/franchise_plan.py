@@ -191,11 +191,16 @@ async def _call_claude(
 async def crawl_sites(urls: list[str]) -> tuple[list[dict], list[str]]:
     """Scrape each URL concurrently. Empty content -> warning. Zero successes -> RuntimeError.
 
-    Results are ordered to match the input URL list.
+    Results are ordered to match the input URL list. Scrapes run at most
+    5-concurrent (mirrors serp_for_clusters) to avoid hammering Firecrawl with
+    ~20 simultaneous requests.
     """
+    sem = asyncio.Semaphore(5)
+
     async def _fetch(u: str) -> tuple[dict | None, str | None]:
         try:
-            page = await scrape_url(u)
+            async with sem:
+                page = await scrape_url(u)
             if not (page.get("content") or "").strip():
                 reason = page.get("error") or (
                     "scraper returned error source" if page.get("source") == "error"
