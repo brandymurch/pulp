@@ -466,6 +466,7 @@ export default function PagesPage() {
   const [queueError, setQueueError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollFailuresRef = useRef(0);
+  const inFlightRef = useRef(false);
 
   /* ---- History state ---- */
   const [generations, setGenerations] = useState<Generation[]>([]);
@@ -501,6 +502,9 @@ export default function PagesPage() {
   }, []);
 
   const fetchJobs = useCallback(async (id: string) => {
+    // Skip this tick if a previous fetch is still in flight (slow network).
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     try {
       const url = id
         ? `/api/pipeline/list?brand_id=${id}&limit=20`
@@ -522,6 +526,7 @@ export default function PagesPage() {
         setQueueError("Failed to load queue");
       }
     } finally {
+      inFlightRef.current = false;
       setQueueLoading(false);
     }
   }, []);

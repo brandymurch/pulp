@@ -1,5 +1,6 @@
 """DataForSEO Labs - keyword research data."""
 from __future__ import annotations
+import asyncio
 import base64
 import logging
 
@@ -11,9 +12,54 @@ logger = logging.getLogger(__name__)
 
 KEYWORD_IDEAS_URL = "https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_ideas/live"
 
+# Shared retry policy for DataForSEO HTTP POSTs (Labs + SERP).
+_RETRY_ATTEMPTS = 3
+_RETRY_BACKOFF = (1, 2)  # seconds before retry 2 and retry 3
+
 
 class DataForSeoError(RuntimeError):
     pass
+
+
+async def post_with_retry(
+    url: str,
+    *,
+    json: object,
+    headers: dict,
+    timeout: float = 60,
+) -> httpx.Response:
+    """POST with retry on transient failures (HTTP 429/5xx + transport errors).
+
+    Retries up to 3 attempts with exponential backoff (1s, 2s). Non-transient
+    HTTP statuses (e.g. 200, 4xx other than 429) are returned to the caller as-is
+    so the caller's existing status handling applies. Dependency-free.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(_RETRY_ATTEMPTS):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(url, json=json, headers=headers)
+        except httpx.TransportError as exc:
+            last_exc = exc
+            logger.warning(
+                "DataForSEO POST transport error (attempt %d/%d): %s",
+                attempt + 1, _RETRY_ATTEMPTS, exc,
+            )
+        else:
+            if resp.status_code == 429 or resp.status_code >= 500:
+                if attempt < _RETRY_ATTEMPTS - 1:
+                    logger.warning(
+                        "DataForSEO POST HTTP %d (attempt %d/%d), retrying",
+                        resp.status_code, attempt + 1, _RETRY_ATTEMPTS,
+                    )
+                else:
+                    return resp
+            else:
+                return resp
+        if attempt < _RETRY_ATTEMPTS - 1:
+            await asyncio.sleep(_RETRY_BACKOFF[attempt])
+    # Exhausted retries on a transport error path with no response to return.
+    raise DataForSeoError(f"DataForSEO request failed after retries: {last_exc}")
 
 
 def parse_keyword_ideas(data: dict) -> list[dict]:
@@ -56,15 +102,15 @@ async def keyword_ideas(
         "language_name": "English",
         "limit": limit,
     }]
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            KEYWORD_IDEAS_URL,
-            json=payload,
-            headers={
-                "Authorization": f"Basic {auth}",
-                "Content-Type": "application/json",
-            },
-        )
+    resp = await post_with_retry(
+        KEYWORD_IDEAS_URL,
+        json=payload,
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json",
+        },
+        timeout=60,
+    )
     if resp.status_code != 200:
         raise DataForSeoError(f"DataForSEO HTTP {resp.status_code}: {resp.text[:300]}")
     return parse_keyword_ideas(resp.json())

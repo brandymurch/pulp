@@ -95,8 +95,14 @@ def build_system_prompt(
     brand_guidelines: str | None = None,
     brand_competitors: list | None = None,
     prompt_learnings: list | None = None,
+    franchise_mode: bool = False,
 ) -> list:
     """Build the system prompt for content generation.
+
+    When franchise_mode is True, the local-business / multi-city / AI-Overview
+    framing is suppressed: franchise recruitment pages have no city, so those
+    rules misdirect the model toward generic local-page habits. Voice, banned
+    words, anti-slop prose rules, and brand guidelines are kept.
 
     Returns a list of system content blocks. All content here is per-brand
     stable (rules, voice, guidelines, banned words, learnings, style
@@ -129,18 +135,25 @@ def build_system_prompt(
         "- Include concrete details that only someone in this industry would know (not generic filler).",
         "- Every section should answer a specific question a searcher would have.",
         "- Prioritize being genuinely useful over being keyword-rich. Helpfulness drives rankings.",
-        "",
-        "AI OVERVIEW OPTIMIZATION:",
-        "- The first paragraph under each H2 should directly answer the question implied by the heading.",
-        "- Use clear, concise, factual statements that Google can extract for AI Overviews.",
-        "- Structure information in a way that is easy to cite: definitions, lists, step-by-step processes.",
-        "- Address 'People Also Ask' and AI fanout queries naturally within the content.",
-        "",
-        "FEATURED SNIPPET FORMATTING:",
-        "- Use numbered lists for processes and steps.",
-        "- Use bullet lists for features, benefits, and options.",
-        "- Use short, direct paragraphs (2-4 sentences) that can stand alone as answers.",
-        "- When defining a concept, lead with a clear one-sentence definition.",
+    ]
+
+    if not franchise_mode:
+        parts += [
+            "",
+            "AI OVERVIEW OPTIMIZATION:",
+            "- The first paragraph under each H2 should directly answer the question implied by the heading.",
+            "- Use clear, concise, factual statements that Google can extract for AI Overviews.",
+            "- Structure information in a way that is easy to cite: definitions, lists, step-by-step processes.",
+            "- Address 'People Also Ask' and AI fanout queries naturally within the content.",
+            "",
+            "FEATURED SNIPPET FORMATTING:",
+            "- Use numbered lists for processes and steps.",
+            "- Use bullet lists for features, benefits, and options.",
+            "- Use short, direct paragraphs (2-4 sentences) that can stand alone as answers.",
+            "- When defining a concept, lead with a clear one-sentence definition.",
+        ]
+
+    parts += [
         "",
         "CONTENT STRUCTURE:",
         "- Write in Markdown format.",
@@ -154,7 +167,12 @@ def build_system_prompt(
         "ENTITY AND NLP OPTIMIZATION:",
         "- Use the full entity name on first reference (e.g., 'spray foam insulation'), then natural variations.",
         "- Co-reference related entities that Google associates with the topic.",
-        "- Use location entities naturally: city, neighborhoods, landmarks, regional details.",
+    ]
+
+    if not franchise_mode:
+        parts.append("- Use location entities naturally: city, neighborhoods, landmarks, regional details.")
+
+    parts += [
         "- Incorporate required terms at their target counts, but never at the expense of readability.",
         "",
         "PROSE QUALITY (do these, always):",
@@ -221,11 +239,12 @@ def build_system_prompt(
     parts.append("- The page is for ONE business. Only name that business.")
     parts.append("- Never name any other company, contractor, agency, or vendor, even if their content or name appears in the reference material below. Reference material is for understanding the topic, not for sourcing business names.")
 
-    parts.append("")
-    parts.append("MULTI-CITY ANTI-DUPLICATION (CRITICAL):")
-    parts.append("- This brand publishes many city pages. Vary section angles, openings, examples, and sentence rhythm for THIS city.")
-    parts.append("- Content that could be published unchanged for another city is a failure.")
-    parts.append("- Openings must not be reusable across cities: anchor them in this city's specifics.")
+    if not franchise_mode:
+        parts.append("")
+        parts.append("MULTI-CITY ANTI-DUPLICATION (CRITICAL):")
+        parts.append("- This brand publishes many city pages. Vary section angles, openings, examples, and sentence rhythm for THIS city.")
+        parts.append("- Content that could be published unchanged for another city is a failure.")
+        parts.append("- Openings must not be reusable across cities: anchor them in this city's specifics.")
 
     if brand_guidelines:
         parts.append("")

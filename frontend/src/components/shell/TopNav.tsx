@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { BrandLockup } from "@/components/shared/BrandLockup";
@@ -22,10 +22,29 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-export function TopNav({ onSignOut, email = "user@pulp.copy" }: TopNavProps) {
+export function TopNav({ onSignOut, email = "" }: TopNavProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close menus on route change.
+  useEffect(() => {
+    setMenuOpen(false);
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Close menus on Escape while one is open.
+  useEffect(() => {
+    if (!menuOpen && !mobileOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setMobileOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen, mobileOpen]);
 
   return (
     <header
@@ -69,10 +88,12 @@ export function TopNav({ onSignOut, email = "user@pulp.copy" }: TopNavProps) {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-gray-200 hover:bg-white/5 transition-colors"
             >
               <span className="w-7 h-7 rounded-full bg-pulp text-ink flex items-center justify-center font-display font-bold text-[12px]">
-                {(email[0] || "U").toUpperCase()}
+                {(email.trim()[0] || "U").toUpperCase()}
               </span>
               <svg
                 width="14"
@@ -93,7 +114,7 @@ export function TopNav({ onSignOut, email = "user@pulp.copy" }: TopNavProps) {
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 top-full mt-1.5 w-56 z-20 rounded-xl bg-[#141D33] border border-white/10 shadow-xl py-1.5">
                   <div className="px-3.5 py-2 text-[11px] text-gray-400 border-b border-white/10 truncate">
-                    {email}
+                    {email.trim() || "Signed in"}
                   </div>
                   <button
                     type="button"
@@ -116,6 +137,7 @@ export function TopNav({ onSignOut, email = "user@pulp.copy" }: TopNavProps) {
             onClick={() => setMobileOpen((o) => !o)}
             className="lg:hidden p-2 rounded-lg text-gray-200 hover:bg-white/5"
             aria-label="Toggle navigation"
+            aria-expanded={mobileOpen}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
               {mobileOpen ? <path d="M5 5l10 10M15 5L5 15" /> : <path d="M3 6h14M3 10h14M3 14h14" />}
