@@ -594,6 +594,8 @@ HARD REQUIREMENTS - the plan is rejected if any of these are violated:
 
 11. BE COMPACT - the plan must fit the output budget across 30-50 pages: rationale is at most 2 tight sentences, serp_notes at most 1 sentence, each outline note at most 10 words. Density of insight, not length, is what gets graded.
 
+12. NO FORMULA ACROSS PAGES: titles must not be the same template with a swapped noun; each rationale must cite the SPECIFIC SERP observation for that cluster (which directories, which competitor brands, what the informational results are), never a generic "directories dominate, target long-tail" boilerplate reused across pages. If two rationales would read the same, the pages are too similar - merge or re-angle them.
+
 THE RESEARCH:
 
 """
@@ -621,6 +623,8 @@ CHECK ALL OF THESE:
 7. KEYWORD-STUFFED TITLES: rewrite any title a real marketing team would refuse to ship.
 8. OUTLINE QUALITY: every outline must be a skeleton of 4-8 H2s with a one-line note each (H1 implied by the title). Trim bloated outlines, flesh out thin ones, and make sure the sections actually answer the page's intent.
 9. COMPACTNESS: the corrected plan must fit the output budget - rationale at most 2 sentences, serp_notes at most 1 sentence, outline notes at most 10 words. Tighten anything longer.
+
+10. SAMENESS: scan the whole plan as a set. Flag titles that are one template with a swapped term, rationales that repeat the same boilerplate SERP observation, and near-identical outlines. Re-angle or merge so each page has a distinct reason to exist and a distinct shape.
 
 OUTPUT: the complete corrected plan - the FULL pages array, including every page you kept unchanged. Do NOT output a critique, commentary, or a diff. What you output ships as-is.
 

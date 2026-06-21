@@ -182,7 +182,7 @@ QUALITATIVE_SCHEMA = {
 
 SYNTHESIS_PROMPT = """You are a franchise development strategist reading a brand's website. Based on EVERYTHING in the scraped pages below, synthesize the brand's qualitative recruitment story. Unlike pure extraction, you may connect dots and articulate what the brand implies but never states crisply - but stay grounded in the text:
 
-- differentiators: 3-6 things that genuinely distinguish this franchise from category norms (business model, support depth, market position, economics structure, brand assets). Specific and concrete, never generic filler like "great support" or "proven model" unless backed by a specific detail.
+- differentiators: 3-6 things that genuinely distinguish this franchise from category norms (business model, support depth, market position, economics structure, brand assets). Specific and concrete, never generic filler like "great support" or "proven model" unless backed by a specific detail. Each differentiator must be traceable to specific evidence in the text - paraphrase a stated capability; do not upgrade a vague mention into a superlative ("industry-leading", "best-in-class"). If the text only supports a weak version, state the weak version. Do not assert support depth, training quality, or candidate fit the source pages do not actually describe.
 - ideal_candidate: 2-3 sentences on the owner profile this brand implicitly targets (background, capital comfort, hands-on vs semi-absentee, what they value).
 - proof_points: the strongest credibility evidence found in the text (years operating, unit counts, parent company, awards, guarantees, rankings). Any NUMBER you cite must appear in the text - never invent figures.
 
@@ -257,8 +257,12 @@ PAGE_TYPES: dict[str, dict[str, str]] = {
 
 FACT_DISCIPLINE = (
     "FACT DISCIPLINE: Use ONLY facts from the FACT SHEET below. Never invent numbers, "
-    "dates, counts, or claims. If a needed fact is missing, either write around it or "
-    "insert [CONFIRM: what is needed] for the team to fill in."
+    "dates, counts, or claims. If a needed fact is missing, PREFER to write around it - "
+    "rephrase so the sentence is true and complete without that fact. Only as a last "
+    "resort, when a specific number or detail is genuinely required and there is no way "
+    "to write around it, insert a [CONFIRM: what is needed] marker for the team to fill "
+    "in. These markers should be rare; a finished page should almost never ship literal "
+    "brackets."
 )
 
 LIGHT_SEO = (
@@ -270,9 +274,11 @@ LIGHT_SEO = (
 
 LIGHT_SEO_PLAN = (
     "SEO: Start the output with 'Title tag:' and 'Meta description:' suggestion lines, then "
-    "the page itself with one H1 and descriptive H2 sections. Work the TARGET KEYWORDS "
-    "above into the copy naturally where they genuinely fit - no usage counts, no "
-    "stuffing. Readability and persuasion win every tradeoff."
+    "the page itself with one H1 and descriptive H2 sections. Work only the PRIMARY 1-2 "
+    "target keywords (the first ones listed above) into the copy naturally; the remaining "
+    "keywords are for reference - use them only if they genuinely fit, never force them. "
+    "No usage counts, no stuffing on these persuasion pages. Readability and persuasion "
+    "win every tradeoff."
 )
 
 
@@ -304,6 +310,7 @@ def build_franchise_user_prompt_from_plan(
     fact_sheet: dict,
     competitor_context: str | None = None,
     pop_guidance: str | None = None,
+    brand_profile: str | None = None,
 ) -> str:
     """Build a user prompt from a plan page entry (title, format, intent, rationale, etc.)."""
     title = page_entry.get("title") or "Untitled"
@@ -317,6 +324,13 @@ def build_franchise_user_prompt_from_plan(
     lines: list[str] = []
     lines.append(f"PAGE TO WRITE: {title}")
     lines.append("")
+    if brand_profile:
+        lines.append(
+            "BRAND CONTEXT (background - lead each page from the angle most relevant to "
+            "THIS page's topic, do not restate the whole pitch every page):"
+        )
+        lines.append(brand_profile)
+        lines.append("")
     if fmt or intent:
         parts = []
         if fmt:
@@ -332,7 +346,7 @@ def build_franchise_user_prompt_from_plan(
         lines.append(f"SERP CONTEXT: {serp_notes}")
         lines.append("")
     if target_keywords:
-        lines.append("TARGET KEYWORDS (work these in naturally where they fit - no counts, no stuffing):")
+        lines.append("TARGET KEYWORDS (only the PRIMARY 1-2 listed first should be worked in; the rest are for reference, use only if they fit naturally - no counts, no stuffing):")
         for kw_entry in target_keywords:
             kw = kw_entry.get("kw") or ""
             volume = kw_entry.get("volume") or 0

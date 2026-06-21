@@ -396,6 +396,7 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
             page_entry, brand.get("name", ""), sheet,
             competitor_context=competitor_context,
             pop_guidance=pop_guidance,
+            brand_profile=plan.get("brand_profile"),
         )
     else:
         user = build_franchise_user_prompt(req.page_type, brand.get("name", ""), sheet)
@@ -409,13 +410,28 @@ async def generate_page(req: FranchiseGenerateRequest, _auth: dict = Depends(req
     voice_notes = fd_voice.get("notes") or brand.get("voice_notes")
     guidelines = fd_voice.get("guidelines") or brand.get("brand_guidelines")
 
+    # Load the brand's style examples (voice exemplars) the same way the local
+    # pipeline does, so FranDev pages match house style rather than just voice
+    # adjectives. Cap at the first 3 (build_system_prompt also caps at 3).
+    style_examples: list = []
+    try:
+        se = await asyncio.to_thread(
+            lambda: get_db().table("style_examples").select("*")
+            .eq("brand_id", req.brand_id).execute()
+        )
+        style_examples = (se.data or [])[:3]
+    except Exception as exc:
+        logger.warning("Failed to load style examples for brand %s (non-blocking): %s", req.brand_id, exc)
+
     system_blocks = build_system_prompt(
+        style_examples=style_examples or None,
         voice_dimensions=voice_dimensions,
         voice_notes=voice_notes,
         brand_banned_words=brand.get("brand_banned_words"),
         brand_guidelines=guidelines,
         brand_competitors=brand.get("competitors") or [],
         prompt_learnings=brand.get("prompt_learnings"),
+        franchise_mode=True,
     )
     system = with_role_block(
         system_blocks,
