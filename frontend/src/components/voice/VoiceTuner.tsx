@@ -42,7 +42,7 @@ function EditableSection({ title, editing, onEdit, onSave, onCancel, saving, chi
       <div className="flex items-center justify-between mb-3">
         <label className={labelClass + " mb-0"}>{title}</label>
         {!editing ? (
-          <button onClick={onEdit} className="text-[11px] text-pulp-deep hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 font-medium">
+          <button onClick={onEdit} className="text-[11px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 font-medium">
             Edit
           </button>
         ) : (
@@ -375,7 +375,7 @@ export function VoiceTuner({ brand, onSave }: VoiceTunerProps) {
                   }
                 }}
                 disabled={generatingTemplate}
-                className="text-[11px] text-pulp-deep hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 font-medium whitespace-nowrap disabled:opacity-50"
+                className="text-[11px] text-ink-70 hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 font-medium whitespace-nowrap disabled:opacity-50"
               >
                 {generatingTemplate ? "Analyzing SEO data..." : "Generate from POP"}
               </button>

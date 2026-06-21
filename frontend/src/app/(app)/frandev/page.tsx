@@ -433,6 +433,12 @@ function ContentPlanSection({
   const [plan, setPlan] = useState<FranchiseContentPlan | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Refs holding the latest plan + helpers so the planPageUpdate effect (which
+  // only re-runs on planPageUpdate) never operates on stale closure values.
+  const planRef = useRef<FranchiseContentPlan | null | undefined>(undefined);
+  const flushDraftsToPlanRef = useRef<(p: FranchiseContentPlan) => FranchiseContentPlan>(null!);
+  const savePlanRef = useRef<(p: FranchiseContentPlan) => Promise<boolean>>(null!);
+
   // Build form state
   const [mainUrlRaw, setMainUrlRaw] = useState("");
   const [seedKeywordsRaw, setSeedKeywordsRaw] = useState("");
@@ -477,10 +483,13 @@ function ContentPlanSection({
   // React to parent signalling that a plan-page generation was saved to history.
   // Flip the page's status + generation_id in local plan state, then PUT the plan.
   useEffect(() => {
-    if (!planPageUpdate || !plan) return;
+    if (!planPageUpdate) return;
+    // Read the latest plan via ref so we don't operate on a stale closure.
+    const currentPlan = planRef.current;
+    if (!currentPlan) return;
     const { pageId, generationId } = planPageUpdate;
     // Flush drafts so edits made while generation streamed survive the reseed.
-    const flushed = flushDraftsToPlan(plan);
+    const flushed = flushDraftsToPlanRef.current(currentPlan);
     const updatedPlan: FranchiseContentPlan = {
       ...flushed,
       pages: flushed.pages.map((p) =>
@@ -489,10 +498,18 @@ function ContentPlanSection({
           : p
       ),
     };
+    // Optimistic local flip; reconciled on save failure via the save error banner.
     setPlan(updatedPlan);
-    // Fire-and-forget PUT — surface errors via the existing save banner if it fails
-    savePlan(updatedPlan);
-    onPlanPageUpdateApplied();
+    let cancelled = false;
+    (async () => {
+      // Await the save; on failure the existing save banner surfaces the error.
+      // Either way clear the signal so we don't loop.
+      await savePlanRef.current(updatedPlan);
+      if (!cancelled) onPlanPageUpdateApplied();
+    })();
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planPageUpdate]);
 
@@ -714,6 +731,10 @@ function ContentPlanSection({
     }
   }
 
+  // Keep refs pointing at the latest plan + helpers for the planPageUpdate effect.
+  planRef.current = plan;
+  savePlanRef.current = savePlan;
+
   function flushDraftsToPlan(currentPlan: FranchiseContentPlan): FranchiseContentPlan {
     return {
       ...currentPlan,
@@ -724,6 +745,7 @@ function ContentPlanSection({
       })),
     };
   }
+  flushDraftsToPlanRef.current = flushDraftsToPlan;
 
   async function handleSavePlan() {
     if (!plan) return;
@@ -1676,7 +1698,7 @@ function FranchisePageInner() {
 
       {/* Scrape card */}
       {showScrapeCard && brandId && (
-        <ScrapeCard brandId={brandId} isRescrape={isRescrape} onDone={handleScrapeDone} />
+        <ScrapeCard key={brandId} brandId={brandId} isRescrape={isRescrape} onDone={handleScrapeDone} />
       )}
 
       {/* Fact sheet editor */}
@@ -1761,6 +1783,7 @@ function FranchisePageInner() {
       {/* Content plan section — between fact sheet and generation card */}
       {hasSheet && !profileLoading && brandId && (
         <ContentPlanSection
+          key={brandId}
           brandId={brandId}
           brandName={brands.find((b) => b.id === brandId)?.name ?? ""}
           hasFactSheet={hasSheet}

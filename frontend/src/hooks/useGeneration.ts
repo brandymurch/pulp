@@ -11,6 +11,8 @@ export function useGeneration() {
   const abortRef = useRef<AbortController | null>(null);
 
   const generate = useCallback(async (path: string, payload: GenerationPayload | FranchiseGeneratePayload) => {
+    // Cancel any in-flight stream so a second Generate click can't interleave output.
+    abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     setOutput("");
@@ -37,7 +39,11 @@ export function useGeneration() {
         throw new Error(errData.detail || `HTTP ${res.status}`);
       }
 
-      const reader = res.body!.getReader();
+      if (!res.body) {
+        throw new Error("Streaming response has no body");
+      }
+
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
 
@@ -53,6 +59,8 @@ export function useGeneration() {
           if (!line.startsWith("data: ")) continue;
           try {
             const data = JSON.parse(line.slice(6));
+            // Drop writes if this stream was superseded/aborted.
+            if (abortRef.current !== controller) continue;
             if (data.type === "chunk") {
               fullText += data.text;
               setOutput(fullText);
@@ -69,10 +77,12 @@ export function useGeneration() {
       }
     } catch (err: any) {
       if (err.name === "AbortError") return;
-      setError(err.message || "Generation failed");
+      if (abortRef.current === controller) setError(err.message || "Generation failed");
     } finally {
-      setIsGenerating(false);
-      if (abortRef.current === controller) abortRef.current = null;
+      if (abortRef.current === controller) {
+        setIsGenerating(false);
+        abortRef.current = null;
+      }
     }
   }, []);
 
